@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>NetWish — Palencia</title>
 
+    <!-- PWA / App Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -13,6 +18,8 @@
                 extend: {
                     colors: {
                         dark: '#0a0a0a',
+                        card: '#121212',
+                        subtle: '#262626',
                     }
                 }
             }
@@ -22,20 +29,22 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        body { background-color: #000000; color: #ededed; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        /* Estilos base para simulación perfecta de app móvil */
+        * { -webkit-tap-highlight-color: transparent; }
+        body { background-color: #050505; color: #ededed; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="flex justify-center items-center h-screen m-0 p-0">
+<body class="flex justify-center items-center h-screen w-screen m-0 p-0">
 
-    <!-- Contenedor Principal Estilo App Móvil -->
-    <div class="w-full h-full max-w-md bg-black border-x border-neutral-900 flex flex-col shadow-2xl overflow-hidden">
+    <!-- Contenedor Principal App Shell (Móvil First / Estilo Alipay-WeChat) -->
+    <div class="w-full h-full sm:max-w-md sm:h-[844px] sm:rounded-3xl bg-black sm:border sm:border-neutral-800 flex flex-col shadow-2xl overflow-hidden relative">
         
-        <!-- Header -->
-        <header class="px-6 py-4 border-b border-neutral-900 flex justify-between items-center bg-black">
+        <!-- Header Superior Fijo -->
+        <header class="px-6 py-4 border-b border-neutral-900 flex justify-between items-center bg-black/90 backdrop-blur-md z-20">
             <div>
-                <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-500">Palencia</span>
+                <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-500">Palencia, ES</span>
                 <h1 class="text-base font-semibold tracking-tight text-white">NetWish</h1>
             </div>
             <div class="w-8 h-8 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-xs font-medium text-neutral-300">
@@ -43,27 +52,27 @@
             </div>
         </header>
 
-        <!-- Contenido Desplazable -->
-        <main class="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6">
+        <!-- Contenido Dinámico con Scroll Nativo Fluido -->
+        <main class="flex-1 overflow-y-auto no-scrollbar p-5 space-y-6">
             
-            <!-- Tarjeta Principal: Escáner QR de Pagos -->
-            <div class="p-5 rounded-2xl bg-neutral-950 border border-neutral-900 flex flex-col justify-between space-y-4">
+            <!-- Tarjeta Central: Escáner QR de Pagos -->
+            <section class="p-5 rounded-2xl bg-neutral-950 border border-neutral-900 flex flex-col justify-between space-y-4 shadow-lg">
                 <div class="flex justify-between items-start">
                     <div>
-                        <span class="text-xs text-neutral-500 font-mono">PAGO URBANO</span>
+                        <span class="text-[10px] text-neutral-500 font-mono tracking-wider">PASARELA URBANA</span>
                         <h2 class="text-lg font-medium tracking-tight mt-0.5 text-white">Escanea y Paga</h2>
                     </div>
-                    <i data-lucide="qr-code" class="w-6 h-6 text-neutral-400"></i>
+                    <i data-lucide="qr-code" class="w-6 h-6 text-neutral-300"></i>
                 </div>
-                <button onclick="alert('Abriendo escáner QR de NetWish...')" class="w-full py-3 bg-white text-black font-medium rounded-xl text-sm transition hover:bg-neutral-200 active:scale-[0.98]">
-                    Abrir Escáner
+                <button onclick="alert('Iniciando cámara para escaneo QR...')" class="w-full py-3 bg-white text-black font-medium rounded-xl text-sm transition hover:bg-neutral-200 active:scale-[0.98]">
+                    Abrir Escáner QR
                 </button>
-            </div>
+            </section>
 
             <!-- Módulo: Panaderías Click & Collect -->
-            <div class="space-y-3">
+            <section class="space-y-3">
                 <div class="flex justify-between items-center">
-                    <h3 class="text-xs font-mono uppercase tracking-wider text-neutral-500">Panaderías en Directo</h3>
+                    <h3 class="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Comercio Local</h3>
                     <span class="text-[10px] text-emerald-400 font-mono bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-900/50">Stock en vivo</span>
                 </div>
                 
@@ -71,46 +80,46 @@
                     <div class="flex justify-between items-start">
                         <div>
                             <h4 class="text-sm font-medium text-white">Obrador La Clau</h4>
-                            <p class="text-xs text-neutral-400">Calle Mayor, Palencia • A 300m</p>
+                            <p class="text-xs text-neutral-500 mt-0.5">Calle Mayor • A 300m</p>
                         </div>
                         <i data-lucide="croissant" class="w-5 h-5 text-neutral-400"></i>
                     </div>
                     
-                    <div class="pt-2 border-t border-neutral-900 flex justify-between items-center">
+                    <div class="pt-3 border-t border-neutral-900/80 flex justify-between items-center">
                         <div>
                             <span class="text-xs text-neutral-400">Baguette Rústica:</span>
-                            <span class="text-xs font-mono text-white ml-1 font-semibold">14 disponibles</span>
+                            <span class="text-xs font-mono text-white ml-1 font-semibold">14 disp.</span>
                         </div>
-                        <button onclick="alert('¡Reserva realizada con éxito! Aviso enviado.')" class="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-white text-xs font-medium rounded-lg transition active:scale-95">
+                        <button onclick="alert('Reserva solicitada. Notificación enviada al obrador.')" class="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-white text-xs font-medium rounded-lg transition active:scale-95">
                             Reservar
                         </button>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- Accesos Rápidos (Servicios Futuros) -->
-            <div>
-                <h3 class="text-xs font-mono uppercase tracking-wider text-neutral-500 mb-3">Próximos Módulos</h3>
+            <!-- Servicios y Utilidades Urbanas -->
+            <section>
+                <h3 class="text-[10px] font-mono uppercase tracking-wider text-neutral-500 mb-3">Infraestructura</h3>
                 <div class="grid grid-cols-3 gap-3">
-                    <button onclick="alert('Módulo Peluquería próximo')" class="flex flex-col items-center justify-center p-4 rounded-xl bg-neutral-950 border border-neutral-900 hover:border-neutral-800 transition space-y-2">
-                        <i data-lucide="scissors" class="w-5 h-5 text-neutral-300"></i>
+                    <button onclick="alert('Módulo Peluquería')" class="flex flex-col items-center justify-center p-4 rounded-xl bg-neutral-950 border border-neutral-900 hover:border-neutral-800 transition space-y-2 group">
+                        <i data-lucide="scissors" class="w-5 h-5 text-neutral-400 group-hover:text-white transition"></i>
                         <span class="text-[11px] text-neutral-300 font-medium">Peluquería</span>
                     </button>
-                    <button onclick="alert('Módulo Autobús próximo')" class="flex flex-col items-center justify-center p-4 rounded-xl bg-neutral-950 border border-neutral-900 hover:border-neutral-800 transition space-y-2">
-                        <i data-lucide="bus" class="w-5 h-5 text-neutral-300"></i>
+                    <button onclick="alert('Módulo Autobús en tiempo real')" class="flex flex-col items-center justify-center p-4 rounded-xl bg-neutral-950 border border-neutral-900 hover:border-neutral-800 transition space-y-2 group">
+                        <i data-lucide="bus" class="w-5 h-5 text-neutral-400 group-hover:text-white transition"></i>
                         <span class="text-[11px] text-neutral-300 font-medium">Autobús</span>
                     </button>
-                    <button onclick="alert('Módulo Taxi próximo')" class="flex flex-col items-center justify-center p-4 rounded-xl bg-neutral-950 border border-neutral-900 hover:border-neutral-800 transition space-y-2">
-                        <i data-lucide="car" class="w-5 h-5 text-neutral-300"></i>
+                    <button onclick="alert('Módulo Taxis sin datáfono')" class="flex flex-col items-center justify-center p-4 rounded-xl bg-neutral-950 border border-neutral-900 hover:border-neutral-800 transition space-y-2 group">
+                        <i data-lucide="car" class="w-5 h-5 text-neutral-400 group-hover:text-white transition"></i>
                         <span class="text-[11px] text-neutral-300 font-medium">Taxis QR</span>
                     </button>
                 </div>
-            </div>
+            </section>
 
         </main>
 
-        <!-- Barra de Navegación Inferior -->
-        <nav class="border-t border-neutral-900 bg-black px-6 py-3 flex justify-around items-center">
+        <!-- Barra de Navegación Inferior Estilo App Nativa -->
+        <nav class="border-t border-neutral-900 bg-black/90 backdrop-blur-md px-6 py-3 flex justify-around items-center z-20">
             <button class="flex flex-col items-center text-white">
                 <i data-lucide="home" class="w-5 h-5"></i>
                 <span class="text-[10px] mt-1 font-medium">Inicio</span>
