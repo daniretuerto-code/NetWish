@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>NetWish — Palencia</title>
 
-    <!-- Meta tags para PWA / Pantalla completa móvil -->
+    <!-- PWA / Pantalla completa móvil -->
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#ffffff">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -18,8 +18,6 @@
                 extend: {
                     colors: {
                         dark: '#0a0a0a',
-                        card: '#121212',
-                        subtle: '#262626',
                     }
                 }
             }
@@ -31,8 +29,8 @@
     <style>
         * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
         body { 
-            background-color: #000000; 
-            color: #ededed; 
+            background-color: #ffffff; /* Fondo general en blanco puro */
+            color: #171717; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             margin: 0;
             padding: 0;
@@ -46,37 +44,37 @@
 </head>
 <body class="flex justify-center items-center">
 
-    <!-- Contenedor Principal Adaptado 100% a Móviles y Centrado en Escritorio -->
-    <div class="w-full h-full sm:max-w-md sm:h-[844px] sm:rounded-3xl bg-black sm:border sm:border-neutral-800 flex flex-col shadow-2xl overflow-hidden relative">
+    <!-- Contenedor Principal (Fondo Blanco, App en Negro/Grises) -->
+    <div class="w-full h-full sm:max-w-md sm:h-[844px] sm:rounded-3xl bg-white sm:border sm:border-neutral-200 flex flex-col shadow-2xl overflow-hidden relative">
         
         <!-- Header Superior -->
-        <header class="px-5 pt-4 pb-3 border-b border-neutral-900 flex justify-between items-center bg-black/90 backdrop-blur-md z-20">
-            <h1 class="text-xl font-bold tracking-tighter text-white font-mono">NetWish</h1>
-            <div class="w-9 h-9 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-xs font-semibold text-neutral-300 shadow-inner">
+        <header class="px-5 pt-4 pb-3 border-b border-neutral-100 flex justify-between items-center bg-white/90 backdrop-blur-md z-20">
+            <h1 class="text-xl font-bold tracking-tighter text-black font-mono">NetWish</h1>
+            <div class="w-9 h-9 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-xs font-semibold text-neutral-800 shadow-sm">
                 DR
             </div>
         </header>
 
-        <!-- Contenido Desplazable (Scroll Natural) -->
+        <!-- Contenido Desplazable -->
         <main class="flex-1 overflow-y-auto no-scrollbar p-5 space-y-6">
             
-            <!-- Barra de Búsqueda de Comercios Locales (Según tu boceto) -->
+            <!-- Barra de Búsqueda de Comercios Locales -->
             <section class="space-y-2">
-                <label class="block text-xs font-medium text-neutral-400 tracking-wide">Busca los comercios locales</label>
+                <label class="block text-xs font-medium text-neutral-500 tracking-wide">Busca los comercios locales</label>
                 <div class="relative flex items-center">
-                    <i data-lucide="search" class="absolute left-3.5 w-4 h-4 text-neutral-500"></i>
-                    <input type="text" placeholder="Panaderías, peluquerías, taxis..." class="w-full bg-neutral-950 border border-neutral-800 rounded-xl py-3 pl-10 pr-4 text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-600 transition shadow-inner">
+                    <i data-lucide="search" class="absolute left-3.5 w-4 h-4 text-neutral-400"></i>
+                    <input type="text" placeholder="Panaderías, peluquerías, taxis..." class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-3 pl-10 pr-4 text-sm text-black placeholder-neutral-400 focus:outline-none focus:border-black transition shadow-sm">
                 </div>
             </section>
 
-            <!-- Acceso Directo Destacado: Escáner QR de Pagos -->
-            <section class="p-5 rounded-2xl bg-neutral-950 border border-neutral-900 flex flex-col justify-between space-y-4 shadow-lg">
+            <!-- Acceso Directo Destacado: Escáner QR de Pagos (Tarjeta Oscura) -->
+            <section class="p-5 rounded-2xl bg-black text-white flex flex-col justify-between space-y-4 shadow-xl">
                 <div class="flex justify-between items-start">
                     <div>
-                        <span class="text-[10px] text-neutral-500 font-mono tracking-wider">PAGO RÁPIDO URBANO</span>
+                        <span class="text-[10px] text-neutral-400 font-mono tracking-wider">PAGO RÁPIDO URBANO</span>
                         <h2 class="text-base font-semibold tracking-tight mt-0.5 text-white">Escanea para Pagar</h2>
                     </div>
-                    <i data-lucide="qr-code" class="w-6 h-6 text-neutral-300"></i>
+                    <i data-lucide="qr-code" class="w-6 h-6 text-neutral-200"></i>
                 </div>
                 <button onclick="alert('Abriendo escáner de pagos NetWish...')" class="w-full py-3 bg-white text-black font-medium rounded-xl text-sm transition hover:bg-neutral-200 active:scale-[0.98]">
                     Abrir Escáner
@@ -87,43 +85,107 @@
             <section class="space-y-3">
                 <div class="flex justify-between items-center">
                     <h3 class="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Destacado en Palencia</h3>
-                    <span class="text-[10px] text-emerald-400 font-mono bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-900/50">Stock en vivo</span>
+                    <span class="text-[10px] text-emerald-600 font-mono bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Stock en vivo</span>
                 </div>
                 
-                <div class="p-4 rounded-2xl bg-neutral-950 border border-neutral-900 space-y-3">
+                <div class="p-4 rounded-2xl bg-neutral-900 text-white space-y-3 shadow-md">
                     <div class="flex justify-between items-start">
                         <div>
                             <h4 class="text-sm font-medium text-white">Obrador La Clau</h4>
-                            <p class="text-xs text-neutral-500 mt-0.5">Calle Mayor • A 300m</p>
+                            <p class="text-xs text-neutral-400 mt-0.5">Calle Mayor • A 300m</p>
                         </div>
-                        <i data-lucide="croissant" class="w-5 h-5 text-neutral-400"></i>
+                        <i data-lucide="croissant" class="w-5 h-5 text-amber-400"></i>
                     </div>
-                    <div class="pt-3 border-t border-neutral-900 flex justify-between items-center">
+                    <div class="pt-3 border-t border-neutral-800 flex justify-between items-center">
                         <span class="text-xs text-neutral-400">Baguette Rústica: <strong class="text-white">14 disp.</strong></span>
-                        <button onclick="alert('¡Reserva realizada con éxito!')" class="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-white text-xs font-medium rounded-lg transition active:scale-95">
+                        <button onclick="alert('¡Reserva realizada con éxito!')" class="px-3 py-1.5 bg-white text-black hover:bg-neutral-200 text-xs font-medium rounded-lg transition active:scale-95">
                             Reservar
                         </button>
                     </div>
                 </div>
             </section>
 
+            <!-- Nueva Sección: Categorías de Infraestructura Urbana con Logos en Color -->
+            <section class="space-y-3">
+                <h3 class="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Categorías de la Ciudad</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <!-- Infraestructuras -->
+                    <button onclick="alert('Sección Infraestructuras')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left group">
+                        <div class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                            <i data-lucide="building-2" class="w-5 h-5 text-blue-600"></i>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-black">Infraestructuras</span>
+                            <span class="block text-[10px] text-neutral-500">Piscinas, bus...</span>
+                        </div>
+                    </button>
+
+                    <!-- Comercios -->
+                    <button onclick="alert('Sección Comercios')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left group">
+                        <div class="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                            <i data-lucide="store" class="w-5 h-5 text-amber-600"></i>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-black">Comercios</span>
+                            <span class="block text-[10px] text-neutral-500">Pan, stock, etc</span>
+                        </div>
+                    </button>
+
+                    <!-- Restaurantes -->
+                    <button onclick="alert('Sección Restaurantes')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left group">
+                        <div class="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center shrink-0">
+                            <i data-lucide="utensils" class="w-5 h-5 text-rose-600"></i>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-black">Restaurantes</span>
+                            <span class="block text-[10px] text-neutral-500">QR mesa, cuenta</span>
+                        </div>
+                    </button>
+
+                    <!-- Movilidad -->
+                    <button onclick="alert('Sección Movilidad')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left group">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                            <i data-lucide="car" class="w-5 h-5 text-emerald-600"></i>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-black">Movilidad</span>
+                            <span class="block text-[10px] text-neutral-500">Taxis y bus GPS</span>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Ocio (Ancho completo) -->
+                <button onclick="alert('Sección Ocio')" class="w-full flex items-center justify-between p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center shrink-0">
+                            <i data-lucide="sparkles" class="w-5 h-5 text-purple-600"></i>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-black">Ocio y Experiencias</span>
+                            <span class="block text-[10px] text-neutral-500">Eventos y actividades en Palencia</span>
+                        </div>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400"></i>
+                </button>
+            </section>
+
         </main>
 
-        <!-- Barra de Navegación Inferior (Basada exactamente en tu boceto: Inicio, Explorar, Scan, Perfil) -->
-        <nav class="border-t border-neutral-900 bg-black/95 backdrop-blur-md px-4 py-2.5 flex justify-around items-center z-20">
-            <button class="flex flex-col items-center text-white space-y-1">
+        <!-- Barra de Navegación Inferior (Inicio, Explorar, Scan, Perfil) -->
+        <nav class="border-t border-neutral-200 bg-white/95 backdrop-blur-md px-4 py-2.5 flex justify-around items-center z-20 shadow-lg">
+            <button class="flex flex-col items-center text-black space-y-1">
                 <i data-lucide="home" class="w-5 h-5"></i>
                 <span class="text-[10px] font-medium tracking-tight">Inicio</span>
             </button>
-            <button class="flex flex-col items-center text-neutral-500 hover:text-neutral-300 transition space-y-1">
+            <button class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1">
                 <i data-lucide="compass" class="w-5 h-5"></i>
                 <span class="text-[10px] font-medium tracking-tight">Explorar</span>
             </button>
-            <button class="flex flex-col items-center text-neutral-500 hover:text-neutral-300 transition space-y-1">
+            <button class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1">
                 <i data-lucide="scan" class="w-5 h-5"></i>
                 <span class="text-[10px] font-medium tracking-tight">Scan</span>
             </button>
-            <button class="flex flex-col items-center text-neutral-500 hover:text-neutral-300 transition space-y-1">
+            <button class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1">
                 <i data-lucide="user" class="w-5 h-5"></i>
                 <span class="text-[10px] font-medium tracking-tight">Perfil</span>
             </button>
