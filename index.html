@@ -214,53 +214,61 @@
                 </div>
             </div>
 
-            <!-- VISTA 5: PAGO DEDICADO A PANTALLA COMPLETA -->
-            <div id="view-payment" class="space-y-4 hidden w-full pt-2 text-center">
-                <div class="flex items-center justify-between">
-                    <button onclick="switchTab('home')" class="w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200 flex items-center justify-center text-black hover:bg-neutral-200 transition">
-                        <i data-lucide="arrow-left" class="w-4 h-4"></i>
-                    </button>
-                    <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Pasarela Segura</span>
-                    <div class="w-9"></div>
-                </div>
-
-                <div class="space-y-1 pt-2">
-                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-500/20 mb-2">
-                        <i data-lucide="user-check" class="w-6 h-6"></i>
+            <!-- VISTA 5: PASARELA DE PAGO ESTILO APPLE PAY (PREMIUM) -->
+            <div id="view-payment" class="space-y-6 hidden w-full pt-2 flex flex-col h-full justify-between pb-6">
+                <div class="space-y-5">
+                    <!-- Barra superior de navegación interna -->
+                    <div class="flex items-center justify-between">
+                        <button onclick="switchTab('home')" class="w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-black hover:bg-neutral-200 transition">
+                            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                        </button>
+                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">NetWish Secure Transfer</span>
+                        <div class="w-9"></div>
                     </div>
-                    <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 block">Conectado con</span>
-                    <h2 id="payeeNameDisplay" class="text-base font-bold text-black">Nombre Destinatario</h2>
-                </div>
 
-                <!-- Cifra grande con formato chulo -->
-                <div class="py-3">
-                    <div class="flex items-center justify-center space-x-1">
-                        <span class="text-3xl font-light text-neutral-400">€</span>
-                        <span id="payAmountDisplay" class="text-4xl font-extrabold tracking-tight text-black">0,00</span>
+                    <!-- Cabecera del Destinatario -->
+                    <div class="text-center space-y-1.5 pt-2">
+                        <div class="w-14 h-14 rounded-3xl bg-neutral-900 text-white flex items-center justify-center mx-auto shadow-lg">
+                            <i data-lucide="shield-check" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">Enviando fondos a</span>
+                            <h2 id="payeeNameDisplay" class="text-base font-bold text-black tracking-tight mt-0.5">Nombre Destinatario</h2>
+                        </div>
+                    </div>
+
+                    <!-- Display de Cantidad Minimalista Tipo Apple -->
+                    <div class="text-center py-4 bg-neutral-50/80 rounded-[28px] border border-neutral-200/60 mx-4 shadow-inner">
+                        <div class="flex items-center justify-center space-x-1.5">
+                            <span class="text-3xl font-light text-neutral-400">€</span>
+                            <span id="payAmountDisplay" class="text-5xl font-extrabold tracking-tight text-black">0,00</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Teclado Numérico Estilo TPV / POS -->
-                <div class="grid grid-cols-3 gap-2.5 pt-2 max-w-[280px] mx-auto">
-                    <button onclick="appendNum('1')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">1</button>
-                    <button onclick="appendNum('2')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">2</button>
-                    <button onclick="appendNum('3')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">3</button>
-                    <button onclick="appendNum('4')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">4</button>
-                    <button onclick="appendNum('5')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">5</button>
-                    <button onclick="appendNum('6')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">6</button>
-                    <button onclick="appendNum('7')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">7</button>
-                    <button onclick="appendNum('8')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">8</button>
-                    <button onclick="appendNum('9')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">9</button>
-                    <button onclick="appendNum('00')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">00</button>
-                    <button onclick="appendNum('0')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">0</button>
-                    <button onclick="clearNum()" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-rose-600 transition active:scale-95 flex items-center justify-center">
-                        <i data-lucide="delete" class="w-5 h-5"></i>
+                <!-- Teclado Táctil Bancario Estilo Apple Pay -->
+                <div class="space-y-4">
+                    <div class="grid grid-cols-3 gap-3 max-w-[280px] mx-auto">
+                        <button onclick="appendNum('1')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-medium text-black transition active:scale-95 shadow-sm">1</button>
+                        <button onclick="appendNum('2')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-medium text-black transition active:scale-95 shadow-sm">2</button>
+                        <button onclick="appendNum('3')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-medium text-black transition active:scale-95 shadow-sm">3</button>
+                        <button onclick="appendNum('4')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-medium text-black transition active:scale-95 shadow-sm">4</button>
+                        <button onclick="appendNum('5')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-medium text-black transition active:scale-95 shadow-sm">5</button>
+                        <button onclick="appendNum('6')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-medium text-black transition active:scale-95 shadow-sm">6</button>
+                        <button onclick="appendNum('7')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-medium text-black transition active:scale-95 shadow-sm">7</button>
+                        <button onclick="appendNum('8')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-medium text-black transition active:scale-95 shadow-sm">8</button>
+                        <button onclick="appendNum('9')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-medium text-black transition active:scale-95 shadow-sm">9</button>
+                        <button onclick="appendNum('00')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-medium text-black transition active:scale-95 shadow-sm">00</button>
+                        <button onclick="appendNum('0')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-medium text-black transition active:scale-95 shadow-sm">0</button>
+                        <button onclick="clearNum()" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-medium text-neutral-400 hover:text-black transition active:scale-95 shadow-sm flex items-center justify-center">
+                            <i data-lucide="delete" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+
+                    <button onclick="executeFullPayment()" class="w-full py-4 bg-black text-white font-semibold rounded-2xl text-xs tracking-wider uppercase transition hover:bg-neutral-800 active:scale-[0.98] shadow-xl">
+                        Autorizar y Enviar Pago
                     </button>
                 </div>
-
-                <button onclick="executeFullPayment()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md mt-2">
-                    Enviar Pago Seguro
-                </button>
             </div>
 
         </main>
@@ -285,7 +293,7 @@
             </button>
         </nav>
 
-        <!-- VENTANA MODAL DINÁMICA (Para QR y otros menús) -->
+        <!-- VENTANA MODAL DINÁMICA -->
         <div id="customModal" class="absolute inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
             <div class="bg-white w-full max-w-[380px] rounded-[36px] p-6 text-center space-y-3.5 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100 flex flex-col overflow-hidden" id="modalContent">
                 
@@ -298,7 +306,7 @@
 
     </div>
 
-    <!-- SCRIPT DE LÓGICA Y TECLADO NUMÉRICO TÁCTIL -->
+    <!-- SCRIPT DE LÓGICA Y ESTÉTICA APPLE -->
     <script>
         lucide.createIcons();
 
@@ -310,9 +318,8 @@
         let currentStream = null;
         let scanningInterval = null;
 
-        // Variables de estado de pago
         let activePayee = "";
-        let rawAmountString = "000"; // Formato en céntimos para el teclado TPV
+        let rawAmountString = "000";
 
         document.addEventListener('DOMContentLoaded', async () => {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -761,21 +768,20 @@
             if (qrText.startsWith('NETWISH_PAY:')) {
                 const parts = qrText.replace('NETWISH_PAY:', '').split(':');
                 activePayee = parts[0] || 'Usuario NetWish';
-                rawAmountString = "000"; // Reiniciar importe a 0,00
+                rawAmountString = "000";
                 updateAmountDisplay();
                 
                 document.getElementById('payeeNameDisplay').innerText = activePayee;
-                switchTab('payment'); // Cambia a la vista dedicada a pantalla completa
+                switchTab('payment');
             } else {
                 alert("El código QR escaneado no pertenece a una cuenta válida de NetWish.");
             }
         }
 
-        // Lógica del teclado numérico TPV
+        // Lógica del teclado numérico TPV Premium
         function appendNum(num) {
             if (num === '00' && rawAmountString === '000') return;
             rawAmountString += num;
-            // Limitar longitud máxima para evitar desbordamiento
             if (rawAmountString.length > 8) {
                 rawAmountString = rawAmountString.slice(1);
             }
@@ -866,7 +872,6 @@
             document.getElementById('nav-scan').className = "flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group";
             document.getElementById('nav-profile').className = "flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group";
 
-            // Si estamos en la vista de pago, ocultamos la barra inferior de navegación para look de app nativa real
             const navBar = document.querySelector('nav');
             if (tabId === 'payment') {
                 navBar.classList.add('hidden');
