@@ -47,19 +47,19 @@
     <!-- Contenedor Principal App Shell -->
     <div class="w-full h-full sm:max-w-md sm:h-[844px] sm:rounded-3xl bg-white sm:border sm:border-neutral-200 flex flex-col shadow-2xl overflow-hidden relative">
         
-        <!-- Header Superior Fijo -->
-        <header class="absolute top-0 left-0 right-0 px-5 pt-4 pb-3 border-b border-neutral-100 flex justify-between items-center bg-white/95 backdrop-blur-md z-30">
+        <!-- Header Superior Fijo (Ajustado para evitar solapamientos) -->
+        <header class="absolute top-0 left-0 right-0 px-6 pt-5 pb-3.5 border-b border-neutral-100 flex justify-between items-center bg-white/95 backdrop-blur-md z-30">
             <h1 class="text-2xl font-bold tracking-tight text-black font-serif italic">NetWish</h1>
             <div class="w-9 h-9 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-xs font-semibold text-neutral-800 shadow-sm">
                 DR
             </div>
         </header>
 
-        <!-- Contenido Desplazable (Con padding superior e inferior para no chocar con las barras fijas) -->
-        <main class="flex-1 overflow-y-auto no-scrollbar px-5 pt-20 pb-24 space-y-6">
+        <!-- Contenido Desplazable (Con espacio superior holgado para el header) -->
+        <main class="flex-1 overflow-y-auto no-scrollbar px-6 pt-24 pb-28 space-y-6">
             
             <!-- Barra de Búsqueda Centrada -->
-            <section class="pt-2">
+            <section>
                 <div class="relative flex items-center shadow-sm">
                     <i data-lucide="search" class="absolute left-4 w-4 h-4 text-neutral-400"></i>
                     <input type="text" placeholder="Buscar comercios, servicios..." class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-3 pl-11 pr-4 text-sm text-black placeholder-neutral-400 focus:outline-none focus:border-black transition">
@@ -78,30 +78,6 @@
                 <button onclick="alert('Abriendo escáner de pagos NetWish...')" class="w-full py-3 bg-white text-black font-medium rounded-xl text-sm transition hover:bg-neutral-200 active:scale-[0.98]">
                     Abrir Escáner
                 </button>
-            </section>
-
-            <!-- Muestra Rápida: Panadería en Directo (Click & Collect) -->
-            <section class="space-y-3">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Panadería Recomendada</h3>
-                    <span class="text-[10px] text-emerald-600 font-mono bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Stock en vivo</span>
-                </div>
-                
-                <div class="p-4 rounded-2xl bg-neutral-900 text-white space-y-3 shadow-md">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h4 class="text-sm font-medium text-white">Obrador La Clau</h4>
-                            <p class="text-xs text-neutral-400 mt-0.5">Calle Mayor • A 300m</p>
-                        </div>
-                        <i data-lucide="croissant" class="w-5 h-5 text-amber-400"></i>
-                    </div>
-                    <div class="pt-3 border-t border-neutral-800 flex justify-between items-center">
-                        <span class="text-xs text-neutral-400">Baguette Rústica: <strong class="text-white">14 disp.</strong></span>
-                        <button onclick="alert('¡Reserva realizada con éxito!')" class="px-3 py-1.5 bg-white text-black hover:bg-neutral-200 text-xs font-medium rounded-lg transition active:scale-95">
-                            Reservar
-                        </button>
-                    </div>
-                </div>
             </section>
 
             <!-- Categorías de la Ciudad -->
@@ -170,7 +146,7 @@
 
         </main>
 
-        <!-- Barra de Navegación Inferior Fija (Inicio, Explorar, Scan, Perfil) -->
+        <!-- Barra de Navegación Inferior Fija -->
         <nav class="absolute bottom-0 left-0 right-0 border-t border-neutral-200 bg-white/95 backdrop-blur-md px-4 py-3 flex justify-around items-center z-30 shadow-lg">
             <button class="flex flex-col items-center text-black space-y-1">
                 <i data-lucide="home" class="w-5 h-5"></i>
