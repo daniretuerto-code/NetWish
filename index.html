@@ -463,6 +463,14 @@
                             <input type="password" id="authPass" ${!isLogin ? 'oninput="checkPasswordStrength()"' : ''} placeholder="> 6 caracteres" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
                         </div>
 
+                        ${isLogin ? `
+                        <div class="text-right">
+                            <button onclick="sendPasswordResetEmail()" class="text-[10px] font-medium text-neutral-500 hover:text-black underline">
+                                ¿Has olvidado tu contraseña?
+                            </button>
+                        </div>
+                        ` : ''}
+
                         ${!isLogin ? `
                         <!-- CHECKLIST DE SEGURIDAD -->
                         <div id="passwordChecklist" class="bg-neutral-50 p-3 rounded-xl border border-neutral-200/80 grid grid-cols-2 gap-2">
@@ -509,6 +517,23 @@
                 </div>
             `;
             lucide.createIcons();
+        }
+
+        async function sendPasswordResetEmail() {
+            const email = document.getElementById('authEmail').value.trim();
+            if (!email) {
+                alert("Introduce tu correo electrónico primero.");
+                return;
+            }
+            const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.origin + '/reset-password.html'
+            });
+            if (error) {
+                alert("Error: " + error.message);
+            } else {
+                alert("Se ha enviado un enlace de recuperación a tu correo.");
+                closeModal();
+            }
         }
 
         function checkPasswordStrength() {
