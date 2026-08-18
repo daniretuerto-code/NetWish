@@ -59,21 +59,21 @@
     <!-- Contenedor Principal App Shell -->
     <div class="w-full h-[100dvh] sm:h-[844px] sm:max-w-[390px] sm:rounded-[48px] bg-white flex flex-col relative shadow-[0_30px_90px_rgba(0,0,0,0.12)] overflow-hidden sm:border-[8px] sm:border-neutral-900">
         
-        <!-- HEADER SUPERIOR FIJO (Cabecera más fina y compacta) -->
+        <!-- HEADER SUPERIOR FIJO (Dinámico según sesión) -->
         <header class="absolute top-0 left-0 right-0 px-6 pt-8 pb-3 border-b border-neutral-100/80 flex justify-between items-center glass-panel z-30">
             <h1 class="text-2xl font-bold tracking-tight text-black font-serif italic">NetWish</h1>
-            <div class="w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner">
-                DR
-            </div>
+            <button onclick="handleHeaderProfileClick()" id="headerAvatar" class="w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner transition hover:scale-105 active:scale-95">
+                IN
+            </button>
         </header>
 
-        <!-- CONTENIDO PRINCIPAL DINÁMICO (Margen superior adaptado a la nueva cabecera) -->
+        <!-- CONTENIDO PRINCIPAL DINÁMICO -->
         <main class="flex-1 overflow-y-auto no-scrollbar px-6 pt-20 pb-28 flex flex-col">
             
             <!-- VISTA 1: INICIO -->
             <div id="view-home" class="flex-1 flex flex-col justify-center space-y-5 my-auto w-full">
                 
-                <!-- Tarjeta Principal: Recibe tu pago / Mostrar código QR -->
+                <!-- Tarjeta Principal: Recibe tu pago -->
                 <section class="glass-dark p-6 rounded-[32px] text-white flex flex-col justify-between space-y-5 relative overflow-hidden shadow-xl">
                     <div class="absolute -right-10 -top-10 w-36 h-36 bg-gradient-to-br from-neutral-700/30 to-transparent rounded-full blur-2xl pointer-events-none"></div>
                     
@@ -87,7 +87,7 @@
                         </div>
                     </div>
 
-                    <button onclick="openModal('Código QR Personal')" class="w-full py-3.5 bg-white text-black font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-100 active:scale-[0.98] relative z-10 shadow-lg flex items-center justify-center space-x-2">
+                    <button onclick="openPersonalQR()" class="w-full py-3.5 bg-white text-black font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-100 active:scale-[0.98] relative z-10 shadow-lg flex items-center justify-center space-x-2">
                         <i data-lucide="qr-code" class="w-4 h-4"></i>
                         <span>Mostrar código QR</span>
                     </button>
@@ -181,7 +181,7 @@
                 </div>
             </div>
 
-            <!-- VISTA 3: QR -->
+            <!-- VISTA 3: QR (Cámara) -->
             <div id="view-scan" class="space-y-6 hidden text-center py-16 my-auto w-full">
                 <div class="w-16 h-16 rounded-[28px] bg-black text-white flex items-center justify-center mx-auto shadow-xl">
                     <i data-lucide="scan" class="w-8 h-8"></i>
@@ -195,30 +195,10 @@
                 </button>
             </div>
 
-            <!-- VISTA 4: PERFIL -->
+            <!-- VISTA 4: PERFIL (Dinámica según estado de sesión) -->
             <div id="view-profile" class="space-y-5 hidden w-full pt-4">
-                <div class="flex items-center space-x-4 p-5 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 shadow-sm">
-                    <div class="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center font-bold text-xs shadow-md shrink-0">
-                        DR
-                    </div>
-                    <div class="overflow-hidden">
-                        <h2 class="text-xs font-bold text-black truncate">Daniel Retuerto</h2>
-                        <p class="text-[10px] text-neutral-500 truncate">Palencia, España</p>
-                    </div>
-                </div>
-
-                <div class="space-y-2">
-                    <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Configuración</span>
-                    <div class="bg-neutral-50/80 border border-neutral-200/60 rounded-[32px] overflow-hidden shadow-sm">
-                        <button onclick="openModal('Métodos de Pago')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
-                            <span class="text-xs font-bold text-black">Métodos de pago seguros</span>
-                            <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
-                        </button>
-                        <button onclick="openModal('Mis Reservas')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition">
-                            <span class="text-xs font-bold text-black">Mis reservas y tickets</span>
-                            <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
-                        </button>
-                    </div>
+                <div id="profileContentContainer">
+                    <!-- Se inyecta por JS dependiendo de si hay usuario o no -->
                 </div>
             </div>
 
@@ -244,21 +224,15 @@
             </button>
         </nav>
 
-        <!-- VENTANA MODAL DINÁMICA -->
+        <!-- VENTANA MODAL DINÁMICA UNIVERSAL -->
         <div id="customModal" class="absolute inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
             <div class="bg-white w-full max-w-md rounded-[36px] p-6 text-center space-y-4 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100 overflow-hidden" id="modalContent">
                 
                 <div id="modalBody" class="space-y-4">
-                    <div class="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto text-black">
-                        <i data-lucide="clock" class="w-6 h-6"></i>
-                    </div>
-                    <div class="space-y-1">
-                        <h3 id="modalTitle" class="text-sm font-bold text-black">Próximamente</h3>
-                        <p id="modalText" class="text-xs text-neutral-500">Este módulo avanzado de NetWish estará disponible muy pronto.</p>
-                    </div>
+                    <!-- Contenido dinámico -->
                 </div>
 
-                <button onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-medium rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 active:scale-[0.98]">
+                <button id="modalCloseBtn" onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-medium rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 active:scale-[0.98]">
                     Cerrar / Entendido
                 </button>
             </div>
@@ -266,10 +240,192 @@
 
     </div>
 
-    <!-- SCRIPT DE LÓGICA E INTERACCIÓN -->
+    <!-- SCRIPT DE LÓGICA, ESTADO DE SESIÓN Y UI DINÁMICA -->
     <script>
         lucide.createIcons();
 
+        // Estado global de sesión simulado en localStorage
+        let currentUser = JSON.parse(localStorage.getItem('netwish_user')) || null;
+
+        // Inicializar interfaz al cargar
+        document.addEventListener('DOMContentLoaded', () => {
+            updateHeaderAvatar();
+            renderProfileView();
+        });
+
+        // Actualizar el avatar superior derecho
+        function updateHeaderAvatar() {
+            const avatarBtn = document.getElementById('headerAvatar');
+            if (currentUser) {
+                avatarBtn.innerText = currentUser.initials;
+                avatarBtn.className = "w-9 h-9 rounded-2xl bg-black text-white border border-neutral-800 flex items-center justify-center text-xs font-bold shadow-md transition hover:scale-105 active:scale-95";
+            } else {
+                avatarBtn.innerText = "IN";
+                avatarBtn.className = "w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner transition hover:scale-105 active:scale-95";
+            }
+        }
+
+        // Click en el avatar superior
+        function handleHeaderProfileClick() {
+            if (currentUser) {
+                switchTab('profile');
+            } else {
+                openAuthModal();
+            }
+        }
+
+        // Renderizar la vista de Perfil según el estado
+        function renderProfileView() {
+            const container = document.getElementById('profileContentContainer');
+            if (currentUser) {
+                container.innerHTML = `
+                    <div class="flex items-center space-x-4 p-5 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 shadow-sm">
+                        <div class="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center font-bold text-xs shadow-md shrink-0">
+                            ${currentUser.initials}
+                        </div>
+                        <div class="overflow-hidden text-left">
+                            <h2 class="text-xs font-bold text-black truncate">${currentUser.name}</h2>
+                            <p class="text-[10px] text-neutral-500 truncate">${currentUser.email}</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 pt-2">
+                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Configuración</span>
+                        <div class="bg-neutral-50/80 border border-neutral-200/60 rounded-[32px] overflow-hidden shadow-sm">
+                            <button onclick="openModal('Métodos de Pago')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
+                                <span class="text-xs font-bold text-black">Métodos de pago seguros</span>
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
+                            </button>
+                            <button onclick="openModal('Mis Reservas')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
+                                <span class="text-xs font-bold text-black">Mis reservas y tickets</span>
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
+                            </button>
+                            <button onclick="logoutUser()" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-rose-50/60 transition text-rose-600">
+                                <span class="text-xs font-bold">Cerrar sesión</span>
+                                <i data-lucide="log-out" class="w-4 h-4 shrink-0"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="p-8 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 text-center space-y-4 shadow-sm">
+                        <div class="w-14 h-14 rounded-2xl bg-black text-white flex items-center justify-center mx-auto shadow-md">
+                            <i data-lucide="user" class="w-6 h-6"></i>
+                        </div>
+                        <div class="space-y-1">
+                            <h2 class="text-sm font-bold text-black">Inicia sesión en NetWish</h2>
+                            <p class="text-xs text-neutral-500">Accede a tus métodos de pago, reservas y genera tu código QR personal.</p>
+                        </div>
+                        <button onclick="openAuthModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md">
+                            Iniciar Sesión / Registrarse
+                        </button>
+                    </div>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        // Abrir Modal de Autenticación
+        function openAuthModal() {
+            const modal = document.getElementById('customModal');
+            const modalContent = document.getElementById('modalContent');
+            const modalBody = document.getElementById('modalBody');
+            
+            modalBody.innerHTML = `
+                <div class="space-y-3 text-left">
+                    <div class="text-center space-y-1">
+                        <h3 class="text-base font-bold text-black">Bienvenido a NetWish</h3>
+                        <p class="text-xs text-neutral-500">Introduce tus datos para acceder a tu perfil urbano.</p>
+                    </div>
+                    <div class="space-y-2 pt-2">
+                        <label class="text-[10px] font-mono uppercase text-neutral-400 block">Nombre Completo</label>
+                        <input type="text" id="authName" placeholder="Ej. Daniel Retuerto" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-3 px-4 text-xs text-black focus:outline-none focus:border-black">
+                        
+                        <label class="text-[10px] font-mono uppercase text-neutral-400 block">Correo Electrónico</label>
+                        <input type="email" id="authEmail" placeholder="correo@ejemplo.com" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-3 px-4 text-xs text-black focus:outline-none focus:border-black">
+                    </div>
+                    <button onclick="submitAuth()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md mt-2">
+                        Continuar
+                    </button>
+                </div>
+            `;
+            lucide.createIcons();
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
+        }
+
+        // Procesar Registro / Login simulado
+        function submitAuth() {
+            const nameInput = document.getElementById('authName').value.trim();
+            const emailInput = document.getElementById('authEmail').value.trim();
+
+            if (!nameInput || !emailInput) {
+                alert("Por favor, rellena todos los campos.");
+                return;
+            }
+
+            // Calcular iniciales automáticamente (ej. "Daniel Retuerto" -> "DR")
+            const initials = nameInput.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+
+            currentUser = {
+                name: nameInput,
+                email: emailInput,
+                initials: initials
+            };
+
+            localStorage.setItem('netwish_user', JSON.stringify(currentUser));
+            closeModal();
+            updateHeaderAvatar();
+            renderProfileView();
+        }
+
+        // Cerrar sesión
+        function logoutUser() {
+            localStorage.removeItem('netwish_user');
+            currentUser = null;
+            updateHeaderAvatar();
+            renderProfileView();
+        }
+
+        // Mostrar QR Personal en la tarjeta de inicio
+        function openPersonalQR() {
+            if (!currentUser) {
+                openAuthModal();
+                return;
+            }
+
+            const modal = document.getElementById('customModal');
+            const modalContent = document.getElementById('modalContent');
+            const modalBody = document.getElementById('modalBody');
+
+            modalBody.innerHTML = `
+                <div class="space-y-3 text-center">
+                    <h3 class="text-base font-bold text-black">Tu Código QR Personal</h3>
+                    <p class="text-xs text-neutral-500">Muestra este código para recibir pagos o identificarte en Palencia.</p>
+                    <div class="w-48 h-48 bg-neutral-100 border-2 border-neutral-200 rounded-3xl mx-auto flex items-center justify-center p-4 relative">
+                        <i data-lucide="qr-code" class="w-32 h-32 text-black"></i>
+                    </div>
+                    <div class="p-3 bg-neutral-50 rounded-2xl border border-neutral-200/60">
+                        <span class="block text-xs font-bold text-black">${currentUser.name}</span>
+                        <span class="block text-[10px] text-neutral-400 font-mono">ID: NW-${currentUser.initials}-2026</span>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
+        }
+
+        // Funciones generales de modales y cámara
         const modal = document.getElementById('customModal');
         const modalContent = document.getElementById('modalContent');
         const modalBody = document.getElementById('modalBody');
@@ -277,7 +433,6 @@
 
         function openModal(sectionName) {
             stopCamera();
-            
             modalBody.innerHTML = `
                 <div class="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto text-black">
                     <i data-lucide="clock" class="w-6 h-6"></i>
@@ -296,7 +451,6 @@
             }, 10);
         }
 
-        // Función exclusiva de la pestaña QR / Activar Cámara
         async function startCameraModal() {
             modalBody.innerHTML = `
                 <div class="space-y-3">
@@ -355,6 +509,11 @@
             document.getElementById('view-profile').classList.add('hidden');
 
             document.getElementById('view-' + tabId).classList.remove('hidden');
+
+            // Si cambiamos a perfil, actualizamos sus datos en caliente
+            if (tabId === 'profile') {
+                renderProfileView();
+            }
 
             document.getElementById('nav-home').className = "flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group";
             document.getElementById('nav-explore').className = "flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group";
