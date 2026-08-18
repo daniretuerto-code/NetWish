@@ -244,11 +244,11 @@
             </button>
         </nav>
 
-        <!-- VENTANA MODAL DINÁMICA (Soporta Avisos y Cámara en Vivo) -->
-        <div id="customModal" class="absolute inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-6 hidden opacity-0 transition-opacity duration-300">
-            <div class="bg-white w-full max-w-xs rounded-[36px] p-6 text-center space-y-4 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100 overflow-hidden" id="modalContent">
+        <!-- VENTANA MODAL DINÁMICA (Ampliadísima y con mayor espacio para la cámara) -->
+        <div id="customModal" class="absolute inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+            <div class="bg-white w-full max-w-md rounded-[36px] p-6 text-center space-y-4 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100 overflow-hidden" id="modalContent">
                 
-                <!-- Contenedor dinámico de contenido (Texto o Cámara) -->
+                <!-- Contenedor dinámico de contenido -->
                 <div id="modalBody" class="space-y-4">
                     <div class="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto text-black">
                         <i data-lucide="clock" class="w-6 h-6"></i>
@@ -278,15 +278,13 @@
 
         function openModal(sectionName) {
             stopCamera();
-            document.getElementById('modalTitle').innerText = sectionName + " — Próximamente";
-            document.getElementById('modalText').innerText = "Este módulo avanzado de NetWish estará disponible muy pronto.";
             
             modalBody.innerHTML = `
                 <div class="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto text-black">
                     <i data-lucide="clock" class="w-6 h-6"></i>
                 </div>
                 <div class="space-y-1">
-                    <h3 id="modalTitle" class="text-sm font-bold text-black">${sectionName} — Próximamente</h3>
+                    <h3 class="text-base font-bold text-black">${sectionName} — Próximamente</h3>
                     <p class="text-xs text-neutral-500">Este módulo avanzado de NetWish estará disponible muy pronto.</p>
                 </div>
             `;
@@ -299,18 +297,18 @@
             }, 10);
         }
 
-        // Función para activar y mostrar la cámara real en el modal
+        // Función para activar y mostrar la cámara real con tamaño ampliado en el modal
         async function startCameraModal() {
             modalBody.innerHTML = `
-                <div class="space-y-2">
-                    <h3 class="text-sm font-bold text-black">Escaneando Código QR</h3>
-                    <div class="w-full h-64 bg-black rounded-2xl overflow-hidden relative flex items-center justify-center">
+                <div class="space-y-3">
+                    <h3 class="text-base font-bold text-black">Escaneando Código QR</h3>
+                    <div class="w-full h-80 bg-black rounded-2xl overflow-hidden relative flex items-center justify-center shadow-inner">
                         <video id="cameraPreview" autoplay playsinline class="w-full h-full object-cover"></video>
                         <div class="absolute inset-0 border-2 border-white/30 m-6 rounded-xl pointer-events-none flex items-center justify-center">
-                            <div class="w-32 h-32 border-2 border-white rounded-lg animate-pulse"></div>
+                            <div class="w-36 h-36 border-2 border-white rounded-xl animate-pulse"></div>
                         </div>
                     </div>
-                    <p class="text-[10px] text-neutral-400">Apunta el código QR del comercio o mesa.</p>
+                    <p class="text-xs text-neutral-400">Apunta el código QR del comercio o mesa.</p>
                 </div>
             `;
 
