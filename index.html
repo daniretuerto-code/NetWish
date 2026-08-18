@@ -40,14 +40,13 @@
             padding: 0;
             width: 100vw;
             height: 100dvh;
-            overflow: hidden; /* Bloquea el scroll general de la página */
+            overflow: hidden;
             position: fixed;
-            touch-action: none; /* Bloquea gestos elásticos en todo el fondo */
+            touch-action: none;
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Permitir scroll exclusivamente dentro del modal y vistas internas */
         .allow-scroll {
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
@@ -235,24 +234,21 @@
             </button>
         </nav>
 
-        <!-- VENTANA MODAL DINÁMICA CON SCROLL BLOQUEADO FUERA -->
-        <div id="customModal" class="absolute inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-3 hidden opacity-0 transition-opacity duration-300">
-            <div class="bg-white w-full max-w-md max-h-[85vh] rounded-[36px] p-6 text-center space-y-4 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100 flex flex-col overflow-hidden" id="modalContent">
+        <!-- VENTANA MODAL DINÁMICA COMPACTA Y FIJA -->
+        <div id="customModal" class="absolute inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+            <div class="bg-white w-full max-w-[340px] rounded-[32px] p-4 text-center space-y-2.5 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100 flex flex-col overflow-hidden" id="modalContent">
                 
-                <!-- Contenido con scroll interno fluido y bloqueo de rebote -->
-                <div id="modalBody" class="allow-scroll space-y-4 flex-1 text-left pb-4">
+                <!-- Contenido compacto sin scroll vertical -->
+                <div id="modalBody" class="space-y-2 text-left">
                     <!-- Contenido dinámico -->
                 </div>
 
-                <button id="modalCloseBtn" onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-medium rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 active:scale-[0.98] shrink-0 mt-2">
-                    Cerrar / Entendido
-                </button>
             </div>
         </div>
 
     </div>
 
-    <!-- SCRIPT DE CONEXIÓN CON SUPABASE -->
+    <!-- SCRIPT DE CONEXIÓN CON SUPABASE Y LÓGICA COMPACTA -->
     <script>
         lucide.createIcons();
 
@@ -354,94 +350,91 @@
 
         function renderAuthForm(mode) {
             const modalBody = document.getElementById('modalBody');
-            const closeBtn = document.getElementById('modalCloseBtn');
-            closeBtn.style.display = 'none';
-
             const isLogin = mode === 'login';
 
             modalBody.innerHTML = `
-                <div class="space-y-4 text-left">
-                    <div class="text-center space-y-1">
-                        <h3 class="text-base font-bold text-black">${isLogin ? 'Iniciar Sesión' : 'Crear una cuenta'}</h3>
-                        <p class="text-xs text-neutral-500">${isLogin ? 'Introduce tus credenciales.' : 'Rellene sus datos personales.'}</p>
+                <div class="space-y-2.5 text-left">
+                    <div class="text-center space-y-0.5">
+                        <h3 class="text-sm font-bold text-black">${isLogin ? 'Iniciar Sesión' : 'Crear una cuenta'}</h3>
+                        <p class="text-[10px] text-neutral-500">${isLogin ? 'Introduce tus credenciales.' : 'Rellene sus datos personales.'}</p>
                     </div>
-                    <div class="space-y-3 pt-2">
+                    
+                    <div class="space-y-2 pt-1">
                         ${!isLogin ? `
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Nombre</label>
-                                <input type="text" id="authName" placeholder="Daniel" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                                <label class="text-[8px] font-mono uppercase text-neutral-400 block mb-0.5">Nombre</label>
+                                <input type="text" id="authName" placeholder="Daniel" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-1.5 px-2.5 text-[11px] text-black focus:outline-none focus:border-black">
                             </div>
                             <div>
-                                <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Apellidos</label>
-                                <input type="text" id="authSurname" placeholder="Retuerto" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                                <label class="text-[8px] font-mono uppercase text-neutral-400 block mb-0.5">Apellidos</label>
+                                <input type="text" id="authSurname" placeholder="Retuerto" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-1.5 px-2.5 text-[11px] text-black focus:outline-none focus:border-black">
                             </div>
                         </div>
                         <div>
-                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Fecha de Nacimiento</label>
-                            <input type="date" id="authDob" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                            <label class="text-[8px] font-mono uppercase text-neutral-400 block mb-0.5">Fecha de Nacimiento</label>
+                            <input type="date" id="authDob" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-1.5 px-2.5 text-[11px] text-black focus:outline-none focus:border-black">
                         </div>
                         ` : ''}
 
                         <div>
-                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Correo Electrónico</label>
-                            <input type="email" id="authEmail" placeholder="correo@ejemplo.com" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                            <label class="text-[8px] font-mono uppercase text-neutral-400 block mb-0.5">Correo Electrónico</label>
+                            <input type="email" id="authEmail" placeholder="correo@ejemplo.com" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-1.5 px-2.5 text-[11px] text-black focus:outline-none focus:border-black">
                         </div>
 
                         ${!isLogin ? `
                         <div>
-                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Repetir Correo Electrónico</label>
-                            <input type="email" id="authEmailConfirm" placeholder="correo@ejemplo.com" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                            <label class="text-[8px] font-mono uppercase text-neutral-400 block mb-0.5">Repetir Correo</label>
+                            <input type="email" id="authEmailConfirm" placeholder="correo@ejemplo.com" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-1.5 px-2.5 text-[11px] text-black focus:outline-none focus:border-black">
                         </div>
                         ` : ''}
 
                         <div>
-                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Contraseña</label>
-                            <input type="password" id="authPass" ${!isLogin ? 'oninput="checkPasswordStrength()"' : ''} placeholder="Más de 6 caracteres" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                            <label class="text-[8px] font-mono uppercase text-neutral-400 block mb-0.5">Contraseña</label>
+                            <input type="password" id="authPass" ${!isLogin ? 'oninput="checkPasswordStrength()"' : ''} placeholder="> 6 caracteres" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-1.5 px-2.5 text-[11px] text-black focus:outline-none focus:border-black">
                         </div>
 
                         ${!isLogin ? `
-                        <!-- CHECKLIST DE SEGURIDAD EN TIEMPO REAL -->
-                        <div id="passwordChecklist" class="bg-neutral-50 p-3 rounded-2xl border border-neutral-200/80 space-y-1.5">
-                            <p class="text-[10px] font-mono uppercase text-neutral-500 mb-1">Requisitos de contraseña:</p>
-                            <div id="req-length" class="flex items-center space-x-2 text-[11px] text-neutral-400">
-                                <span class="w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center text-[9px] text-white font-bold transition-colors" id="icon-length">○</span>
-                                <span>Más de 6 caracteres (>6)</span>
+                        <!-- CHECKLIST COMPACTO -->
+                        <div id="passwordChecklist" class="bg-neutral-50 p-2 rounded-xl border border-neutral-200/80 grid grid-cols-2 gap-1">
+                            <div id="req-length" class="flex items-center space-x-1 text-[9px] text-neutral-400">
+                                <span class="w-3 h-3 rounded-full bg-neutral-200 flex items-center justify-center text-[7px] text-white font-bold" id="icon-length">○</span>
+                                <span>> 6 caracteres</span>
                             </div>
-                            <div id="req-number" class="flex items-center space-x-2 text-[11px] text-neutral-400">
-                                <span class="w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center text-[9px] text-white font-bold transition-colors" id="icon-number">○</span>
-                                <span>Al menos un número</span>
+                            <div id="req-number" class="flex items-center space-x-1 text-[9px] text-neutral-400">
+                                <span class="w-3 h-3 rounded-full bg-neutral-200 flex items-center justify-center text-[7px] text-white font-bold" id="icon-number">○</span>
+                                <span>1 número</span>
                             </div>
-                            <div id="req-upper" class="flex items-center space-x-2 text-[11px] text-neutral-400">
-                                <span class="w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center text-[9px] text-white font-bold transition-colors" id="icon-upper">○</span>
-                                <span>Al menos una letra mayúscula</span>
+                            <div id="req-upper" class="flex items-center space-x-1 text-[9px] text-neutral-400">
+                                <span class="w-3 h-3 rounded-full bg-neutral-200 flex items-center justify-center text-[7px] text-white font-bold" id="icon-upper">○</span>
+                                <span>1 mayúscula</span>
                             </div>
-                            <div id="req-special" class="flex items-center space-x-2 text-[11px] text-neutral-400">
-                                <span class="w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center text-[9px] text-white font-bold transition-colors" id="icon-special">○</span>
-                                <span>Al menos un carácter especial</span>
+                            <div id="req-special" class="flex items-center space-x-1 text-[9px] text-neutral-400">
+                                <span class="w-3 h-3 rounded-full bg-neutral-200 flex items-center justify-center text-[7px] text-white font-bold" id="icon-special">○</span>
+                                <span>1 especial</span>
                             </div>
                         </div>
 
                         <div>
-                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Repetir Contraseña</label>
-                            <input type="password" id="authPassConfirm" placeholder="Repita contraseña" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                            <label class="text-[8px] font-mono uppercase text-neutral-400 block mb-0.5">Repetir Contraseña</label>
+                            <input type="password" id="authPassConfirm" placeholder="Repita contraseña" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-1.5 px-2.5 text-[11px] text-black focus:outline-none focus:border-black">
                         </div>
                         ` : ''}
                     </div>
 
-                    <button onclick="processAuthAction('${mode}')" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md mt-2">
-                        ${isLogin ? 'Entrar a mi Cuenta' : 'Completar Registro'}
+                    <button onclick="processAuthAction('${mode}')" class="w-full py-2.5 bg-black text-white font-semibold rounded-xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md mt-1">
+                        ${isLogin ? 'Entrar' : 'Completar Registro'}
                     </button>
                     
-                    <div class="text-center pt-2">
+                    <div class="text-center pt-1">
                         ${isLogin ? `
-                            <p class="text-xs text-neutral-500">¿No tienes cuenta? <button onclick="renderAuthForm('register')" class="text-black font-bold underline hover:text-neutral-700">Regístrate aquí</button></p>
+                            <p class="text-[10px] text-neutral-500">¿No tienes cuenta? <button onclick="renderAuthForm('register')" class="text-black font-bold underline hover:text-neutral-700">Regístrate</button></p>
                         ` : `
-                            <p class="text-xs text-neutral-500">¿Ya tienes cuenta? <button onclick="renderAuthForm('login')" class="text-black font-bold underline hover:text-neutral-700">Inicia sesión</button></p>
+                            <p class="text-[10px] text-neutral-500">¿Ya tienes cuenta? <button onclick="renderAuthForm('login')" class="text-black font-bold underline hover:text-neutral-700">Inicia sesión</button></p>
                         `}
                     </div>
 
-                    <button onclick="closeModal()" class="w-full py-1 text-neutral-400 font-medium text-xs transition hover:text-black">
+                    <button onclick="closeModal()" class="w-full py-0.5 text-neutral-400 font-medium text-[10px] transition hover:text-black">
                         Cancelar
                     </button>
                 </div>
@@ -468,12 +461,12 @@
             if (!item || !icon) return;
 
             if (isValid) {
-                item.className = "flex items-center space-x-2 text-[11px] text-emerald-600 font-medium";
-                icon.className = "w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center text-[10px] text-white font-bold transition-colors";
+                item.className = "flex items-center space-x-1 text-[9px] text-emerald-600 font-medium";
+                icon.className = "w-3 h-3 rounded-full bg-emerald-500 flex items-center justify-center text-[7px] text-white font-bold transition-colors";
                 icon.innerText = "✓";
             } else {
-                item.className = "flex items-center space-x-2 text-[11px] text-neutral-400";
-                icon.className = "w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center text-[9px] text-white font-bold transition-colors";
+                item.className = "flex items-center space-x-1 text-[9px] text-neutral-400";
+                icon.className = "w-3 h-3 rounded-full bg-neutral-200 flex items-center justify-center text-[7px] text-white font-bold transition-colors";
                 icon.innerText = "○";
             }
         }
@@ -579,20 +572,18 @@
             const modal = document.getElementById('customModal');
             const modalContent = document.getElementById('modalContent');
             const modalBody = document.getElementById('modalBody');
-            const closeBtn = document.getElementById('modalCloseBtn');
-            
-            closeBtn.style.display = 'block';
             const meta = currentUser.user_metadata || {};
 
             modalBody.innerHTML = `
-                <div class="space-y-3 text-center">
-                    <h3 class="text-base font-bold text-black">Tu Código QR Personal</h3>
-                    <p class="text-xs text-neutral-500">Muestra este código seguro para recibir pagos en Palencia.</p>
-                    <div id="realQRCodeContainer" class="w-48 h-48 bg-white border-2 border-neutral-200 rounded-3xl mx-auto flex items-center justify-center p-3 relative shadow-sm"></div>
-                    <div class="p-3 bg-neutral-50 rounded-2xl border border-neutral-200/60">
+                <div class="space-y-2.5 text-center">
+                    <h3 class="text-sm font-bold text-black">Tu Código QR Personal</h3>
+                    <p class="text-[10px] text-neutral-500">Muestra este código seguro para recibir pagos en Palencia.</p>
+                    <div id="realQRCodeContainer" class="w-40 h-40 bg-white border-2 border-neutral-200 rounded-2xl mx-auto flex items-center justify-center p-2 relative shadow-sm"></div>
+                    <div class="p-2.5 bg-neutral-50 rounded-xl border border-neutral-200/60">
                         <span class="block text-xs font-bold text-black">${meta.name || ''} ${meta.surname || ''}</span>
-                        <span class="block text-[10px] text-neutral-400 font-mono">ID: NW-${meta.initials || 'USER'}-${currentUser.id.substring(0,6)}</span>
+                        <span class="block text-[9px] text-neutral-400 font-mono">ID: NW-${meta.initials || 'USER'}-${currentUser.id.substring(0,6)}</span>
                     </div>
+                    <button onclick="closeModal()" class="w-full py-2.5 bg-black text-white font-semibold rounded-xl text-xs tracking-wide">Cerrar</button>
                 </div>
             `;
             lucide.createIcons();
@@ -606,8 +597,8 @@
                 qrContainer.innerHTML = "";
                 new QRCode(qrContainer, {
                     text: `NETWISH_SECURE_PAY:${currentUser.id}:${currentUser.email}`,
-                    width: 160,
-                    height: 160,
+                    width: 140,
+                    height: 140,
                     colorDark: "#000000",
                     colorLight: "#ffffff",
                     correctLevel: QRCode.CorrectLevel.H
@@ -622,14 +613,16 @@
 
         function openModal(sectionName) {
             stopCamera();
-            document.getElementById('modalCloseBtn').style.display = 'block';
             modalBody.innerHTML = `
-                <div class="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto text-black">
-                    <i data-lucide="clock" class="w-6 h-6"></i>
-                </div>
-                <div class="space-y-1">
-                    <h3 class="text-base font-bold text-black">${sectionName} — Próximamente</h3>
-                    <p class="text-xs text-neutral-500">Este módulo avanzado de NetWish estará disponible muy pronto.</p>
+                <div class="space-y-3 text-center py-4">
+                    <div class="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto text-black">
+                        <i data-lucide="clock" class="w-6 h-6"></i>
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="text-sm font-bold text-black">${sectionName} — Próximamente</h3>
+                        <p class="text-[11px] text-neutral-500">Este módulo avanzado de NetWish estará disponible muy pronto.</p>
+                    </div>
+                    <button onclick="closeModal()" class="w-full py-2.5 bg-black text-white font-semibold rounded-xl text-xs">Entendido</button>
                 </div>
             `;
             lucide.createIcons();
@@ -642,17 +635,16 @@
         }
 
         async function startCameraModal() {
-            document.getElementById('modalCloseBtn').style.display = 'block';
             modalBody.innerHTML = `
-                <div class="space-y-3">
-                    <h3 class="text-base font-bold text-black">Escaneando Código QR</h3>
-                    <div class="w-full h-80 bg-black rounded-2xl overflow-hidden relative flex items-center justify-center shadow-inner">
+                <div class="space-y-2.5 text-center">
+                    <h3 class="text-sm font-bold text-black">Escaneando Código QR</h3>
+                    <div class="w-full h-64 bg-black rounded-2xl overflow-hidden relative flex items-center justify-center shadow-inner">
                         <video id="cameraPreview" autoplay playsinline class="w-full h-full object-cover"></video>
-                        <div class="absolute inset-0 border-2 border-white/30 m-6 rounded-xl pointer-events-none flex items-center justify-center">
-                            <div class="w-36 h-36 border-2 border-white rounded-xl animate-pulse"></div>
+                        <div class="absolute inset-0 border-2 border-white/30 m-4 rounded-xl pointer-events-none flex items-center justify-center">
+                            <div class="w-28 h-28 border-2 border-white rounded-xl animate-pulse"></div>
                         </div>
                     </div>
-                    <p class="text-xs text-neutral-400">Apunta el código QR del comercio o mesa.</p>
+                    <button onclick="closeModal()" class="w-full py-2 bg-black text-white font-semibold rounded-xl text-xs">Cerrar Cámara</button>
                 </div>
             `;
 
@@ -672,7 +664,7 @@
                 }
             } catch (error) {
                 console.error("Error al acceder a la cámara:", error);
-                alert("No se pudo acceder a la cámara. Asegúrate de dar permisos en tu navegador.");
+                alert("No se pudo acceder a la cámara.");
                 closeModal();
             }
         }
