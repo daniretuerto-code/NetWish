@@ -245,7 +245,6 @@
     <script>
         lucide.createIcons();
 
-        // Estado global de sesión y base de datos local de usuarios registrados
         let currentUser = JSON.parse(localStorage.getItem('netwish_session')) || null;
         let registeredUsers = JSON.parse(localStorage.getItem('netwish_db_users')) || [];
 
@@ -310,48 +309,56 @@
                         </div>
                         <div class="space-y-1">
                             <h2 class="text-sm font-bold text-black">Inicia sesión en NetWish</h2>
-                            <p class="text-xs text-neutral-500">Accede con tus datos reales para generar tu identidad y códigos QR urbanos.</p>
+                            <p class="text-xs text-neutral-500">Accede a tu cuenta o regístrate para gestionar tus pagos y códigos QR urbanos.</p>
                         </div>
-                        <button onclick="openAuthModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md">
-                            Iniciar Sesión / Registrarse
-                        </button>
+                        <div class="space-y-2 pt-2">
+                            <button onclick="openAuthModal('login')" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md">
+                                Iniciar Sesión
+                            </button>
+                            <button onclick="openAuthModal('register')" class="w-full py-3.5 bg-neutral-100 text-black font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-200 border border-neutral-200">
+                                Registrarse
+                            </button>
+                        </div>
                     </div>
                 `;
             }
             lucide.createIcons();
         }
 
-        // Modal con validación estricta y control de base de datos local
-        function openAuthModal() {
+        // Modal que diferencia de forma real entre Login y Registro
+        function openAuthModal(mode) {
             const modal = document.getElementById('customModal');
             const modalContent = document.getElementById('modalContent');
             const modalBody = document.getElementById('modalBody');
             const closeBtn = document.getElementById('modalCloseBtn');
             
             closeBtn.style.display = 'none';
+            const isLogin = mode === 'login';
 
             modalBody.innerHTML = `
                 <div class="space-y-4 text-left">
                     <div class="text-center space-y-1">
-                        <h3 class="text-base font-bold text-black">Autenticación NetWish</h3>
-                        <p class="text-xs text-neutral-500">Introduce tus datos reales de usuario.</p>
+                        <h3 class="text-base font-bold text-black">${isLogin ? 'Iniciar Sesión en NetWish' : 'Crear Cuenta Nueva'}</h3>
+                        <p class="text-xs text-neutral-500">${isLogin ? 'Introduce tus credenciales registradas.' : 'Completa los datos para darte de alta.'}</p>
                     </div>
                     <div class="space-y-3 pt-2">
+                        ${!isLogin ? `
                         <div>
                             <label class="text-[10px] font-mono uppercase text-neutral-400 block mb-1">Nombre Completo</label>
                             <input type="text" id="authName" placeholder="Ej. Daniel Retuerto" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-3 px-4 text-xs text-black focus:outline-none focus:border-black">
                         </div>
+                        ` : ''}
                         <div>
                             <label class="text-[10px] font-mono uppercase text-neutral-400 block mb-1">Correo Electrónico</label>
                             <input type="email" id="authEmail" placeholder="correo@ejemplo.com" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-3 px-4 text-xs text-black focus:outline-none focus:border-black">
                         </div>
                         <div>
-                            <label class="text-[10px] font-mono uppercase text-neutral-400 block mb-1">Contraseña de Acceso</label>
+                            <label class="text-[10px] font-mono uppercase text-neutral-400 block mb-1">Contraseña</label>
                             <input type="password" id="authPass" placeholder="Mínimo 6 caracteres" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-3 px-4 text-xs text-black focus:outline-none focus:border-black">
                         </div>
                     </div>
-                    <button onclick="processRealAuth()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md mt-2">
-                        Validar e Ingresar
+                    <button onclick="processStrictAuth('${mode}')" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md mt-2">
+                        ${isLogin ? 'Entrar a mi Cuenta' : 'Registrarse Ahora'}
                     </button>
                     <button onclick="closeModal()" class="w-full py-2 text-neutral-400 font-medium text-xs transition hover:text-black">
                         Cancelar
@@ -367,41 +374,37 @@
             }, 10);
         }
 
-        // Lógica estricta de validación y base de datos simulada
-        function processRealAuth() {
-            const name = document.getElementById('authName').value.trim();
+        // Validación estricta con comprobación real de la base de datos local
+        function processStrictAuth(mode) {
             const email = document.getElementById('authEmail').value.trim();
             const pass = document.getElementById('authPass').value.trim();
+            const name = mode === 'register' ? document.getElementById('authName').value.trim() : '';
 
-            // Validaciones rigurosas
-            if (!name || !email || !pass) {
-                alert("Error: Todos los campos son obligatorios.");
-                return;
-            }
-
+            // Comprobaciones básicas de formato
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                alert("Error: Introduce un correo electrónico válido.");
+            if (!email || !emailRegex.test(email)) {
+                alert("Por favor, introduce un correo electrónico válido.");
+                return;
+            }
+            if (!pass || pass.length < 6) {
+                alert("La contraseña debe tener al menos 6 caracteres.");
                 return;
             }
 
-            if (pass.length < 6) {
-                alert("Error: La contraseña debe tener al menos 6 caracteres.");
-                return;
-            }
-
-            // Buscar si el usuario ya existe en nuestra base de datos local
-            let existingUser = registeredUsers.find(u => u.email === email);
-
-            if (existingUser) {
-                // Si existe, validamos contraseña
-                if (existingUser.pass !== pass) {
-                    alert("Error: Contraseña incorrecta para este correo.");
+            if (mode === 'register') {
+                if (!name) {
+                    alert("Por favor, introduce tu nombre completo.");
                     return;
                 }
-                currentUser = existingUser;
-            } else {
-                // Si no existe, lo registramos oficialmente en la "BD"
+                // Comprobar si el correo ya existe en la base de datos
+                let existingUser = registeredUsers.find(u => u.email === email);
+                if (existingUser) {
+                    alert("Este correo ya está registrado. Por favor, inicia sesión.");
+                    openAuthModal('login');
+                    return;
+                }
+
+                // Crear nuevo usuario real
                 const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
                 currentUser = {
                     name: name,
@@ -412,9 +415,24 @@
                 };
                 registeredUsers.push(currentUser);
                 localStorage.setItem('netwish_db_users', JSON.stringify(registeredUsers));
+                alert("¡Cuenta creada con éxito! Bienvenido a NetWish.");
+
+            } else {
+                // Modo Iniciar Sesión: comprobar que el usuario exista y la contraseña sea correcta
+                let foundUser = registeredUsers.find(u => u.email === email);
+                if (!foundUser) {
+                    alert("No existe ninguna cuenta registrada con este correo.");
+                    return;
+                }
+                if (foundUser.pass !== pass) {
+                    alert("Contraseña incorrecta. Comprueba tus datos.");
+                    return;
+                }
+                currentUser = foundUser;
+                alert("¡Sesión iniciada correctamente!");
             }
 
-            // Guardar sesión activa
+            // Guardar sesión activa y actualizar interfaz
             localStorage.setItem('netwish_session', JSON.stringify(currentUser));
             closeModal();
             updateHeaderAvatar();
@@ -432,7 +450,7 @@
 
         function openPersonalQR() {
             if (!currentUser) {
-                openAuthModal();
+                openAuthModal('login');
                 return;
             }
 
