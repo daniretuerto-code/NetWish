@@ -54,16 +54,16 @@
     <!-- Contenedor Principal App Shell (Simula app en desktop, pantalla completa en móvil) -->
     <div class="w-full h-[100dvh] sm:h-[844px] sm:max-w-[390px] sm:rounded-[40px] bg-white flex flex-col relative shadow-2xl overflow-hidden sm:border sm:border-neutral-300">
         
-        <!-- HEADER SUPERIOR FIJO -->
-        <header class="absolute top-0 left-0 right-0 px-6 pt-14 pb-4 border-b border-neutral-100 flex justify-between items-center bg-white/95 backdrop-blur-md z-30 shadow-sm">
-            <h1 class="text-2xl font-bold tracking-tight text-black font-serif italic">NetWish</h1>
-            <div class="w-9 h-9 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-xs font-semibold text-neutral-800 shadow-sm">
+        <!-- HEADER SUPERIOR FIJO (Reducido en altura para lograr simetría perfecta con la barra inferior) -->
+        <header class="absolute top-0 left-0 right-0 px-5 pt-10 pb-3 border-b border-neutral-100 flex justify-between items-center bg-white/95 backdrop-blur-md z-30 shadow-sm">
+            <h1 class="text-xl font-bold tracking-tight text-black font-serif italic">NetWish</h1>
+            <div class="w-8 h-8 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-[11px] font-semibold text-neutral-800 shadow-sm">
                 DR
             </div>
         </header>
 
-        <!-- CONTENIDO PRINCIPAL DINÁMICO (Vistas con scroll natural) -->
-        <main class="flex-1 overflow-y-auto no-scrollbar px-6 pt-28 pb-28 space-y-6">
+        <!-- CONTENIDO PRINCIPAL DINÁMICO (Vistas con scroll natural y espacio ajustado al nuevo header) -->
+        <main class="flex-1 overflow-y-auto no-scrollbar px-5 pt-24 pb-28 space-y-6">
             
             <!-- VISTA 1: INICIO -->
             <div id="view-home" class="space-y-6">
