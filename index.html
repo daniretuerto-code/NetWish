@@ -27,7 +27,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Librería QRCode.js para generar -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <!-- Librería jsQR universal para lectura por software en cualquier navegador -->
+    <!-- Librería jsQR universal para lectura -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <!-- Supabase JS SDK Real -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -214,6 +214,55 @@
                 </div>
             </div>
 
+            <!-- VISTA 5: PAGO DEDICADO A PANTALLA COMPLETA -->
+            <div id="view-payment" class="space-y-4 hidden w-full pt-2 text-center">
+                <div class="flex items-center justify-between">
+                    <button onclick="switchTab('home')" class="w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200 flex items-center justify-center text-black hover:bg-neutral-200 transition">
+                        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    </button>
+                    <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Pasarela Segura</span>
+                    <div class="w-9"></div>
+                </div>
+
+                <div class="space-y-1 pt-2">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-500/20 mb-2">
+                        <i data-lucide="user-check" class="w-6 h-6"></i>
+                    </div>
+                    <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 block">Conectado con</span>
+                    <h2 id="payeeNameDisplay" class="text-base font-bold text-black">Nombre Destinatario</h2>
+                </div>
+
+                <!-- Cifra grande con formato chulo -->
+                <div class="py-3">
+                    <div class="flex items-center justify-center space-x-1">
+                        <span class="text-3xl font-light text-neutral-400">€</span>
+                        <span id="payAmountDisplay" class="text-4xl font-extrabold tracking-tight text-black">0,00</span>
+                    </div>
+                </div>
+
+                <!-- Teclado Numérico Estilo TPV / POS -->
+                <div class="grid grid-cols-3 gap-2.5 pt-2 max-w-[280px] mx-auto">
+                    <button onclick="appendNum('1')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">1</button>
+                    <button onclick="appendNum('2')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">2</button>
+                    <button onclick="appendNum('3')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">3</button>
+                    <button onclick="appendNum('4')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">4</button>
+                    <button onclick="appendNum('5')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">5</button>
+                    <button onclick="appendNum('6')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">6</button>
+                    <button onclick="appendNum('7')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">7</button>
+                    <button onclick="appendNum('8')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">8</button>
+                    <button onclick="appendNum('9')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">9</button>
+                    <button onclick="appendNum('00')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">00</button>
+                    <button onclick="appendNum('0')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-black transition active:scale-95">0</button>
+                    <button onclick="clearNum()" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-base font-bold text-rose-600 transition active:scale-95 flex items-center justify-center">
+                        <i data-lucide="delete" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <button onclick="executeFullPayment()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md mt-2">
+                    Enviar Pago Seguro
+                </button>
+            </div>
+
         </main>
 
         <!-- BARRA DE NAVEGACIÓN INFERIOR -->
@@ -236,7 +285,7 @@
             </button>
         </nav>
 
-        <!-- VENTANA MODAL DINÁMICA -->
+        <!-- VENTANA MODAL DINÁMICA (Para QR y otros menús) -->
         <div id="customModal" class="absolute inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
             <div class="bg-white w-full max-w-[380px] rounded-[36px] p-6 text-center space-y-3.5 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100 flex flex-col overflow-hidden" id="modalContent">
                 
@@ -249,7 +298,7 @@
 
     </div>
 
-    <!-- SCRIPT DE LÓGICA Y LECTOR UNIVERSAL jsQR -->
+    <!-- SCRIPT DE LÓGICA Y TECLADO NUMÉRICO TÁCTIL -->
     <script>
         lucide.createIcons();
 
@@ -260,6 +309,10 @@
         let currentUser = null;
         let currentStream = null;
         let scanningInterval = null;
+
+        // Variables de estado de pago
+        let activePayee = "";
+        let rawAmountString = "000"; // Formato en céntimos para el teclado TPV
 
         document.addEventListener('DOMContentLoaded', async () => {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -697,6 +750,7 @@
                     if (code) {
                         clearInterval(scanningInterval);
                         stopCamera();
+                        closeModal();
                         processScannedQRData(code.data);
                     }
                 }
@@ -706,49 +760,52 @@
         function processScannedQRData(qrText) {
             if (qrText.startsWith('NETWISH_PAY:')) {
                 const parts = qrText.replace('NETWISH_PAY:', '').split(':');
-                const payeeName = parts[0] || 'Usuario NetWish';
-                showPaymentScreen(payeeName);
+                activePayee = parts[0] || 'Usuario NetWish';
+                rawAmountString = "000"; // Reiniciar importe a 0,00
+                updateAmountDisplay();
+                
+                document.getElementById('payeeNameDisplay').innerText = activePayee;
+                switchTab('payment'); // Cambia a la vista dedicada a pantalla completa
             } else {
                 alert("El código QR escaneado no pertenece a una cuenta válida de NetWish.");
-                closeModal();
             }
         }
 
-        function showPaymentScreen(payeeName) {
-            modalBody.innerHTML = `
-                <div class="space-y-4 text-center">
-                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-500/20">
-                        <i data-lucide="user-check" class="w-6 h-6"></i>
-                    </div>
-                    <div class="space-y-0.5">
-                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">Conectado con destinatario</span>
-                        <h3 class="text-base font-bold text-black">${payeeName}</h3>
-                    </div>
-
-                    <!-- Input de cantidad en formato chulo de divisa -->
-                    <div class="bg-neutral-50 p-4 rounded-2xl border border-neutral-200/80 space-y-1">
-                        <label class="text-[9px] font-mono uppercase text-neutral-400 block">Cantidad a enviar</label>
-                        <div class="flex items-center justify-center space-x-1">
-                            <span class="text-2xl font-bold text-black">€</span>
-                            <input type="number" id="payAmount" value="0.00" step="0.01" min="0.01" class="w-36 bg-transparent text-3xl font-bold text-black text-center focus:outline-none">
-                        </div>
-                    </div>
-
-                    <button onclick="executeSecurePayment('${payeeName}')" class="w-full py-3.5 bg-black text-white font-semibold rounded-xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md">
-                        Enviar Pago Seguro
-                    </button>
-                    <button onclick="closeModal()" class="w-full py-1 text-neutral-400 font-medium text-xs">Cancelar</button>
-                </div>
-            `;
-            lucide.createIcons();
+        // Lógica del teclado numérico TPV
+        function appendNum(num) {
+            if (num === '00' && rawAmountString === '000') return;
+            rawAmountString += num;
+            // Limitar longitud máxima para evitar desbordamiento
+            if (rawAmountString.length > 8) {
+                rawAmountString = rawAmountString.slice(1);
+            }
+            updateAmountDisplay();
         }
 
-        function executeSecurePayment(payeeName) {
-            const amount = document.getElementById('payAmount').value;
-            if (!amount || amount <= 0) {
-                alert("Introduce una cantidad válida.");
+        function clearNum() {
+            if (rawAmountString.length <= 3) {
+                rawAmountString = "000";
+            } else {
+                rawAmountString = rawAmountString.slice(0, -1);
+            }
+            updateAmountDisplay();
+        }
+
+        function updateAmountDisplay() {
+            const numericValue = parseInt(rawAmountString, 10) / 100;
+            document.getElementById('payAmountDisplay').innerText = numericValue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function executeFullPayment() {
+            const numericValue = parseInt(rawAmountString, 10) / 100;
+            if (numericValue <= 0) {
+                alert("Introduce una cantidad válida mayor a 0 €.");
                 return;
             }
+
+            const modal = document.getElementById('customModal');
+            const modalContent = document.getElementById('modalContent');
+            const modalBody = document.getElementById('modalBody');
 
             modalBody.innerHTML = `
                 <div class="space-y-4 text-center py-6">
@@ -757,12 +814,18 @@
                     </div>
                     <div class="space-y-1">
                         <h3 class="text-base font-bold text-black">¡Pago enviado con éxito!</h3>
-                        <p class="text-xs text-neutral-500">Has enviado <strong class="text-black">${Number(amount).toFixed(2)} €</strong> a <strong class="text-black">${payeeName}</strong>.</p>
+                        <p class="text-xs text-neutral-500">Has enviado <strong class="text-black">${numericValue.toFixed(2)} €</strong> a <strong class="text-black">${activePayee}</strong>.</p>
                     </div>
                     <button onclick="closeModal(); switchTab('home');" class="w-full py-3 bg-black text-white font-semibold rounded-xl text-xs">Volver al Inicio</button>
                 </div>
             `;
             lucide.createIcons();
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
         }
 
         function stopCamera() {
@@ -790,6 +853,7 @@
             document.getElementById('view-explore').classList.add('hidden');
             document.getElementById('view-scan').classList.add('hidden');
             document.getElementById('view-profile').classList.add('hidden');
+            document.getElementById('view-payment').classList.add('hidden');
 
             document.getElementById('view-' + tabId).classList.remove('hidden');
 
@@ -802,7 +866,13 @@
             document.getElementById('nav-scan').className = "flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group";
             document.getElementById('nav-profile').className = "flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group";
 
-            document.getElementById('nav-' + tabId).className = "flex flex-col items-center text-black space-y-1 transition group";
+            // Si estamos en la vista de pago, ocultamos la barra inferior de navegación para look de app nativa real
+            const navBar = document.querySelector('nav');
+            if (tabId === 'payment') {
+                navBar.classList.add('hidden');
+            } else {
+                navBar.classList.remove('hidden');
+            }
         }
     </script>
 </body>
