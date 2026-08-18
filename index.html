@@ -327,7 +327,6 @@
         let holdProgress = 0;
 
         document.addEventListener('DOMContentLoaded', async () => {
-            // Detección automática de recuperación de contraseña por token de URL
             const hash = window.location.hash;
             if (hash && hash.includes('type=recovery')) {
                 openNewPasswordModal();
@@ -469,14 +468,6 @@
                             <input type="password" id="authPass" ${!isLogin ? 'oninput="checkPasswordStrength()"' : ''} placeholder="> 6 caracteres" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
                         </div>
 
-                        ${isLogin ? `
-                        <div class="text-right pt-0.5">
-                            <button onclick="sendPasswordResetEmail()" class="text-[10px] font-medium text-neutral-500 hover:text-black underline">
-                                ¿Has olvidado tu contraseña?
-                            </button>
-                        </div>
-                        ` : ''}
-
                         ${!isLogin ? `
                         <!-- CHECKLIST DE SEGURIDAD -->
                         <div id="passwordChecklist" class="bg-neutral-50 p-3 rounded-xl border border-neutral-200/80 grid grid-cols-2 gap-2">
@@ -509,6 +500,14 @@
                         ${isLogin ? 'Entrar' : 'Completar Registro'}
                     </button>
                     
+                    ${isLogin ? `
+                    <div class="text-center pt-1">
+                        <button onclick="sendPasswordResetEmail()" class="text-[11px] font-medium text-neutral-500 hover:text-black underline">
+                            ¿Has olvidado tu contraseña?
+                        </button>
+                    </div>
+                    ` : ''}
+
                     <div class="text-center pt-1.5">
                         ${isLogin ? `
                             <p class="text-xs text-neutral-500">¿No tienes cuenta? <button onclick="renderAuthForm('register')" class="text-black font-bold underline hover:text-neutral-700">Regístrate</button></p>
@@ -581,7 +580,12 @@
             const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
             
             if (error) {
-                alert("Error al actualizar: " + error.message);
+                // Traducción limpia del error de Supabase al castellano
+                let errMsg = error.message;
+                if (errMsg.includes("New password should be different from the old password")) {
+                    errMsg = "La nueva contraseña debe ser diferente a la anterior.";
+                }
+                alert("Error al actualizar: " + errMsg);
             } else {
                 alert("¡Contraseña actualizada con éxito! Ya puedes iniciar sesión.");
                 window.location.hash = '';
