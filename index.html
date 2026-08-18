@@ -168,11 +168,11 @@
                 </div>
             </div>
 
-            <!-- VISTA 2: EXPLORAR (Con margen superior holgado para que no pegue con la cabecera) -->
-            <div id="view-explore" class="space-y-5 hidden w-full pt-4">
+            <!-- VISTA 2: EXPLORAR (Centrada, con título actualizado y texto recortado) -->
+            <div id="view-explore" class="space-y-5 hidden w-full pt-4 text-center">
                 <div class="space-y-1">
-                    <h2 class="text-base font-bold text-black tracking-tight">Explorar Palencia</h2>
-                    <p class="text-xs text-neutral-500">Busca comercios, locales y servicios de la ciudad.</p>
+                    <h2 class="text-lg font-bold text-black tracking-tight">Explora tu ciudad</h2>
+                    <p class="text-xs text-neutral-500">Busca comercios, locales y servicios.</p>
                 </div>
                 <div class="relative flex items-center shadow-sm">
                     <i data-lucide="search" class="absolute left-4 w-4 h-4 text-neutral-400"></i>
@@ -186,7 +186,7 @@
                 </div>
             </div>
 
-            <!-- VISTA 3: SCAN -->
+            <!-- VISTA 3: QR (Con botón "Activar Cámara") -->
             <div id="view-scan" class="space-y-6 hidden text-center py-16 my-auto w-full">
                 <div class="w-16 h-16 rounded-[28px] bg-black text-white flex items-center justify-center mx-auto shadow-xl">
                     <i data-lucide="scan" class="w-8 h-8"></i>
@@ -196,11 +196,11 @@
                     <p class="text-xs text-neutral-500 px-6">Apunta al código QR del establecimiento para realizar pagos o gestionar pedidos.</p>
                 </div>
                 <button onclick="openModal('Cámara QR')" class="px-6 py-3.5 bg-black text-white rounded-2xl text-xs font-semibold transition hover:bg-neutral-800 shadow-md">
-                    Activar Sensor Óptico
+                    Activar Cámara
                 </button>
             </div>
 
-            <!-- VISTA 4: PERFIL (Con margen superior holgado y botones de configuración perfectamente dimensionados) -->
+            <!-- VISTA 4: PERFIL -->
             <div id="view-profile" class="space-y-5 hidden w-full pt-4">
                 <!-- Tarjeta de Usuario -->
                 <div class="flex items-center space-x-4 p-5 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 shadow-sm">
@@ -213,7 +213,7 @@
                     </div>
                 </div>
 
-                <!-- Bloque de Configuración (Botones amplios, separados y limpios) -->
+                <!-- Bloque de Configuración -->
                 <div class="space-y-2">
                     <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Configuración</span>
                     <div class="bg-neutral-50/80 border border-neutral-200/60 rounded-[32px] overflow-hidden shadow-sm">
@@ -231,7 +231,7 @@
 
         </main>
 
-        <!-- BARRA DE NAVEGACIÓN INFERIOR (Flotante) -->
+        <!-- BARRA DE NAVEGACIÓN INFERIOR (Con "QR" en lugar de "Scan") -->
         <nav class="absolute bottom-4 left-4 right-4 border border-neutral-200/80 bg-white/90 backdrop-blur-2xl px-6 py-3.5 rounded-[32px] flex justify-around items-center z-30 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
             <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center text-black space-y-1 transition group">
                 <i data-lucide="home" class="w-5 h-5 transition-transform group-active:scale-90"></i>
@@ -243,7 +243,7 @@
             </button>
             <button onclick="switchTab('scan')" id="nav-scan" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group">
                 <i data-lucide="scan" class="w-5 h-5 transition-transform group-active:scale-90"></i>
-                <span class="text-[9px] font-medium tracking-tight">Scan</span>
+                <span class="text-[9px] font-medium tracking-tight">QR</span>
             </button>
             <button onclick="switchTab('profile')" id="nav-profile" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group">
                 <i data-lucide="user" class="w-5 h-5 transition-transform group-active:scale-90"></i>
