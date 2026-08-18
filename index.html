@@ -198,10 +198,10 @@
                 </div>
                 <div class="space-y-1.5">
                     <h2 class="text-sm font-bold text-black">Cámara de Escaneo QR</h2>
-                    <p class="text-xs text-neutral-500 px-6">Apunta la cámara o selecciona un usuario para realizar un pago inmediato.</p>
+                    <p class="text-xs text-neutral-500 px-6">Apunta la cámara al código QR personal de otro usuario para conectarte y pagar.</p>
                 </div>
                 <button onclick="startCameraModal()" class="w-full py-3.5 bg-black text-white rounded-2xl text-xs font-semibold transition hover:bg-neutral-800 shadow-md">
-                    Escanear Código QR
+                    Activar Lector QR
                 </button>
             </div>
 
@@ -247,7 +247,7 @@
 
     </div>
 
-    <!-- SCRIPT DE LÓGICA Y PASARELA DE PAGO -->
+    <!-- SCRIPT DE LÓGICA Y LECTOR QR REAL POR HARDWARE -->
     <script>
         lucide.createIcons();
 
@@ -257,6 +257,7 @@
 
         let currentUser = null;
         let currentStream = null;
+        let scanAnimationId = null;
 
         document.addEventListener('DOMContentLoaded', async () => {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -579,7 +580,7 @@
                     <div id="realQRCodeContainer" class="w-40 h-40 bg-white border-2 border-neutral-200 rounded-2xl mx-auto flex items-center justify-center p-2 relative shadow-sm"></div>
                     <div class="p-2.5 bg-neutral-50 rounded-xl border border-neutral-200/60">
                         <span class="block text-xs font-bold text-black">${meta.name || ''} ${meta.surname || ''}</span>
-                        <span class="block text-[9px] text-neutral-400 font-mono">ID: NW-${meta.initials || 'USER'}-${currentUser.id.substring(0,6)} • ${currentUser.email}</span>
+                        <span class="block text-[9px] text-neutral-400 font-mono">ID: NW-${meta.initials || 'USER'}-${currentUser.id.substring(0,6)}</span>
                     </div>
                     <button onclick="closeModal()" class="w-full py-3 bg-black text-white font-semibold rounded-xl text-xs tracking-wide">Cerrar</button>
                 </div>
@@ -593,6 +594,7 @@
                 
                 const qrContainer = document.getElementById('realQRCodeContainer');
                 qrContainer.innerHTML = "";
+                // Codificamos el identificador estructurado real en el QR
                 new QRCode(qrContainer, {
                     text: `NETWISH_PAY:${meta.name || 'Usuario'} ${meta.surname || ''}:${currentUser.email}`,
                     width: 140,
@@ -632,25 +634,20 @@
         }
 
         // ==========================================
-        // CÁMARA REAL CON CONEXIÓN AL IDENTIFICADOR DE USUARIO
+        // LECTOR QR REAL POR HARDWARE (BarcodeDetector API)
         // ==========================================
         async function startCameraModal() {
             modalBody.innerHTML = `
                 <div class="space-y-3 text-center">
-                    <h3 class="text-base font-bold text-black">Cámara de Escaneo QR</h3>
+                    <h3 class="text-base font-bold text-black">Escaneando Código QR</h3>
                     <div class="w-full h-56 bg-black rounded-2xl overflow-hidden relative flex items-center justify-center shadow-inner">
                         <video id="cameraPreview" autoplay playsinline muted class="w-full h-full object-cover"></video>
                         <div class="absolute inset-0 border-2 border-white/30 m-4 rounded-xl pointer-events-none flex items-center justify-center">
                             <div class="w-24 h-24 border-2 border-white rounded-xl animate-pulse"></div>
                         </div>
                     </div>
-                    <p class="text-[10px] text-neutral-400">Apunta la cámara al QR de la otra persona.</p>
-                    
-                    <!-- Selector de usuario detectado / Conexión directa -->
-                    <button onclick="simulateSuccessfulScan('Daniel Retuerto')" class="w-full py-3 bg-black text-white font-semibold rounded-xl text-xs tracking-wide shadow-md">
-                        ✓ Conectar con Usuario Escaneado
-                    </button>
-                    <button onclick="closeModal()" class="w-full py-2 bg-neutral-100 text-black font-semibold rounded-xl text-xs">Cerrar</button>
+                    <p class="text-[10px] text-neutral-400">Apunta la cámara al QR de la otra persona para conectarte al instante.</p>
+                    <button onclick="closeModal()" class="w-full py-2.5 bg-neutral-100 text-black font-semibold rounded-xl text-xs">Cerrar Cámara</button>
                 </div>
             `;
             lucide.createIcons();
@@ -668,15 +665,56 @@
                 const videoElement = document.getElementById('cameraPreview');
                 if (videoElement) {
                     videoElement.srcObject = currentStream;
+                    videoElement.play();
+                    runBarcodeScanner(videoElement);
                 }
             } catch (error) {
                 console.error("Error al acceder a la cámara:", error);
+                alert("No se pudo acceder a la cámara. Revisa los permisos.");
+                closeModal();
             }
         }
 
-        // Al conectar con el usuario escaneado, se abre la pasarela de pago elegante con su nombre
-        function simulateSuccessfulScan(payeeName) {
-            stopCamera();
+        async function runBarcodeScanner(videoElement) {
+            // Comprobamos si el navegador soporta el detector nativo de códigos QR
+            if (!('BarcodeDetector' in window)) {
+                alert("Tu navegador no soporta el escáner de códigos por hardware. Usa Chrome o Safari actualizados.");
+                return;
+            }
+
+            const barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] });
+
+            const scanFrame = async () => {
+                if (!currentStream) return;
+                try {
+                    const barcodes = await barcodeDetector.detect(videoElement);
+                    if (barcodes.length > 0) {
+                        const scannedText = barcodes[0].rawValue;
+                        stopCamera();
+                        processScannedQRData(scannedText);
+                        return;
+                    }
+                } catch (e) {
+                    // Ignoramos errores de fotograma mientras escanea
+                }
+                scanAnimationId = requestAnimationFrame(scanFrame);
+            };
+
+            scanAnimationId = requestAnimationFrame(scanFrame);
+        }
+
+        function processScannedQRData(qrText) {
+            if (qrText.startsWith('NETWISH_PAY:')) {
+                const parts = qrText.replace('NETWISH_PAY:', '').split(':');
+                const payeeName = parts[0] || 'Usuario NetWish';
+                showPaymentScreen(payeeName);
+            } else {
+                alert("El código QR escaneado no pertenece a una cuenta válida de NetWish.");
+                closeModal();
+            }
+        }
+
+        function showPaymentScreen(payeeName) {
             modalBody.innerHTML = `
                 <div class="space-y-4 text-center">
                     <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-500/20">
@@ -728,6 +766,10 @@
         }
 
         function stopCamera() {
+            if (scanAnimationId) {
+                cancelAnimationFrame(scanAnimationId);
+                scanAnimationId = null;
+            }
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
                 currentStream = null;
