@@ -227,7 +227,7 @@
 
         <!-- VENTANA MODAL DINÁMICA -->
         <div id="customModal" class="absolute inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
-            <div class="bg-white w-full max-w-md rounded-[36px] p-6 text-center space-y-4 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100 overflow-hidden" id="modalContent">
+            <div class="bg-white w-full max-w-md rounded-[36px] p-6 text-center space-y-4 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100 overflow-hidden max-h-[90vh] overflow-y-auto no-scrollbar" id="modalContent">
                 
                 <div id="modalBody" class="space-y-4">
                     <!-- Contenido dinámico -->
@@ -241,7 +241,7 @@
 
     </div>
 
-    <!-- SCRIPT DE LÓGICA DE AUTENTICACIÓN REAL Y UNIFICADA -->
+    <!-- SCRIPT DE LÓGICA CON VALIDACIÓN ESTRICTA Y CAMPOS SEPARADOS -->
     <script>
         lucide.createIcons();
 
@@ -278,8 +278,8 @@
                             ${currentUser.initials}
                         </div>
                         <div class="overflow-hidden text-left">
-                            <h2 class="text-xs font-bold text-black truncate">${currentUser.name}</h2>
-                            <p class="text-[10px] text-neutral-500 truncate">${currentUser.email}</p>
+                            <h2 class="text-xs font-bold text-black truncate">${currentUser.name} ${currentUser.surname}</h2>
+                            <p class="text-[10px] text-neutral-500 truncate">${currentUser.email} • Nac: ${currentUser.dob}</p>
                         </div>
                     </div>
 
@@ -320,7 +320,6 @@
             lucide.createIcons();
         }
 
-        // Único botón de acceso que abre el modal con opción de cambiar entre Login y Registro
         function openAuthModal(initialMode = 'login') {
             renderAuthForm(initialMode);
             const modal = document.getElementById('customModal');
@@ -333,7 +332,6 @@
             }, 10);
         }
 
-        // Renderizador dinámico del formulario unificado dentro del modal
         function renderAuthForm(mode) {
             const modalBody = document.getElementById('modalBody');
             const closeBtn = document.getElementById('modalCloseBtn');
@@ -345,26 +343,53 @@
                 <div class="space-y-4 text-left">
                     <div class="text-center space-y-1">
                         <h3 class="text-base font-bold text-black">${isLogin ? 'Iniciar Sesión' : 'Crear una cuenta'}</h3>
-                        <p class="text-xs text-neutral-500">${isLogin ? 'Introduce tus datos para acceder.' : 'Regístrate en pocos segundos.'}</p>
+                        <p class="text-xs text-neutral-500">${isLogin ? 'Introduce tus credenciales.' : 'Rellene sus datos personales.'}</p>
                     </div>
                     <div class="space-y-3 pt-2">
                         ${!isLogin ? `
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Nombre</label>
+                                <input type="text" id="authName" placeholder="Daniel" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                            </div>
+                            <div>
+                                <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Apellidos</label>
+                                <input type="text" id="authSurname" placeholder="Retuerto" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                            </div>
+                        </div>
                         <div>
-                            <label class="text-[10px] font-mono uppercase text-neutral-400 block mb-1">Nombre Completo</label>
-                            <input type="text" id="authName" placeholder="Ej. Daniel Retuerto" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-3 px-4 text-xs text-black focus:outline-none focus:border-black">
+                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Fecha de Nacimiento</label>
+                            <input type="date" id="authDob" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
                         </div>
                         ` : ''}
+
                         <div>
-                            <label class="text-[10px] font-mono uppercase text-neutral-400 block mb-1">Correo Electrónico</label>
-                            <input type="email" id="authEmail" placeholder="correo@ejemplo.com" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-3 px-4 text-xs text-black focus:outline-none focus:border-black">
+                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Correo Electrónico</label>
+                            <input type="email" id="authEmail" placeholder="correo@ejemplo.com" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
                         </div>
+
+                        ${!isLogin ? `
                         <div>
-                            <label class="text-[10px] font-mono uppercase text-neutral-400 block mb-1">Contraseña</label>
-                            <input type="password" id="authPass" placeholder="Mínimo 6 caracteres" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-3 px-4 text-xs text-black focus:outline-none focus:border-black">
+                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Repetir Correo Electrónico</label>
+                            <input type="email" id="authEmailConfirm" placeholder="correo@ejemplo.com" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
                         </div>
+                        ` : ''}
+
+                        <div>
+                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Contraseña</label>
+                            <input type="password" id="authPass" placeholder="Mínimo 6 caracteres" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                        </div>
+
+                        ${!isLogin ? `
+                        <div>
+                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Repetir Contraseña</label>
+                            <input type="password" id="authPassConfirm" placeholder="Repita contraseña" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                        </div>
+                        ` : ''}
                     </div>
+
                     <button onclick="processAuthAction('${mode}')" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md mt-2">
-                        ${isLogin ? 'Entrar' : 'Registrarse'}
+                        ${isLogin ? 'Entrar a mi Cuenta' : 'Completar Registro'}
                     </button>
                     
                     <div class="text-center pt-2">
@@ -383,11 +408,9 @@
             lucide.createIcons();
         }
 
-        // Lógica real de procesamiento según si es login o registro
         function processAuthAction(mode) {
             const email = document.getElementById('authEmail').value.trim();
             const pass = document.getElementById('authPass').value.trim();
-            const name = mode === 'register' ? document.getElementById('authName').value.trim() : '';
 
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!email || !emailRegex.test(email)) {
@@ -400,10 +423,25 @@
             }
 
             if (mode === 'register') {
-                if (!name) {
-                    alert("Por favor, introduce tu nombre completo.");
+                const name = document.getElementById('authName').value.trim();
+                const surname = document.getElementById('authSurname').value.trim();
+                const dob = document.getElementById('authDob').value;
+                const emailConfirm = document.getElementById('authEmailConfirm').value.trim();
+                const passConfirm = document.getElementById('authPassConfirm').value.trim();
+
+                if (!name || !surname || !dob) {
+                    alert("Por favor, rellene el nombre, los apellidos y la fecha de nacimiento.");
                     return;
                 }
+                if (email !== emailConfirm) {
+                    alert("Los correos electrónicos no coinciden. Compruébalos.");
+                    return;
+                }
+                if (pass !== passConfirm) {
+                    alert("Las contraseñas no coinciden. Compruébalas.");
+                    return;
+                }
+
                 let existingUser = registeredUsers.find(u => u.email === email);
                 if (existingUser) {
                     alert("Este correo ya está registrado. Por favor, inicia sesión.");
@@ -411,9 +449,11 @@
                     return;
                 }
 
-                const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+                const initials = (name[0] + (surname[0] || '')).toUpperCase();
                 currentUser = {
                     name: name,
+                    surname: surname,
+                    dob: dob,
                     email: email,
                     pass: pass,
                     initials: initials,
@@ -421,11 +461,12 @@
                 };
                 registeredUsers.push(currentUser);
                 localStorage.setItem('netwish_db_users', JSON.stringify(registeredUsers));
+                alert("¡Registro completado con éxito!");
+
             } else {
                 let foundUser = registeredUsers.find(u => u.email === email);
                 if (!foundUser) {
-                    alert("No existe ninguna cuenta con este correo. Regístrate primero.");
-                    renderAuthForm('register');
+                    alert("No existe ninguna cuenta registrada con este correo.");
                     return;
                 }
                 if (foundUser.pass !== pass) {
@@ -433,6 +474,7 @@
                     return;
                 }
                 currentUser = foundUser;
+                alert("¡Bienvenido de nuevo, " + currentUser.name + "!");
             }
 
             localStorage.setItem('netwish_session', JSON.stringify(currentUser));
@@ -469,7 +511,7 @@
                     <p class="text-xs text-neutral-500">Muestra este código seguro para recibir pagos en Palencia.</p>
                     <div id="realQRCodeContainer" class="w-48 h-48 bg-white border-2 border-neutral-200 rounded-3xl mx-auto flex items-center justify-center p-3 relative shadow-sm"></div>
                     <div class="p-3 bg-neutral-50 rounded-2xl border border-neutral-200/60">
-                        <span class="block text-xs font-bold text-black">${currentUser.name}</span>
+                        <span class="block text-xs font-bold text-black">${currentUser.name} ${currentUser.surname}</span>
                         <span class="block text-[10px] text-neutral-400 font-mono">ID: ${currentUser.id}</span>
                     </div>
                 </div>
