@@ -234,11 +234,10 @@
             </button>
         </nav>
 
-        <!-- VENTANA MODAL DINÁMICA PERFECTAMENTE PROPORCIONADA -->
+        <!-- VENTANA MODAL DINÁMICA -->
         <div id="customModal" class="absolute inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
             <div class="bg-white w-full max-w-[380px] rounded-[36px] p-6 text-center space-y-3.5 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100 flex flex-col overflow-hidden" id="modalContent">
                 
-                <!-- Contenido con holgura y espacio perfecto -->
                 <div id="modalBody" class="space-y-3 text-left">
                     <!-- Contenido dinámico -->
                 </div>
@@ -531,7 +530,6 @@
                     return;
                 }
 
-                alert("¡Registro completado en la nube con éxito!");
                 currentUser = data.user;
 
             } else {
@@ -546,7 +544,6 @@
                 }
 
                 currentUser = data.user;
-                alert("¡Sesión iniciada correctamente!");
             }
 
             closeModal();
