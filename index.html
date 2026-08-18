@@ -2,91 +2,207 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <!-- Viewport adaptativo para móviles con notch -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>NetWish — Palencia</title>
 
+    <!-- PWA / Pantalla completa móvil -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#ffffff">
+
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0a0a0a',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        /* Eliminación de resaltado de tap nativo y scroll invisible */
         * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-        body { background-color: #f5f5f7; min-height: 100dvh; display: flex; justify-content: center; align-items: center; }
+        html {
+            background-color: #f5f5f7;
+        }
+        body { 
+            background-color: #f5f5f7; 
+            color: #171717; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            margin: 0;
+            padding: 0;
+            min-height: 100dvh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body>
 
-    <!-- Contenedor App Shell: Estructura centrada tipo móvil -->
+    <!-- Contenedor Principal App Shell -->
     <div class="w-full h-[100dvh] sm:h-[844px] sm:max-w-[390px] sm:rounded-[40px] bg-white flex flex-col relative shadow-2xl overflow-hidden sm:border sm:border-neutral-300">
         
-        <!-- Header: Fijo en el tope, con blur de fondo para elegancia -->
+        <!-- Header Superior Fijo -->
         <header class="absolute top-0 left-0 right-0 px-6 pt-14 pb-4 border-b border-neutral-100 flex justify-between items-center bg-white/95 backdrop-blur-md z-30 shadow-sm">
             <h1 class="text-2xl font-bold tracking-tight text-black font-serif italic">NetWish</h1>
-            <div class="w-9 h-9 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-xs font-semibold text-neutral-800">DR</div>
+            <div class="w-9 h-9 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-xs font-semibold text-neutral-800 shadow-sm">
+                DR
+            </div>
         </header>
 
-        <!-- Contenido principal con padding para no solaparse con cabeceras fijas -->
-        <main class="flex-1 overflow-y-auto no-scrollbar px-6 pt-28 pb-28 space-y-8">
+        <!-- Contenido Principal -->
+        <main class="flex-1 overflow-y-auto no-scrollbar px-6 pt-28 pb-28 space-y-6">
             
-            <!-- SECCIÓN EXPLORAR: Buscador inteligente -->
-            <section id="explore-view" class="space-y-4">
-                <h2 class="text-xl font-bold text-black">Explorar</h2>
-                <div class="relative flex items-center shadow-sm">
-                    <i data-lucide="search" class="absolute left-4 w-4 h-4 text-neutral-400"></i>
-                    <input type="text" placeholder="Buscar servicios en Palencia..." class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-3 pl-11 pr-4 text-sm focus:outline-none focus:border-black transition">
+            <!-- Acceso Directo Destacado: Escáner QR de Pagos -->
+            <section class="p-5 rounded-2xl bg-black text-white flex flex-col justify-between space-y-4 shadow-xl">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span class="text-[10px] text-neutral-400 font-mono tracking-wider">PAGO RÁPIDO URBANO</span>
+                        <h2 class="text-base font-semibold tracking-tight mt-0.5 text-white">Escanea para Pagar</h2>
+                    </div>
+                    <i data-lucide="qr-code" class="w-6 h-6 text-neutral-200"></i>
                 </div>
+                <button onclick="openModal('Escáner QR de Pagos')" class="w-full py-3 bg-white text-black font-medium rounded-xl text-sm transition hover:bg-neutral-200 active:scale-[0.98]">
+                    Abrir Escáner
+                </button>
             </section>
 
-            <!-- SECCIÓN CATEGORÍAS: Integración de tarjetas -->
+            <!-- Categorías de la Ciudad -->
             <section class="space-y-3">
-                <h3 class="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Servicios rápidos</h3>
+                <h3 class="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Categorías de la Ciudad</h3>
                 <div class="grid grid-cols-2 gap-3">
-                    <!-- Ejemplo de componente reutilizable de botón -->
+                    <!-- Comercios -->
+                    <button onclick="openModal('Comercios')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left active:scale-95">
+                        <div class="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                            <i data-lucide="store" class="w-5 h-5 text-amber-600"></i>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-black">Comercios</span>
+                            <span class="block text-[10px] text-neutral-500">Pan, stock, etc</span>
+                        </div>
+                    </button>
+
+                    <!-- Restaurantes -->
+                    <button onclick="openModal('Restaurantes')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left active:scale-95">
+                        <div class="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center shrink-0">
+                            <i data-lucide="utensils" class="w-5 h-5 text-rose-600"></i>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-black">Restaurantes</span>
+                            <span class="block text-[10px] text-neutral-500">QR mesa, cuenta</span>
+                        </div>
+                    </button>
+
+                    <!-- Movilidad -->
+                    <button onclick="openModal('Movilidad')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left active:scale-95">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                            <i data-lucide="car" class="w-5 h-5 text-emerald-600"></i>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-black">Movilidad</span>
+                            <span class="block text-[10px] text-neutral-500">Taxis y bus GPS</span>
+                        </div>
+                    </button>
+
+                    <!-- Peluquería -->
                     <button onclick="openModal('Peluquería')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left active:scale-95">
                         <div class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
                             <i data-lucide="scissors" class="w-5 h-5 text-blue-600"></i>
                         </div>
-                        <span class="text-xs font-semibold text-black">Peluquería</span>
+                        <div>
+                            <span class="block text-xs font-semibold text-black">Peluquería</span>
+                            <span class="block text-[10px] text-neutral-500">Reservas y citas</span>
+                        </div>
                     </button>
-                    <!-- Añade más botones siguiendo este patrón -->
                 </div>
+
+                <!-- Ocio -->
+                <button onclick="openModal('Ocio y Experiencias')" class="w-full flex items-center justify-between p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left active:scale-95">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center shrink-0">
+                            <i data-lucide="sparkles" class="w-5 h-5 text-purple-600"></i>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-black">Ocio y Experiencias</span>
+                            <span class="block text-[10px] text-neutral-500">Eventos y actividades en Palencia</span>
+                        </div>
+                    </div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400"></i>
+                </button>
             </section>
 
         </main>
 
-        <!-- Navegación: Posicionamiento absoluto para consistencia -->
+        <!-- Barra de Navegación Inferior Fija -->
         <nav class="absolute bottom-0 left-0 right-0 border-t border-neutral-200 bg-white/95 backdrop-blur-md px-4 py-3 flex justify-around items-center z-30 shadow-lg">
-            <button class="flex flex-col items-center text-black space-y-1"><i data-lucide="home" class="w-5 h-5"></i><span class="text-[10px] font-medium">Inicio</span></button>
-            <button class="flex flex-col items-center text-black space-y-1"><i data-lucide="compass" class="w-5 h-5"></i><span class="text-[10px] font-medium">Explorar</span></button>
-            <button class="flex flex-col items-center text-neutral-400 space-y-1"><i data-lucide="scan" class="w-5 h-5"></i><span class="text-[10px] font-medium">Scan</span></button>
-            <button class="flex flex-col items-center text-neutral-400 space-y-1"><i data-lucide="user" class="w-5 h-5"></i><span class="text-[10px] font-medium">Perfil</span></button>
+            <button class="flex flex-col items-center text-black space-y-1">
+                <i data-lucide="home" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium tracking-tight">Inicio</span>
+            </button>
+            <button onclick="openModal('Explorar')" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1">
+                <i data-lucide="compass" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium tracking-tight">Explorar</span>
+            </button>
+            <button onclick="openModal('Scan')" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1">
+                <i data-lucide="scan" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium tracking-tight">Scan</span>
+            </button>
+            <button onclick="openModal('Perfil')" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1">
+                <i data-lucide="user" class="w-5 h-5"></i>
+                <span class="text-[10px] font-medium tracking-tight">Perfil</span>
+            </button>
         </nav>
 
-        <!-- Modal: Componente de aviso genérico para funcionalidades futuras -->
+        <!-- Ventana Modal "Próximamente" (Oculta por defecto) -->
         <div id="customModal" class="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6 hidden opacity-0 transition-opacity duration-300">
-            <div class="bg-white w-full max-w-xs rounded-3xl p-6 text-center shadow-2xl scale-95 transition-transform duration-300" id="modalContent">
-                <h3 id="modalTitle" class="text-base font-semibold text-black mb-2">Próximamente</h3>
-                <button onclick="closeModal()" class="w-full py-3 bg-black text-white rounded-xl text-sm">OK</button>
+            <div class="bg-white w-full max-w-xs rounded-3xl p-6 text-center space-y-4 shadow-2xl scale-95 transition-transform duration-300" id="modalContent">
+                <div class="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mx-auto text-black">
+                    <i data-lucide="clock" class="w-6 h-6"></i>
+                </div>
+                <div class="space-y-1">
+                    <h3 id="modalTitle" class="text-base font-semibold text-black">Próximamente</h3>
+                    <p class="text-xs text-neutral-500">Este módulo de NetWish estará disponible muy pronto.</p>
+                </div>
+                <button onclick="closeModal()" class="w-full py-3 bg-black text-white font-medium rounded-xl text-sm transition hover:bg-neutral-800 active:scale-[0.98]">
+                    OK
+                </button>
             </div>
         </div>
+
     </div>
 
+    <!-- Script de Interacción Modal -->
     <script>
-        // Inicialización de iconos y funciones de UI
         lucide.createIcons();
+
         const modal = document.getElementById('customModal');
-        
-        function openModal(name) {
-            document.getElementById('modalTitle').innerText = name + " — Próximamente";
+        const modalContent = document.getElementById('modalContent');
+        const modalTitle = document.getElementById('modalTitle');
+
+        function openModal(sectionName) {
+            modalTitle.innerText = sectionName + " — Próximamente";
             modal.classList.remove('hidden');
-            setTimeout(() => { modal.classList.remove('opacity-0'); }, 10);
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
         }
 
         function closeModal() {
             modal.classList.add('opacity-0');
-            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+            modalContent.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
         }
     </script>
 </body>
