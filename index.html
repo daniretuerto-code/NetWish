@@ -214,63 +214,63 @@
                 </div>
             </div>
 
-            <!-- VISTA 5: PASARELA DE PAGO ESTILO APPLE (ESPACIADA Y ELEGANTE) -->
-            <div id="view-payment" class="hidden w-full h-full flex flex-col justify-between pt-2 pb-2">
+            <!-- VISTA 5: PASARELA DE PAGO AMPLIADA Y ESPACIADA (ESTILO APPLE) -->
+            <div id="view-payment" class="hidden w-full h-full flex flex-col justify-between pt-1 pb-2">
                 <!-- Header con indicador verde -->
                 <div class="flex items-center justify-between px-1">
-                    <button onclick="switchTab('scan')" class="w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-black hover:bg-neutral-200 transition">
-                        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    <button onclick="switchTab('scan')" class="w-10 h-10 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-black hover:bg-neutral-200 transition">
+                        <i data-lucide="arrow-left" class="w-5 h-5"></i>
                     </button>
-                    <div class="flex items-center space-x-2 px-3.5 py-1.5 bg-emerald-50 border border-emerald-200/60 rounded-full">
+                    <div class="flex items-center space-x-2 px-4 py-1.5 bg-emerald-50 border border-emerald-200/60 rounded-full">
                         <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                        <span class="text-[9px] font-bold text-emerald-700 uppercase tracking-widest">Conectado</span>
+                        <span class="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">Conectado</span>
                     </div>
-                    <div class="w-9"></div>
+                    <div class="w-10"></div>
                 </div>
 
                 <!-- Info Persona -->
-                <div class="text-center space-y-1 my-1">
-                    <div class="w-12 h-12 rounded-2xl bg-neutral-900 text-white flex items-center justify-center mx-auto shadow-md text-xs font-bold" id="payeeInitialsBubble">
+                <div class="text-center space-y-1.5 my-2">
+                    <div class="w-16 h-16 rounded-3xl bg-neutral-900 text-white flex items-center justify-center mx-auto shadow-lg text-base font-bold" id="payeeInitialsBubble">
                         NW
                     </div>
                     <div>
-                        <span class="text-[8px] font-mono uppercase tracking-widest text-neutral-400">Enviando fondos a</span>
-                        <h2 id="payeeNameDisplay" class="text-sm font-bold text-black tracking-tight mt-0.5">Destinatario</h2>
+                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">Enviando fondos a</span>
+                        <h2 id="payeeNameDisplay" class="text-lg font-bold text-black tracking-tight mt-0.5">Destinatario</h2>
                     </div>
                 </div>
 
-                <!-- Display Cantidad -->
-                <div class="text-center py-3 bg-neutral-50/80 rounded-[24px] border border-neutral-200/80 mx-2 shadow-sm">
-                    <div class="flex items-center justify-center space-x-1">
-                        <span class="text-2xl font-light text-neutral-400">€</span>
-                        <span id="payAmountDisplay" class="text-4xl font-extrabold tracking-tight text-black">0,00</span>
+                <!-- Display Cantidad Ampliado -->
+                <div class="text-center py-5 bg-neutral-50/90 rounded-[32px] border border-neutral-200/80 mx-1 shadow-sm">
+                    <div class="flex items-center justify-center space-x-1.5">
+                        <span class="text-3xl font-light text-neutral-400">€</span>
+                        <span id="payAmountDisplay" class="text-6xl font-extrabold tracking-tight text-black">0,00</span>
                     </div>
                 </div>
 
-                <!-- Teclado Táctil con Sombra Estilo Apple -->
-                <div class="grid grid-cols-3 gap-2 max-w-[280px] mx-auto w-full my-1">
-                    <button onclick="appendNum('1')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-base font-semibold text-black transition active:scale-95 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">1</button>
-                    <button onclick="appendNum('2')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-base font-semibold text-black transition active:scale-95 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">2</button>
-                    <button onclick="appendNum('3')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-base font-semibold text-black transition active:scale-95 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">3</button>
-                    <button onclick="appendNum('4')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-base font-semibold text-black transition active:scale-95 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">4</button>
-                    <button onclick="appendNum('5')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-base font-semibold text-black transition active:scale-95 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">5</button>
-                    <button onclick="appendNum('6')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-base font-semibold text-black transition active:scale-95 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">6</button>
-                    <button onclick="appendNum('7')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-base font-semibold text-black transition active:scale-95 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">7</button>
-                    <button onclick="appendNum('8')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-base font-semibold text-black transition active:scale-95 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">8</button>
-                    <button onclick="appendNum('9')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-base font-semibold text-black transition active:scale-95 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">9</button>
-                    <button onclick="appendNum('00')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-base font-semibold text-black transition active:scale-95 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">00</button>
-                    <button onclick="appendNum('0')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-base font-semibold text-black transition active:scale-95 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">0</button>
-                    <button onclick="clearNum()" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-base font-semibold text-rose-600 transition active:scale-95 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex items-center justify-center">
-                        <i data-lucide="delete" class="w-5 h-5"></i>
+                <!-- Teclado Táctil Ampliado con Sombra Circular Estilo Apple -->
+                <div class="grid grid-cols-3 gap-3 max-w-[310px] mx-auto w-full my-2">
+                    <button onclick="appendNum('1')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">1</button>
+                    <button onclick="appendNum('2')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">2</button>
+                    <button onclick="appendNum('3')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">3</button>
+                    <button onclick="appendNum('4')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">4</button>
+                    <button onclick="appendNum('5')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">5</button>
+                    <button onclick="appendNum('6')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">6</button>
+                    <button onclick="appendNum('7')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">7</button>
+                    <button onclick="appendNum('8')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">8</button>
+                    <button onclick="appendNum('9')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">9</button>
+                    <button onclick="appendNum('00')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">00</button>
+                    <button onclick="appendNum('0')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">0</button>
+                    <button onclick="clearNum()" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-rose-600 transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)] flex items-center justify-center">
+                        <i data-lucide="delete" class="w-6 h-6"></i>
                     </button>
                 </div>
 
-                <!-- Botón de Confirmación con Mantener Pulsado y Barra Verde Fluida -->
-                <div id="holdButtonContainer" class="relative w-full h-13 bg-black rounded-2xl overflow-hidden shadow-xl select-none cursor-pointer flex items-center justify-center my-1">
-                    <!-- Barra verde fluida -->
+                <!-- Botón de Confirmación Gigante con Barra Verde más Lenta -->
+                <div id="holdButtonContainer" class="relative w-full h-16 bg-black rounded-3xl overflow-hidden shadow-2xl select-none cursor-pointer flex items-center justify-center my-1">
+                    <!-- Barra verde fluida y más lenta -->
                     <div id="progressBar" class="absolute top-0 left-0 bottom-0 w-0 bg-emerald-500 transition-all duration-100 ease-out pointer-events-none"></div>
                     <!-- Texto superpuesto -->
-                    <span class="relative z-10 text-white font-semibold text-xs tracking-wider uppercase pointer-events-none">MANTENER PARA CONFIRMAR</span>
+                    <span class="relative z-10 text-white font-bold text-xs tracking-widest uppercase pointer-events-none">MANTENER PARA CONFIRMAR</span>
                 </div>
             </div>
 
@@ -322,7 +322,7 @@
         let scanningInterval = null;
 
         let activePayee = "";
-        let rawAmountString = "0"; // Almacena los dígitos introducidos en bruto
+        let rawAmountString = "000"; 
 
         // Variables para el botón de mantener pulsado
         let holdTimer = null;
@@ -815,13 +815,12 @@
         }
 
         function updateAmountDisplay() {
-            // Ejemplo: Al pulsar "2", rawAmountString es "2", lo que divide por 100 y da 0,02. Si pulsas "2", "0", "0", rawAmountString es "200" / 100 = 2,00 €.
             const numericValue = parseInt(rawAmountString, 10) / 100;
             document.getElementById('payAmountDisplay').innerText = numericValue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
         // ==========================================
-        // LÓGICA DE MANTENER PULSADO PARA CONFIRMAR
+        // LÓGICA DE MANTENER PULSADO PARA CONFIRMAR (MÁS LENTA Y FLUIDA)
         // ==========================================
         function initHoldButtonListeners() {
             const btn = document.getElementById('holdButtonContainer');
@@ -835,7 +834,7 @@
                 const progressBar = document.getElementById('progressBar');
                 
                 progressInterval = setInterval(() => {
-                    holdProgress += 3; // Velocidad de llenado suave
+                    holdProgress += 1.5; // Más lenta para que tarde más en completarse
                     if (progressBar) progressBar.style.width = holdProgress + '%';
 
                     if (holdProgress >= 100) {
@@ -845,7 +844,7 @@
                         progressInterval = null;
                         executeFullPayment();
                     }
-                }, 15);
+                }, 20);
             };
 
             const cancelHold = () => {
