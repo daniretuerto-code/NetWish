@@ -227,15 +227,16 @@
             </button>
         </nav>
 
-        <!-- VENTANA MODAL DINÁMICA -->
-        <div id="customModal" class="absolute inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
-            <div class="bg-white w-full max-w-md rounded-[36px] p-6 text-center space-y-4 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100 overflow-hidden max-h-[90vh] overflow-y-auto no-scrollbar" id="modalContent">
+        <!-- VENTANA MODAL DINÁMICA OPTIMIZADA -->
+        <div id="customModal" class="absolute inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-3 hidden opacity-0 transition-opacity duration-300">
+            <div class="bg-white w-full max-w-md max-h-[85vh] rounded-[36px] p-6 text-center space-y-4 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100 flex flex-col overflow-hidden" id="modalContent">
                 
-                <div id="modalBody" class="space-y-4">
+                <!-- Contenido con scroll interno fluido -->
+                <div id="modalBody" class="space-y-4 overflow-y-auto no-scrollbar flex-1 text-left pb-4">
                     <!-- Contenido dinámico -->
                 </div>
 
-                <button id="modalCloseBtn" onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-medium rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 active:scale-[0.98]">
+                <button id="modalCloseBtn" onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-medium rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 active:scale-[0.98] shrink-0 mt-2">
                     Cerrar / Entendido
                 </button>
             </div>
@@ -247,7 +248,6 @@
     <script>
         lucide.createIcons();
 
-        // CREDENCIALES REALES DE SUPABASE
         const SUPABASE_URL = 'https://gamjjnyomhnyswbxlhgq.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_096WH9RGLik4I_DsDR5iBg_QEKxC7bK';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
