@@ -241,7 +241,7 @@
 
     </div>
 
-    <!-- SCRIPT DE LÓGICA CON VALIDACIÓN DE CONTRASEÑA EN TIEMPO REAL -->
+    <!-- SCRIPT DE LÓGICA CON VALIDACIÓN DE CONTRASEÑA ACTUALIZADA -->
     <script>
         lucide.createIcons();
 
@@ -377,7 +377,7 @@
 
                         <div>
                             <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Contraseña</label>
-                            <input type="password" id="authPass" oninput="checkPasswordStrength()" placeholder="Exactamente 6 caracteres" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                            <input type="password" id="authPass" ${!isLogin ? 'oninput="checkPasswordStrength()"' : ''} placeholder="Más de 6 caracteres" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
                         </div>
 
                         ${!isLogin ? `
@@ -386,19 +386,19 @@
                             <p class="text-[10px] font-mono uppercase text-neutral-500 mb-1">Requisitos de contraseña:</p>
                             <div id="req-length" class="flex items-center space-x-2 text-[11px] text-neutral-400">
                                 <span class="w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center text-[9px] text-white font-bold transition-colors" id="icon-length">○</span>
-                                <span>Exactamente 6 caracteres</span>
+                                <span>Más de 6 caracteres (>6)</span>
                             </div>
                             <div id="req-number" class="flex items-center space-x-2 text-[11px] text-neutral-400">
                                 <span class="w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center text-[9px] text-white font-bold transition-colors" id="icon-number">○</span>
                                 <span>Al menos un número</span>
                             </div>
-                            <div id="req-lower" class="flex items-center space-x-2 text-[11px] text-neutral-400">
-                                <span class="w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center text-[9px] text-white font-bold transition-colors" id="icon-lower">○</span>
-                                <span>Al menos una letra minúscula</span>
+                            <div id="req-upper" class="flex items-center space-x-2 text-[11px] text-neutral-400">
+                                <span class="w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center text-[9px] text-white font-bold transition-colors" id="icon-upper">○</span>
+                                <span>Al menos una letra mayúscula</span>
                             </div>
                             <div id="req-special" class="flex items-center space-x-2 text-[11px] text-neutral-400">
                                 <span class="w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center text-[9px] text-white font-bold transition-colors" id="icon-special">○</span>
-                                <span>Al menos un carácter especial (ej. @$!%*?&)</span>
+                                <span>Al menos un carácter especial</span>
                             </div>
                         </div>
 
@@ -429,18 +429,18 @@
             lucide.createIcons();
         }
 
-        // Validación visual en tiempo real de la contraseña
+        // Validación visual en tiempo real con los nuevos criterios
         function checkPasswordStrength() {
             const pass = document.getElementById('authPass').value;
 
-            const hasLength = pass.length === 6;
+            const hasLength = pass.length > 6;
             const hasNumber = /[0-9]/.test(pass);
-            const hasLower = /[a-z]/.test(pass);
+            const hasUpper = /[A-Z]/.test(pass);
             const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(pass);
 
             updateReqUI('length', hasLength);
             updateReqUI('number', hasNumber);
-            updateReqUI('lower', hasLower);
+            updateReqUI('upper', hasUpper);
             updateReqUI('special', hasSpecial);
         }
 
@@ -486,14 +486,14 @@
                     return;
                 }
 
-                // Validar requisitos estrictos de contraseña
-                const hasLength = pass.length === 6;
+                // Validación final de seguridad estricta
+                const hasLength = pass.length > 6;
                 const hasNumber = /[0-9]/.test(pass);
-                const hasLower = /[a-z]/.test(pass);
+                const hasUpper = /[A-Z]/.test(pass);
                 const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(pass);
 
-                if (!hasLength || !hasNumber || !hasLower || !hasSpecial) {
-                    alert("La contraseña no cumple con todos los requisitos de seguridad obligatorios.");
+                if (!hasLength || !hasNumber || !hasUpper || !hasSpecial) {
+                    alert("La contraseña no cumple con todos los requisitos de seguridad obligatorios (>6 caracteres, número, mayúscula y carácter especial).");
                     return;
                 }
 
