@@ -59,7 +59,7 @@
     <!-- Contenedor Principal App Shell -->
     <div class="w-full h-[100dvh] sm:h-[844px] sm:max-w-[390px] sm:rounded-[48px] bg-white flex flex-col relative shadow-[0_30px_90px_rgba(0,0,0,0.12)] overflow-hidden sm:border-[8px] sm:border-neutral-900">
         
-        <!-- HEADER SUPERIOR FIJO (NetWish grande y limpio, sin textos auxiliares) -->
+        <!-- HEADER SUPERIOR FIJO -->
         <header class="absolute top-0 left-0 right-0 px-6 pt-12 pb-4 border-b border-neutral-100/80 flex justify-between items-center glass-panel z-30">
             <h1 class="text-2xl font-bold tracking-tight text-black font-serif italic">NetWish</h1>
             <div class="w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner">
@@ -70,7 +70,7 @@
         <!-- CONTENIDO PRINCIPAL DINÁMICO -->
         <main class="flex-1 overflow-y-auto no-scrollbar px-6 pt-24 pb-28 flex flex-col">
             
-            <!-- VISTA 1: INICIO (Centrada verticalmente con proporción perfecta) -->
+            <!-- VISTA 1: INICIO (Centrada verticalmente) -->
             <div id="view-home" class="flex-1 flex flex-col justify-center space-y-5 my-auto w-full">
                 
                 <!-- Tarjeta Principal de Pago -->
@@ -93,7 +93,7 @@
                     </button>
                 </section>
 
-                <!-- Sección de Servicios con tamaño idóneo -->
+                <!-- Sección de Servicios -->
                 <div class="space-y-3">
                     <div class="flex justify-between items-center px-1">
                         <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Servicios Activos</h3>
@@ -103,7 +103,7 @@
                         </span>
                     </div>
 
-                    <!-- Grid de Categorías con tamaño perfecto -->
+                    <!-- Grid de Categorías -->
                     <div class="grid grid-cols-2 gap-3">
                         <!-- Comercios -->
                         <button onclick="openModal('Comercios & Click&Collect')" class="group p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/70 hover:border-black/30 hover:bg-white transition-all duration-200 text-left active:scale-[0.97] shadow-sm flex flex-col justify-between h-24">
@@ -168,10 +168,10 @@
                 </div>
             </div>
 
-            <!-- VISTA 2: EXPLORAR (Alineada arriba correctamente, con padding superior limpio) -->
-            <div id="view-explore" class="space-y-5 hidden w-full pt-2">
+            <!-- VISTA 2: EXPLORAR (Con margen superior holgado para que no pegue con la cabecera) -->
+            <div id="view-explore" class="space-y-5 hidden w-full pt-4">
                 <div class="space-y-1">
-                    <h2 class="text-lg font-bold text-black tracking-tight">Explorar Palencia</h2>
+                    <h2 class="text-base font-bold text-black tracking-tight">Explorar Palencia</h2>
                     <p class="text-xs text-neutral-500">Busca comercios, locales y servicios de la ciudad.</p>
                 </div>
                 <div class="relative flex items-center shadow-sm">
@@ -200,8 +200,8 @@
                 </button>
             </div>
 
-            <!-- VISTA 4: PERFIL (Alineada arriba correctamente, con tarjetas de configuración limpias) -->
-            <div id="view-profile" class="space-y-5 hidden w-full pt-2">
+            <!-- VISTA 4: PERFIL (Con margen superior holgado y botones de configuración perfectamente dimensionados) -->
+            <div id="view-profile" class="space-y-5 hidden w-full pt-4">
                 <!-- Tarjeta de Usuario -->
                 <div class="flex items-center space-x-4 p-5 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 shadow-sm">
                     <div class="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center font-bold text-xs shadow-md shrink-0">
@@ -213,17 +213,17 @@
                     </div>
                 </div>
 
-                <!-- Bloque de Configuración -->
+                <!-- Bloque de Configuración (Botones amplios, separados y limpios) -->
                 <div class="space-y-2">
                     <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Configuración</span>
-                    <div class="bg-neutral-50/80 border border-neutral-200/60 rounded-[32px] divide-y divide-neutral-200/60 overflow-hidden text-xs font-medium shadow-sm">
-                        <button onclick="openModal('Métodos de Pago')" class="w-full p-4.5 text-left flex justify-between items-center hover:bg-neutral-100/50 transition">
-                            <span class="text-black font-semibold">Métodos de pago seguros</span>
-                            <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400"></i>
+                    <div class="bg-neutral-50/80 border border-neutral-200/60 rounded-[32px] overflow-hidden shadow-sm">
+                        <button onclick="openModal('Métodos de Pago')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
+                            <span class="text-xs font-bold text-black">Métodos de pago seguros</span>
+                            <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
                         </button>
-                        <button onclick="openModal('Mis Reservas')" class="w-full p-4.5 text-left flex justify-between items-center hover:bg-neutral-100/50 transition">
-                            <span class="text-black font-semibold">Mis reservas y tickets</span>
-                            <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400"></i>
+                        <button onclick="openModal('Mis Reservas')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition">
+                            <span class="text-xs font-bold text-black">Mis reservas y tickets</span>
+                            <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
                         </button>
                     </div>
                 </div>
