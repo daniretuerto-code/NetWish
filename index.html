@@ -241,11 +241,13 @@
 
     </div>
 
-    <!-- SCRIPT DE LÓGICA E INTERACCIÓN -->
+    <!-- SCRIPT DE LÓGICA DE AUTENTICACIÓN REAL Y VALIDACIÓN -->
     <script>
         lucide.createIcons();
 
-        let currentUser = JSON.parse(localStorage.getItem('netwish_user')) || null;
+        // Estado global de sesión y base de datos local de usuarios registrados
+        let currentUser = JSON.parse(localStorage.getItem('netwish_session')) || null;
+        let registeredUsers = JSON.parse(localStorage.getItem('netwish_db_users')) || [];
 
         document.addEventListener('DOMContentLoaded', () => {
             updateHeaderAvatar();
@@ -308,7 +310,7 @@
                         </div>
                         <div class="space-y-1">
                             <h2 class="text-sm font-bold text-black">Inicia sesión en NetWish</h2>
-                            <p class="text-xs text-neutral-500">Accede a tus métodos de pago, reservas y genera tu código QR personal.</p>
+                            <p class="text-xs text-neutral-500">Accede con tus datos reales para generar tu identidad y códigos QR urbanos.</p>
                         </div>
                         <button onclick="openAuthModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md">
                             Iniciar Sesión / Registrarse
@@ -319,6 +321,7 @@
             lucide.createIcons();
         }
 
+        // Modal con validación estricta y control de base de datos local
         function openAuthModal() {
             const modal = document.getElementById('customModal');
             const modalContent = document.getElementById('modalContent');
@@ -330,8 +333,8 @@
             modalBody.innerHTML = `
                 <div class="space-y-4 text-left">
                     <div class="text-center space-y-1">
-                        <h3 class="text-base font-bold text-black">Identificación NetWish</h3>
-                        <p class="text-xs text-neutral-500">Regístrate o inicia sesión con tus datos.</p>
+                        <h3 class="text-base font-bold text-black">Autenticación NetWish</h3>
+                        <p class="text-xs text-neutral-500">Introduce tus datos reales de usuario.</p>
                     </div>
                     <div class="space-y-3 pt-2">
                         <div>
@@ -342,9 +345,13 @@
                             <label class="text-[10px] font-mono uppercase text-neutral-400 block mb-1">Correo Electrónico</label>
                             <input type="email" id="authEmail" placeholder="correo@ejemplo.com" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-3 px-4 text-xs text-black focus:outline-none focus:border-black">
                         </div>
+                        <div>
+                            <label class="text-[10px] font-mono uppercase text-neutral-400 block mb-1">Contraseña de Acceso</label>
+                            <input type="password" id="authPass" placeholder="Mínimo 6 caracteres" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-3 px-4 text-xs text-black focus:outline-none focus:border-black">
+                        </div>
                     </div>
-                    <button onclick="submitAuth()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md mt-2">
-                        Acceder a la App
+                    <button onclick="processRealAuth()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md mt-2">
+                        Validar e Ingresar
                     </button>
                     <button onclick="closeModal()" class="w-full py-2 text-neutral-400 font-medium text-xs transition hover:text-black">
                         Cancelar
@@ -360,24 +367,55 @@
             }, 10);
         }
 
-        function submitAuth() {
-            const nameInput = document.getElementById('authName').value.trim();
-            const emailInput = document.getElementById('authEmail').value.trim();
+        // Lógica estricta de validación y base de datos simulada
+        function processRealAuth() {
+            const name = document.getElementById('authName').value.trim();
+            const email = document.getElementById('authEmail').value.trim();
+            const pass = document.getElementById('authPass').value.trim();
 
-            if (!nameInput || !emailInput) {
-                alert("Por favor, introduce tu nombre y correo.");
+            // Validaciones rigurosas
+            if (!name || !email || !pass) {
+                alert("Error: Todos los campos son obligatorios.");
                 return;
             }
 
-            const initials = nameInput.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                alert("Error: Introduce un correo electrónico válido.");
+                return;
+            }
 
-            currentUser = {
-                name: nameInput,
-                email: emailInput,
-                initials: initials
-            };
+            if (pass.length < 6) {
+                alert("Error: La contraseña debe tener al menos 6 caracteres.");
+                return;
+            }
 
-            localStorage.setItem('netwish_user', JSON.stringify(currentUser));
+            // Buscar si el usuario ya existe en nuestra base de datos local
+            let existingUser = registeredUsers.find(u => u.email === email);
+
+            if (existingUser) {
+                // Si existe, validamos contraseña
+                if (existingUser.pass !== pass) {
+                    alert("Error: Contraseña incorrecta para este correo.");
+                    return;
+                }
+                currentUser = existingUser;
+            } else {
+                // Si no existe, lo registramos oficialmente en la "BD"
+                const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+                currentUser = {
+                    name: name,
+                    email: email,
+                    pass: pass,
+                    initials: initials,
+                    id: 'NW-' + initials + '-' + Math.floor(1000 + Math.random() * 9000)
+                };
+                registeredUsers.push(currentUser);
+                localStorage.setItem('netwish_db_users', JSON.stringify(registeredUsers));
+            }
+
+            // Guardar sesión activa
+            localStorage.setItem('netwish_session', JSON.stringify(currentUser));
             closeModal();
             updateHeaderAvatar();
             renderProfileView();
@@ -385,7 +423,7 @@
         }
 
         function logoutUser() {
-            localStorage.removeItem('netwish_user');
+            localStorage.removeItem('netwish_session');
             currentUser = null;
             updateHeaderAvatar();
             renderProfileView();
@@ -408,11 +446,11 @@
             modalBody.innerHTML = `
                 <div class="space-y-3 text-center">
                     <h3 class="text-base font-bold text-black">Tu Código QR Personal</h3>
-                    <p class="text-xs text-neutral-500">Muestra este código para recibir pagos o identificarte en Palencia.</p>
+                    <p class="text-xs text-neutral-500">Muestra este código seguro para recibir pagos en Palencia.</p>
                     <div id="realQRCodeContainer" class="w-48 h-48 bg-white border-2 border-neutral-200 rounded-3xl mx-auto flex items-center justify-center p-3 relative shadow-sm"></div>
                     <div class="p-3 bg-neutral-50 rounded-2xl border border-neutral-200/60">
                         <span class="block text-xs font-bold text-black">${currentUser.name}</span>
-                        <span class="block text-[10px] text-neutral-400 font-mono">ID: NW-${currentUser.initials}-2026</span>
+                        <span class="block text-[10px] text-neutral-400 font-mono">ID: ${currentUser.id}</span>
                     </div>
                 </div>
             `;
@@ -426,7 +464,7 @@
                 const qrContainer = document.getElementById('realQRCodeContainer');
                 qrContainer.innerHTML = "";
                 new QRCode(qrContainer, {
-                    text: `NETWISH_USER_PAY:${currentUser.email}:${currentUser.name}`,
+                    text: `NETWISH_SECURE_PAY:${currentUser.id}:${currentUser.email}`,
                     width: 160,
                     height: 160,
                     colorDark: "#000000",
