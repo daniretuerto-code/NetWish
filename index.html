@@ -195,10 +195,10 @@
                 </button>
             </div>
 
-            <!-- VISTA 4: PERFIL (Dinámica según estado de sesión) -->
-            <div id="view-profile" class="space-y-5 hidden w-full pt-4">
-                <div id="profileContentContainer">
-                    <!-- Se inyecta por JS dependiendo de si hay usuario o no -->
+            <!-- VISTA 4: PERFIL (Dinámica con control estricto de centrado) -->
+            <div id="view-profile" class="hidden w-full">
+                <div id="profileContentContainer" class="w-full">
+                    <!-- Se inyecta por JS -->
                 </div>
             </div>
 
@@ -240,20 +240,17 @@
 
     </div>
 
-    <!-- SCRIPT DE LÓGICA, ESTADO DE SESIÓN Y UI DINÁMICA -->
+    <!-- SCRIPT DE LÓGICA E INTERACCIÓN -->
     <script>
         lucide.createIcons();
 
-        // Estado global de sesión simulado en localStorage
         let currentUser = JSON.parse(localStorage.getItem('netwish_user')) || null;
 
-        // Inicializar interfaz al cargar
         document.addEventListener('DOMContentLoaded', () => {
             updateHeaderAvatar();
             renderProfileView();
         });
 
-        // Actualizar el avatar superior derecho
         function updateHeaderAvatar() {
             const avatarBtn = document.getElementById('headerAvatar');
             if (currentUser) {
@@ -265,19 +262,17 @@
             }
         }
 
-        // Click en el avatar superior
         function handleHeaderProfileClick() {
-            if (currentUser) {
-                switchTab('profile');
-            } else {
-                openAuthModal();
-            }
+            switchTab('profile');
         }
 
-        // Renderizar la vista de Perfil según el estado
         function renderProfileView() {
+            const viewProfile = document.getElementById('view-profile');
             const container = document.getElementById('profileContentContainer');
+
             if (currentUser) {
+                // Con sesión: flujo natural ordenado desde arriba
+                viewProfile.className = "space-y-5 hidden w-full pt-4";
                 container.innerHTML = `
                     <div class="flex items-center space-x-4 p-5 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 shadow-sm">
                         <div class="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center font-bold text-xs shadow-md shrink-0">
@@ -308,6 +303,8 @@
                     </div>
                 `;
             } else {
+                // Sin sesión: estrictamente CENTRADO verticalmente en medio de la pantalla
+                viewProfile.className = "flex-1 flex flex-col justify-center space-y-5 my-auto w-full hidden";
                 container.innerHTML = `
                     <div class="p-8 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 text-center space-y-4 shadow-sm">
                         <div class="w-14 h-14 rounded-2xl bg-black text-white flex items-center justify-center mx-auto shadow-md">
@@ -326,7 +323,6 @@
             lucide.createIcons();
         }
 
-        // Abrir Modal de Autenticación
         function openAuthModal() {
             const modal = document.getElementById('customModal');
             const modalContent = document.getElementById('modalContent');
@@ -359,7 +355,6 @@
             }, 10);
         }
 
-        // Procesar Registro / Login simulado
         function submitAuth() {
             const nameInput = document.getElementById('authName').value.trim();
             const emailInput = document.getElementById('authEmail').value.trim();
@@ -369,7 +364,6 @@
                 return;
             }
 
-            // Calcular iniciales automáticamente (ej. "Daniel Retuerto" -> "DR")
             const initials = nameInput.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
 
             currentUser = {
@@ -384,7 +378,6 @@
             renderProfileView();
         }
 
-        // Cerrar sesión
         function logoutUser() {
             localStorage.removeItem('netwish_user');
             currentUser = null;
@@ -392,7 +385,6 @@
             renderProfileView();
         }
 
-        // Mostrar QR Personal en la tarjeta de inicio
         function openPersonalQR() {
             if (!currentUser) {
                 openAuthModal();
@@ -425,7 +417,6 @@
             }, 10);
         }
 
-        // Funciones generales de modales y cámara
         const modal = document.getElementById('customModal');
         const modalContent = document.getElementById('modalContent');
         const modalBody = document.getElementById('modalBody');
@@ -510,7 +501,6 @@
 
             document.getElementById('view-' + tabId).classList.remove('hidden');
 
-            // Si cambiamos a perfil, actualizamos sus datos en caliente
             if (tabId === 'profile') {
                 renderProfileView();
             }
