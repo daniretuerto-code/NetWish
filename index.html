@@ -59,7 +59,7 @@
     <!-- Contenedor Principal App Shell -->
     <div class="w-full h-[100dvh] sm:h-[844px] sm:max-w-[390px] sm:rounded-[48px] bg-white flex flex-col relative shadow-[0_30px_90px_rgba(0,0,0,0.12)] overflow-hidden sm:border-[8px] sm:border-neutral-900">
         
-        <!-- HEADER SUPERIOR FIJO -->
+        <!-- HEADER SUPERIOR FIJO (Dinámico según sesión) -->
         <header class="absolute top-0 left-0 right-0 px-6 pt-8 pb-3 border-b border-neutral-100/80 flex justify-between items-center glass-panel z-30">
             <h1 class="text-2xl font-bold tracking-tight text-black font-serif italic">NetWish</h1>
             <button onclick="handleHeaderProfileClick()" id="headerAvatar" class="w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner transition hover:scale-105 active:scale-95">
@@ -181,7 +181,7 @@
                 </div>
             </div>
 
-            <!-- VISTA 3: QR -->
+            <!-- VISTA 3: QR (Cámara) -->
             <div id="view-scan" class="space-y-6 hidden text-center py-16 my-auto w-full">
                 <div class="w-16 h-16 rounded-[28px] bg-black text-white flex items-center justify-center mx-auto shadow-xl">
                     <i data-lucide="scan" class="w-8 h-8"></i>
@@ -267,12 +267,11 @@
         }
 
         function renderProfileView() {
-            const container = document.getElementById('profileContentContainer');
             const viewProfile = document.getElementById('view-profile');
+            const container = document.getElementById('profileContentContainer');
 
             if (currentUser) {
-                viewProfile.classList.remove('flex-1', 'flex', 'flex-col', 'justify-center', 'my-auto');
-                viewProfile.classList.add('space-y-5', 'pt-4');
+                viewProfile.className = "space-y-5 hidden w-full pt-4";
                 container.innerHTML = `
                     <div class="flex items-center space-x-4 p-5 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 shadow-sm">
                         <div class="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center font-bold text-xs shadow-md shrink-0">
@@ -303,8 +302,7 @@
                     </div>
                 `;
             } else {
-                viewProfile.classList.add('flex-1', 'flex', 'flex-col', 'justify-center', 'my-auto');
-                viewProfile.classList.remove('space-y-5', 'pt-4');
+                viewProfile.className = "flex-1 flex flex-col justify-center space-y-5 my-auto w-full hidden";
                 container.innerHTML = `
                     <div class="p-8 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 text-center space-y-4 shadow-sm">
                         <div class="w-14 h-14 rounded-2xl bg-black text-white flex items-center justify-center mx-auto shadow-md">
@@ -323,26 +321,36 @@
             lucide.createIcons();
         }
 
+        // Función real para abrir el formulario de registro/login
         function openAuthModal() {
             const modal = document.getElementById('customModal');
             const modalContent = document.getElementById('modalContent');
             const modalBody = document.getElementById('modalBody');
+            const closeBtn = document.getElementById('modalCloseBtn');
             
+            closeBtn.style.display = 'none'; // Ocultamos el botón por defecto para usar el de submit
+
             modalBody.innerHTML = `
-                <div class="space-y-3 text-left">
+                <div class="space-y-4 text-left">
                     <div class="text-center space-y-1">
-                        <h3 class="text-base font-bold text-black">Bienvenido a NetWish</h3>
-                        <p class="text-xs text-neutral-500">Introduce tus datos para acceder a tu perfil urbano.</p>
+                        <h3 class="text-base font-bold text-black">Identificación NetWish</h3>
+                        <p class="text-xs text-neutral-500">Regístrate o inicia sesión con tus datos.</p>
                     </div>
-                    <div class="space-y-2 pt-2">
-                        <label class="text-[10px] font-mono uppercase text-neutral-400 block">Nombre Completo</label>
-                        <input type="text" id="authName" placeholder="Ej. Daniel Retuerto" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-3 px-4 text-xs text-black focus:outline-none focus:border-black">
-                        
-                        <label class="text-[10px] font-mono uppercase text-neutral-400 block">Correo Electrónico</label>
-                        <input type="email" id="authEmail" placeholder="correo@ejemplo.com" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-3 px-4 text-xs text-black focus:outline-none focus:border-black">
+                    <div class="space-y-3 pt-2">
+                        <div>
+                            <label class="text-[10px] font-mono uppercase text-neutral-400 block mb-1">Nombre Completo</label>
+                            <input type="text" id="authName" placeholder="Ej. Daniel Retuerto" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-3 px-4 text-xs text-black focus:outline-none focus:border-black">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-mono uppercase text-neutral-400 block mb-1">Correo Electrónico</label>
+                            <input type="email" id="authEmail" placeholder="correo@ejemplo.com" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-3 px-4 text-xs text-black focus:outline-none focus:border-black">
+                        </div>
                     </div>
                     <button onclick="submitAuth()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md mt-2">
-                        Continuar
+                        Acceder a la App
+                    </button>
+                    <button onclick="closeModal()" class="w-full py-2 text-neutral-400 font-medium text-xs transition hover:text-black">
+                        Cancelar
                     </button>
                 </div>
             `;
@@ -360,7 +368,7 @@
             const emailInput = document.getElementById('authEmail').value.trim();
 
             if (!nameInput || !emailInput) {
-                alert("Por favor, rellena todos los campos.");
+                alert("Por favor, introduce tu nombre y correo.");
                 return;
             }
 
@@ -376,6 +384,7 @@
             closeModal();
             updateHeaderAvatar();
             renderProfileView();
+            switchTab('home');
         }
 
         function logoutUser() {
@@ -383,6 +392,7 @@
             currentUser = null;
             updateHeaderAvatar();
             renderProfileView();
+            switchTab('profile');
         }
 
         function openPersonalQR() {
@@ -394,6 +404,9 @@
             const modal = document.getElementById('customModal');
             const modalContent = document.getElementById('modalContent');
             const modalBody = document.getElementById('modalBody');
+            const closeBtn = document.getElementById('modalCloseBtn');
+            
+            closeBtn.style.display = 'block';
 
             modalBody.innerHTML = `
                 <div class="space-y-3 text-center">
@@ -424,6 +437,7 @@
 
         function openModal(sectionName) {
             stopCamera();
+            document.getElementById('modalCloseBtn').style.display = 'block';
             modalBody.innerHTML = `
                 <div class="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto text-black">
                     <i data-lucide="clock" class="w-6 h-6"></i>
@@ -443,6 +457,7 @@
         }
 
         async function startCameraModal() {
+            document.getElementById('modalCloseBtn').style.display = 'block';
             modalBody.innerHTML = `
                 <div class="space-y-3">
                     <h3 class="text-base font-bold text-black">Escaneando Código QR</h3>
