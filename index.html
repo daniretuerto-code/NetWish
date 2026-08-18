@@ -27,6 +27,8 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Librería QRCode.js para generar -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Librería jsQR universal para lectura por software en cualquier navegador -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <!-- Supabase JS SDK Real -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -198,7 +200,7 @@
                 </div>
                 <div class="space-y-1.5">
                     <h2 class="text-sm font-bold text-black">Cámara de Escaneo QR</h2>
-                    <p class="text-xs text-neutral-500 px-6">Apunta la cámara al código QR personal de otro usuario para conectarte y pagar.</p>
+                    <p class="text-xs text-neutral-500 px-6">Apunta la cámara al código QR personal de otro usuario para conectarte al instante.</p>
                 </div>
                 <button onclick="startCameraModal()" class="w-full py-3.5 bg-black text-white rounded-2xl text-xs font-semibold transition hover:bg-neutral-800 shadow-md">
                     Activar Lector QR
@@ -247,7 +249,7 @@
 
     </div>
 
-    <!-- SCRIPT DE LÓGICA Y LECTOR QR REAL POR HARDWARE -->
+    <!-- SCRIPT DE LÓGICA Y LECTOR UNIVERSAL jsQR -->
     <script>
         lucide.createIcons();
 
@@ -257,7 +259,7 @@
 
         let currentUser = null;
         let currentStream = null;
-        let scanAnimationId = null;
+        let scanningInterval = null;
 
         document.addEventListener('DOMContentLoaded', async () => {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -594,7 +596,6 @@
                 
                 const qrContainer = document.getElementById('realQRCodeContainer');
                 qrContainer.innerHTML = "";
-                // Codificamos el identificador estructurado real en el QR
                 new QRCode(qrContainer, {
                     text: `NETWISH_PAY:${meta.name || 'Usuario'} ${meta.surname || ''}:${currentUser.email}`,
                     width: 140,
@@ -634,7 +635,7 @@
         }
 
         // ==========================================
-        // LECTOR QR REAL POR HARDWARE (BarcodeDetector API)
+        // ESCÁNER UNIVERSAL CON LIBRERÍA jsQR
         // ==========================================
         async function startCameraModal() {
             modalBody.innerHTML = `
@@ -642,11 +643,12 @@
                     <h3 class="text-base font-bold text-black">Escaneando Código QR</h3>
                     <div class="w-full h-56 bg-black rounded-2xl overflow-hidden relative flex items-center justify-center shadow-inner">
                         <video id="cameraPreview" autoplay playsinline muted class="w-full h-full object-cover"></video>
+                        <canvas id="qrCanvas" class="hidden"></canvas>
                         <div class="absolute inset-0 border-2 border-white/30 m-4 rounded-xl pointer-events-none flex items-center justify-center">
                             <div class="w-24 h-24 border-2 border-white rounded-xl animate-pulse"></div>
                         </div>
                     </div>
-                    <p class="text-[10px] text-neutral-400">Apunta la cámara al QR de la otra persona para conectarte al instante.</p>
+                    <p class="text-[10px] text-neutral-400">Apunta la cámara al código QR de la otra persona.</p>
                     <button onclick="closeModal()" class="w-full py-2.5 bg-neutral-100 text-black font-semibold rounded-xl text-xs">Cerrar Cámara</button>
                 </div>
             `;
@@ -666,41 +668,39 @@
                 if (videoElement) {
                     videoElement.srcObject = currentStream;
                     videoElement.play();
-                    runBarcodeScanner(videoElement);
+                    startUniversalScanningLoop();
                 }
             } catch (error) {
                 console.error("Error al acceder a la cámara:", error);
-                alert("No se pudo acceder a la cámara. Revisa los permisos.");
+                alert("No se pudo acceder a la cámara. Asegúrate de dar permisos en el navegador.");
                 closeModal();
             }
         }
 
-        async function runBarcodeScanner(videoElement) {
-            // Comprobamos si el navegador soporta el detector nativo de códigos QR
-            if (!('BarcodeDetector' in window)) {
-                alert("Tu navegador no soporta el escáner de códigos por hardware. Usa Chrome o Safari actualizados.");
-                return;
-            }
+        function startUniversalScanningLoop() {
+            const video = document.getElementById('cameraPreview');
+            const canvas = document.getElementById('qrCanvas');
+            if (!video || !canvas) return;
+            const context = canvas.getContext('2d');
 
-            const barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] });
+            scanningInterval = setInterval(() => {
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    canvas.height = video.videoHeight;
+                    canvas.width = video.videoWidth;
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: "dontInvert",
+                    });
 
-            const scanFrame = async () => {
-                if (!currentStream) return;
-                try {
-                    const barcodes = await barcodeDetector.detect(videoElement);
-                    if (barcodes.length > 0) {
-                        const scannedText = barcodes[0].rawValue;
+                    if (code) {
+                        clearInterval(scanningInterval);
                         stopCamera();
-                        processScannedQRData(scannedText);
-                        return;
+                        processScannedQRData(code.data);
                     }
-                } catch (e) {
-                    // Ignoramos errores de fotograma mientras escanea
                 }
-                scanAnimationId = requestAnimationFrame(scanFrame);
-            };
-
-            scanAnimationId = requestAnimationFrame(scanFrame);
+            }, 250);
         }
 
         function processScannedQRData(qrText) {
@@ -766,9 +766,9 @@
         }
 
         function stopCamera() {
-            if (scanAnimationId) {
-                cancelAnimationFrame(scanAnimationId);
-                scanAnimationId = null;
+            if (scanningInterval) {
+                clearInterval(scanningInterval);
+                scanningInterval = null;
             }
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
