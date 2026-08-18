@@ -214,7 +214,7 @@
                 </div>
             </div>
 
-            <!-- VISTA 5: PASARELA DE PAGO ESTILO APPLE -->
+            <!-- VISTA 5: PASARELA DE PAGO ESTILO APPLE CON BOTÓN DE MANTENER PULSADO -->
             <div id="view-payment" class="hidden w-full h-full flex flex-col justify-between pt-4 pb-4">
                 <!-- Header con indicador verde -->
                 <div class="flex items-center justify-between px-1">
@@ -247,7 +247,7 @@
                     </div>
                 </div>
 
-                <!-- Teclado Táctil Directo -->
+                <!-- Teclado Táctil Directo Estilo Calculadora/Cajero -->
                 <div class="grid grid-cols-3 gap-2.5 max-w-[280px] mx-auto w-full">
                     <button onclick="appendNum('1')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-sm">1</button>
                     <button onclick="appendNum('2')" class="py-3 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-sm">2</button>
@@ -265,9 +265,13 @@
                     </button>
                 </div>
 
-                <button onclick="executeFullPayment()" class="w-full py-4 bg-black text-white font-semibold rounded-2xl text-xs tracking-wider uppercase transition hover:bg-neutral-800 active:scale-[0.98] shadow-xl">
-                    Confirmar Envío
-                </button>
+                <!-- Botón de Confirmación con Mantener Pulsado y Barra Verde -->
+                <div id="holdButtonContainer" class="relative w-full h-14 bg-black rounded-2xl overflow-hidden shadow-xl select-none cursor-pointer flex items-center justify-center">
+                    <!-- Barra verde que se llena al mantener pulsado -->
+                    <div id="progressBar" class="absolute top-0 left-0 bottom-0 w-0 bg-emerald-500 transition-all duration-75 pointer-events-none"></div>
+                    <!-- Texto superpuesto -->
+                    <span class="relative z-10 text-white font-semibold text-xs tracking-wider uppercase pointer-events-none">MANTENER PARA CONFIRMAR</span>
+                </div>
             </div>
 
         </main>
@@ -305,7 +309,7 @@
 
     </div>
 
-    <!-- SCRIPT DE LÓGICA Y TECLADO INTELIGENTE -->
+    <!-- SCRIPT DE LÓGICA Y TECLADO ESTILO CAJERO / MANTENER PULSADO -->
     <script>
         lucide.createIcons();
 
@@ -318,7 +322,12 @@
         let scanningInterval = null;
 
         let activePayee = "";
-        let rawDigits = "0"; // Almacena los dígitos introducidos
+        let rawAmountString = "0"; // Almacena los dígitos introducidos en bruto
+
+        // Variables para el botón de mantener pulsado
+        let holdTimer = null;
+        let progressInterval = null;
+        let holdProgress = 0;
 
         document.addEventListener('DOMContentLoaded', async () => {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -327,6 +336,7 @@
             }
             updateHeaderAvatar();
             renderProfileView();
+            initHoldButtonListeners();
         });
 
         function updateHeaderAvatar() {
@@ -652,18 +662,18 @@
             setTimeout(() => {
                 modal.classList.remove('opacity-0');
                 modalContent.classList.remove('scale-95');
-                
-                const qrContainer = document.getElementById('realQRCodeContainer');
-                qrContainer.innerHTML = "";
-                new QRCode(qrContainer, {
-                    text: `NETWISH_PAY:${meta.name || 'Usuario'} ${meta.surname || ''}:${currentUser.email}`,
-                    width: 140,
-                    height: 140,
-                    colorDark: "#000000",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
-                });
             }, 10);
+
+            const qrContainer = document.getElementById('realQRCodeContainer');
+            qrContainer.innerHTML = "";
+            new QRCode(qrContainer, {
+                text: `NETWISH_PAY:${meta.name || 'Usuario'} ${meta.surname || ''}:${currentUser.email}`,
+                width: 140,
+                height: 140,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
         }
 
         const modal = document.getElementById('customModal');
@@ -768,8 +778,8 @@
                 const parts = qrText.replace('NETWISH_PAY:', '').split(':');
                 activePayee = parts[0] || 'Usuario NetWish';
                 
-                // Inicializar importe a 0,00
-                rawDigits = "0";
+                // Inicializar importe a vacío / 0
+                rawAmountString = "0";
                 updateAmountDisplay();
                 
                 document.getElementById('payeeNameDisplay').innerText = activePayee;
@@ -781,38 +791,89 @@
         }
 
         // ==========================================
-        // TECLADO INTELIGENTE ESTILO IPHONE (ENTRADA DIRECTA)
+        // TECLADO ESTILO CAJERO (ENTRADA DIRECTA EXACTA)
         // ==========================================
         function appendNum(num) {
-            if (rawDigits === "0" && num !== "00") {
-                rawDigits = num;
-            } else if (rawDigits === "0" && num === "00") {
-                return;
+            if (rawAmountString === "0") {
+                if (num === "00") return;
+                rawAmountString = num;
             } else {
-                if (rawDigits.length < 7) { // Evita desbordamiento
-                    rawDigits += num;
+                if (rawAmountString.length < 7) {
+                    rawAmountString += num;
                 }
             }
             updateAmountDisplay();
         }
 
         function clearNum() {
-            if (rawDigits.length <= 1) {
-                rawDigits = "0";
+            if (rawAmountString.length <= 1) {
+                rawAmountString = "0";
             } else {
-                rawDigits = rawDigits.slice(0, -1);
+                rawAmountString = rawAmountString.slice(0, -1);
             }
             updateAmountDisplay();
         }
 
         function updateAmountDisplay() {
-            // Convertimos los dígitos a número dividiendo por 100 para manejar céntimos de forma natural (ej: "2" -> 0,02 / "25" -> 0,25 / "250" -> 2,50)
-            const numericValue = parseInt(rawDigits, 10) / 100;
+            // Ejemplo: si rawAmountString es "2", se divide por 100 y da 0,02. Si es "200", da 2,00. Si es "1500", da 15,00.
+            const numericValue = parseInt(rawAmountString, 10) / 100;
             document.getElementById('payAmountDisplay').innerText = numericValue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
+        // ==========================================
+        // LÓGICA DE MANTENER PULSADO PARA CONFIRMAR
+        // ==========================================
+        function initHoldButtonListeners() {
+            const btn = document.getElementById('holdButtonContainer');
+            if (!btn) return;
+
+            const startHold = (e) => {
+                e.preventDefault();
+                if (holdTimer) return; // Ya está activo
+
+                holdProgress = 0;
+                const progressBar = document.getElementById('progressBar');
+                
+                progressInterval = setInterval(() => {
+                    holdProgress += 2; // Velocidad de llenado
+                    if (progressBar) progressBar.style.width = holdProgress + '%';
+
+                    if (holdProgress >= 100) {
+                        clearInterval(progressInterval);
+                        clearInterval(holdTimer);
+                        holdTimer = null;
+                        progressInterval = null;
+                        executeFullPayment();
+                    }
+                }, 20);
+            };
+
+            const cancelHold = () => {
+                if (holdTimer) {
+                    clearInterval(holdTimer);
+                    holdTimer = null;
+                }
+                if (progressInterval) {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                }
+                holdProgress = 0;
+                const progressBar = document.getElementById('progressBar');
+                if (progressBar) progressBar.style.width = '0%';
+            };
+
+            // Eventos táctiles y de ratón
+            btn.addEventListener('mousedown', startHold);
+            btn.addEventListener('mouseup', cancelHold);
+            btn.addEventListener('mouseleave', cancelHold);
+
+            btn.addEventListener('touchstart', startHold, { passive: false });
+            btn.addEventListener('touchend', cancelHold);
+            btn.addEventListener('touchcancel', cancelHold);
+        }
+
         function executeFullPayment() {
-            const numericValue = parseInt(rawDigits, 10) / 100;
+            const numericValue = parseInt(rawAmountString, 10) / 100;
             if (numericValue <= 0) {
                 alert("Introduce una cantidad válida mayor a 0 €.");
                 return;
@@ -874,6 +935,13 @@
 
             if (tabId === 'profile') {
                 renderProfileView();
+            }
+
+            // Si entramos en la vista de pago, reiniciamos la barra de progreso
+            if (tabId === 'payment') {
+                holdProgress = 0;
+                const pb = document.getElementById('progressBar');
+                if (pb) pb.style.width = '0%';
             }
 
             document.getElementById('nav-home').className = "flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group";
