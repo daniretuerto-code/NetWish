@@ -25,6 +25,8 @@
     </script>
     <!-- Lucide Icons CDN -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Librería QRCode.js real y válida -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <style>
         * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
@@ -59,7 +61,7 @@
     <!-- Contenedor Principal App Shell -->
     <div class="w-full h-[100dvh] sm:h-[844px] sm:max-w-[390px] sm:rounded-[48px] bg-white flex flex-col relative shadow-[0_30px_90px_rgba(0,0,0,0.12)] overflow-hidden sm:border-[8px] sm:border-neutral-900">
         
-        <!-- HEADER SUPERIOR FIJO (Dinámico según sesión) -->
+        <!-- HEADER SUPERIOR FIJO -->
         <header class="absolute top-0 left-0 right-0 px-6 pt-8 pb-3 border-b border-neutral-100/80 flex justify-between items-center glass-panel z-30">
             <h1 class="text-2xl font-bold tracking-tight text-black font-serif italic">NetWish</h1>
             <button onclick="handleHeaderProfileClick()" id="headerAvatar" class="w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner transition hover:scale-105 active:scale-95">
@@ -198,7 +200,7 @@
             <!-- VISTA 4: PERFIL -->
             <div id="view-profile" class="space-y-5 hidden w-full pt-4">
                 <div id="profileContentContainer" class="w-full">
-                    <!-- Se inyecta por JS -->
+                    <!-- Se inyecta por JS de forma segura -->
                 </div>
             </div>
 
@@ -272,6 +274,7 @@
 
             if (currentUser) {
                 viewProfile.className = "space-y-5 hidden w-full pt-4";
+                viewProfile.classList.remove('flex-1', 'flex', 'flex-col', 'justify-center', 'my-auto');
                 container.innerHTML = `
                     <div class="flex items-center space-x-4 p-5 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 shadow-sm">
                         <div class="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center font-bold text-xs shadow-md shrink-0">
@@ -321,14 +324,14 @@
             lucide.createIcons();
         }
 
-        // Función real para abrir el formulario de registro/login
+        // Abrir modal de Registro / Login real
         function openAuthModal() {
             const modal = document.getElementById('customModal');
             const modalContent = document.getElementById('modalContent');
             const modalBody = document.getElementById('modalBody');
             const closeBtn = document.getElementById('modalCloseBtn');
             
-            closeBtn.style.display = 'none'; // Ocultamos el botón por defecto para usar el de submit
+            closeBtn.style.display = 'none';
 
             modalBody.innerHTML = `
                 <div class="space-y-4 text-left">
@@ -395,6 +398,7 @@
             switchTab('profile');
         }
 
+        // Generación de un Código QR VÁLIDO y real con qrcode.js
         function openPersonalQR() {
             if (!currentUser) {
                 openAuthModal();
@@ -412,9 +416,7 @@
                 <div class="space-y-3 text-center">
                     <h3 class="text-base font-bold text-black">Tu Código QR Personal</h3>
                     <p class="text-xs text-neutral-500">Muestra este código para recibir pagos o identificarte en Palencia.</p>
-                    <div class="w-48 h-48 bg-neutral-100 border-2 border-neutral-200 rounded-3xl mx-auto flex items-center justify-center p-4 relative">
-                        <i data-lucide="qr-code" class="w-32 h-32 text-black"></i>
-                    </div>
+                    <div id="realQRCodeContainer" class="w-48 h-48 bg-white border-2 border-neutral-200 rounded-3xl mx-auto flex items-center justify-center p-3 relative shadow-sm"></div>
                     <div class="p-3 bg-neutral-50 rounded-2xl border border-neutral-200/60">
                         <span class="block text-xs font-bold text-black">${currentUser.name}</span>
                         <span class="block text-[10px] text-neutral-400 font-mono">ID: NW-${currentUser.initials}-2026</span>
@@ -427,6 +429,18 @@
             setTimeout(() => {
                 modal.classList.remove('opacity-0');
                 modalContent.classList.remove('scale-95');
+                
+                // Generar el QR real con los datos del usuario
+                const qrContainer = document.getElementById('realQRCodeContainer');
+                qrContainer.innerHTML = ""; // Limpiar contenedor por si acaso
+                new QRCode(qrContainer, {
+                    text: `NETWISH_USER_PAY:${currentUser.email}:${currentUser.name}`,
+                    width: 160,
+                    height: 160,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.H
+                });
             }, 10);
         }
 
