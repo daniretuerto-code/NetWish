@@ -2,7 +2,6 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <!-- Viewport adaptativo para móviles y soporte de notch -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>NetWish — Palencia</title>
 
@@ -28,14 +27,11 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        /* Desactivar resaltado táctil en móviles y configurar caja global */
         * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-        html {
-            background-color: #f5f5f7;
-        }
+        html { background-color: #f8f9fa; }
         body { 
-            background-color: #f5f5f7; 
-            color: #171717; 
+            background-color: #f8f9fa; 
+            color: #111111; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             margin: 0;
             padding: 0;
@@ -44,107 +40,107 @@
             justify-content: center;
             align-items: center;
         }
-        /* Ocultar barras de scroll para un aspecto de app nativa fluida */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body>
 
-    <!-- Contenedor Principal App Shell (Simula app en desktop, pantalla completa en móvil) -->
-    <div class="w-full h-[100dvh] sm:h-[844px] sm:max-w-[390px] sm:rounded-[40px] bg-white flex flex-col relative shadow-2xl overflow-hidden sm:border sm:border-neutral-300">
+    <!-- Contenedor Principal App Shell (Efecto cristal y bordes refinados) -->
+    <div class="w-full h-[100dvh] sm:h-[844px] sm:max-w-[390px] sm:rounded-[44px] bg-white flex flex-col relative shadow-[0_20px_50px_rgba(0,0,0,0.08)] overflow-hidden sm:border sm:border-neutral-200/80">
         
-        <!-- HEADER SUPERIOR FIJO -->
-        <header class="absolute top-0 left-0 right-0 px-5 pt-10 pb-3 border-b border-neutral-100 flex justify-between items-center bg-white/95 backdrop-blur-md z-30 shadow-sm">
+        <!-- HEADER SUPERIOR FIJO (Diseño minimalista de alta gama) -->
+        <header class="absolute top-0 left-0 right-0 px-6 pt-12 pb-3.5 border-b border-neutral-100 flex justify-between items-center bg-white/80 backdrop-blur-xl z-30">
             <h1 class="text-xl font-bold tracking-tight text-black font-serif italic">NetWish</h1>
-            <div class="w-8 h-8 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-[11px] font-semibold text-neutral-800 shadow-sm">
+            <div class="w-8 h-8 rounded-full bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-[11px] font-semibold text-neutral-800 shadow-sm">
                 DR
             </div>
         </header>
 
         <!-- CONTENIDO PRINCIPAL DINÁMICO -->
-        <main class="flex-1 overflow-y-auto no-scrollbar px-5 pt-28 pb-28 flex flex-col">
+        <main class="flex-1 overflow-y-auto no-scrollbar px-6 pt-28 pb-28 flex flex-col">
             
-            <!-- VISTA 1: INICIO (Centrada verticalmente) -->
-            <div id="view-home" class="flex-1 flex flex-col justify-center space-y-6 my-auto">
+            <!-- VISTA 1: INICIO -->
+            <div id="view-home" class="flex-1 flex flex-col justify-center space-y-5 my-auto">
                 
-                <!-- Frase de cabecera con fuente elegante -->
-                <div class="text-center px-2 pb-1">
-                    <p class="text-sm font-serif italic text-neutral-600 tracking-wide">La manera de unificar tus necesidades.</p>
+                <!-- Frase de cabecera elegante -->
+                <div class="text-center px-2">
+                    <p class="text-xs font-serif italic text-neutral-500 tracking-wider">La manera de unificar tus necesidades.</p>
                 </div>
 
-                <!-- Acceso Directo Destacado: Escáner QR de Pagos -->
-                <section class="p-5 rounded-2xl bg-black text-white flex flex-col justify-between space-y-4 shadow-xl">
-                    <div class="flex justify-between items-start">
+                <!-- Acceso Directo Destacado: Escáner QR de Pagos (Efecto premium oscuro) -->
+                <section class="p-5 rounded-3xl bg-[#0d0d0d] text-white flex flex-col justify-between space-y-4 shadow-[0_10px_30px_rgba(0,0,0,0.15)] relative overflow-hidden">
+                    <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-neutral-800/40 rounded-full blur-xl pointer-events-none"></div>
+                    <div class="flex justify-between items-start relative z-10">
                         <div>
-                            <span class="text-[10px] text-neutral-400 font-mono tracking-wider">PAGO RÁPIDO URBANO</span>
-                            <h2 class="text-base font-semibold tracking-tight mt-0.5 text-white">Escanea para Pagar</h2>
+                            <span class="text-[9px] text-neutral-400 font-mono tracking-widest uppercase">PASARELA URBANA</span>
+                            <h2 class="text-base font-medium tracking-tight mt-0.5 text-white">Escanea para Pagar</h2>
                         </div>
-                        <i data-lucide="qr-code" class="w-6 h-6 text-neutral-200"></i>
+                        <i data-lucide="qr-code" class="w-5 h-5 text-neutral-300"></i>
                     </div>
-                    <button onclick="openModal('Escáner QR de Pagos')" class="w-full py-3 bg-white text-black font-medium rounded-xl text-sm transition hover:bg-neutral-200 active:scale-[0.98]">
+                    <button onclick="openModal('Escáner QR de Pagos')" class="w-full py-3 bg-white text-black font-medium rounded-2xl text-xs transition hover:bg-neutral-200 active:scale-[0.98] relative z-10 shadow-sm">
                         Abrir Escáner
                     </button>
                 </section>
 
                 <!-- Categorías de la Ciudad -->
-                <section class="space-y-3">
-                    <h3 class="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Categorías de la Ciudad</h3>
-                    <div class="grid grid-cols-2 gap-3">
+                <section class="space-y-2.5">
+                    <h3 class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Categorías de la Ciudad</h3>
+                    <div class="grid grid-cols-2 gap-2.5">
                         <!-- Comercios -->
-                        <button onclick="openModal('Comercios')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left active:scale-95">
-                            <div class="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
-                                <i data-lucide="store" class="w-5 h-5 text-amber-600"></i>
+                        <button onclick="openModal('Comercios')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50/80 border border-neutral-200/60 hover:border-neutral-300 transition text-left active:scale-[0.98] shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+                            <div class="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                                <i data-lucide="store" class="w-4 h-4 text-amber-600"></i>
                             </div>
                             <div>
-                                <span class="block text-xs font-semibold text-black">Comercios</span>
-                                <span class="block text-[10px] text-neutral-500">Pan, stock, etc</span>
+                                <span class="block text-xs font-semibold text-black leading-tight">Comercios</span>
+                                <span class="block text-[9px] text-neutral-400 mt-0.5">Pan, stock, etc</span>
                             </div>
                         </button>
 
                         <!-- Restaurantes -->
-                        <button onclick="openModal('Restaurantes')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left active:scale-95">
-                            <div class="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center shrink-0">
-                                <i data-lucide="utensils" class="w-5 h-5 text-rose-600"></i>
+                        <button onclick="openModal('Restaurantes')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50/80 border border-neutral-200/60 hover:border-neutral-300 transition text-left active:scale-[0.98] shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+                            <div class="w-8 h-8 rounded-xl bg-rose-500/10 flex items-center justify-center shrink-0">
+                                <i data-lucide="utensils" class="w-4 h-4 text-rose-600"></i>
                             </div>
                             <div>
-                                <span class="block text-xs font-semibold text-black">Restaurantes</span>
-                                <span class="block text-[10px] text-neutral-500">QR mesa, cuenta</span>
+                                <span class="block text-xs font-semibold text-black leading-tight">Restaurantes</span>
+                                <span class="block text-[9px] text-neutral-400 mt-0.5">QR mesa, cuenta</span>
                             </div>
                         </button>
 
                         <!-- Movilidad -->
-                        <button onclick="openModal('Movilidad')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left active:scale-95">
-                            <div class="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
-                                <i data-lucide="car" class="w-5 h-5 text-emerald-600"></i>
+                        <button onclick="openModal('Movilidad')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50/80 border border-neutral-200/60 hover:border-neutral-300 transition text-left active:scale-[0.98] shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+                            <div class="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                                <i data-lucide="car" class="w-4 h-4 text-emerald-600"></i>
                             </div>
                             <div>
-                                <span class="block text-xs font-semibold text-black">Movilidad</span>
-                                <span class="block text-[10px] text-neutral-500">Taxis y bus GPS</span>
+                                <span class="block text-xs font-semibold text-black leading-tight">Movilidad</span>
+                                <span class="block text-[9px] text-neutral-400 mt-0.5">Taxis y bus GPS</span>
                             </div>
                         </button>
 
                         <!-- Peluquería -->
-                        <button onclick="openModal('Peluquería')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left active:scale-95">
-                            <div class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
-                                <i data-lucide="scissors" class="w-5 h-5 text-blue-600"></i>
+                        <button onclick="openModal('Peluquería')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50/80 border border-neutral-200/60 hover:border-neutral-300 transition text-left active:scale-[0.98] shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+                            <div class="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                                <i data-lucide="scissors" class="w-4 h-4 text-blue-600"></i>
                             </div>
                             <div>
-                                <span class="block text-xs font-semibold text-black">Peluquería</span>
-                                <span class="block text-[10px] text-neutral-500">Reservas y citas</span>
+                                <span class="block text-xs font-semibold text-black leading-tight">Peluquería</span>
+                                <span class="block text-[9px] text-neutral-400 mt-0.5">Reservas y citas</span>
                             </div>
                         </button>
                     </div>
 
                     <!-- Ocio -->
-                    <button onclick="openModal('Ocio y Experiencias')" class="w-full flex items-center justify-between p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left active:scale-95">
+                    <button onclick="openModal('Ocio y Experiencias')" class="w-full flex items-center justify-between p-3.5 rounded-2xl bg-neutral-50/80 border border-neutral-200/60 hover:border-neutral-300 transition text-left active:scale-[0.98] shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
                         <div class="flex items-center space-x-3">
-                            <div class="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center shrink-0">
-                                <i data-lucide="sparkles" class="w-5 h-5 text-purple-600"></i>
+                            <div class="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0">
+                                <i data-lucide="sparkles" class="w-4 h-4 text-purple-600"></i>
                             </div>
                             <div>
-                                <span class="block text-xs font-semibold text-black">Ocio y Experiencias</span>
-                                <span class="block text-[10px] text-neutral-500">Eventos y actividades en Palencia</span>
+                                <span class="block text-xs font-semibold text-black leading-tight">Ocio y Experiencias</span>
+                                <span class="block text-[9px] text-neutral-400 mt-0.5">Eventos y actividades en Palencia</span>
                             </div>
                         </div>
                         <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400"></i>
@@ -152,55 +148,55 @@
                 </section>
             </div>
 
-            <!-- VISTA 2: EXPLORAR (Alineada arriba) -->
-            <div id="view-explore" class="space-y-6 hidden">
-                <div class="space-y-2 pt-2">
-                    <h2 class="text-lg font-bold text-black tracking-tight">Explorar Palencia</h2>
-                    <p class="text-xs text-neutral-500">Encuentra comercios, locales y servicios al instante.</p>
+            <!-- VISTA 2: EXPLORAR -->
+            <div id="view-explore" class="space-y-5 hidden">
+                <div class="space-y-1 pt-1">
+                    <h2 class="text-base font-bold text-black tracking-tight">Explorar Palencia</h2>
+                    <p class="text-xs text-neutral-500">Encuentra comercios y servicios al instante.</p>
                 </div>
                 <div class="relative flex items-center shadow-sm">
                     <i data-lucide="search" class="absolute left-4 w-4 h-4 text-neutral-400"></i>
-                    <input type="text" placeholder="Buscar panaderías, taxis, etc..." class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-3 pl-11 pr-4 text-sm text-black placeholder-neutral-400 focus:outline-none focus:border-black transition">
+                    <input type="text" placeholder="Buscar panaderías, taxis, etc..." class="w-full bg-neutral-50 border border-neutral-200/80 rounded-2xl py-3.5 pl-11 pr-4 text-xs text-black placeholder-neutral-400 focus:outline-none focus:border-black transition">
                 </div>
-                <div class="p-6 rounded-2xl bg-neutral-50 border border-neutral-200 text-center space-y-2">
-                    <i data-lucide="compass" class="w-8 h-8 text-neutral-400 mx-auto"></i>
+                <div class="p-6 rounded-3xl bg-neutral-50/50 border border-neutral-200/60 text-center space-y-2">
+                    <i data-lucide="compass" class="w-7 h-7 text-neutral-400 mx-auto"></i>
                     <p class="text-xs font-medium text-neutral-600">Introduce un término para comenzar la búsqueda en directo.</p>
                 </div>
             </div>
 
             <!-- VISTA 3: SCAN -->
-            <div id="view-scan" class="space-y-6 hidden text-center py-10 my-auto">
-                <div class="w-16 h-16 rounded-full bg-black text-white flex items-center justify-center mx-auto shadow-xl">
-                    <i data-lucide="scan" class="w-8 h-8"></i>
+            <div id="view-scan" class="space-y-6 hidden text-center py-12 my-auto">
+                <div class="w-14 h-14 rounded-3xl bg-black text-white flex items-center justify-center mx-auto shadow-lg">
+                    <i data-lucide="scan" class="w-7 h-7"></i>
                 </div>
                 <div class="space-y-1">
-                    <h2 class="text-base font-bold text-black">Cámara de Escaneo QR</h2>
-                    <p class="text-xs text-neutral-500">Apunta con tu cámara al código QR del establecimiento para pagar o consultar stock.</p>
+                    <h2 class="text-sm font-bold text-black">Cámara de Escaneo QR</h2>
+                    <p class="text-xs text-neutral-500 px-4">Apunta con tu cámara al código QR del establecimiento para pagar o consultar stock.</p>
                 </div>
-                <button onclick="openModal('Cámara QR')" class="px-6 py-3 bg-black text-white rounded-xl text-xs font-medium transition hover:bg-neutral-800">
+                <button onclick="openModal('Cámara QR')" class="px-6 py-3 bg-black text-white rounded-2xl text-xs font-medium transition hover:bg-neutral-800 shadow-sm">
                     Activar Cámara
                 </button>
             </div>
 
-            <!-- VISTA 4: PERFIL (Alineada arriba) -->
-            <div id="view-profile" class="space-y-6 hidden">
-                <div class="flex items-center space-x-4 p-4 rounded-2xl bg-neutral-50 border border-neutral-200 pt-2">
-                    <div class="w-12 h-12 rounded-full bg-black text-white flex items-center justify-center font-bold text-sm shadow-md">
+            <!-- VISTA 4: PERFIL -->
+            <div id="view-profile" class="space-y-5 hidden">
+                <div class="flex items-center space-x-3.5 p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/60 pt-2">
+                    <div class="w-11 h-11 rounded-2xl bg-black text-white flex items-center justify-center font-bold text-xs shadow-sm">
                         DR
                     </div>
                     <div>
-                        <h2 class="text-sm font-bold text-black">Daniel Retuerto</h2>
-                        <p class="text-xs text-neutral-500">Palencia, ES</p>
+                        <h2 class="text-xs font-bold text-black">Daniel Retuerto</h2>
+                        <p class="text-[10px] text-neutral-500">Palencia, ES</p>
                     </div>
                 </div>
                 <div class="space-y-2">
-                    <span class="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Ajustes de cuenta</span>
-                    <div class="bg-neutral-50 border border-neutral-200 rounded-2xl divide-y divide-neutral-200 overflow-hidden text-xs font-medium">
-                        <button onclick="openModal('Métodos de Pago')" class="w-full p-4 text-left flex justify-between items-center hover:bg-neutral-100 transition">
+                    <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Ajustes de cuenta</span>
+                    <div class="bg-neutral-50/80 border border-neutral-200/60 rounded-3xl divide-y divide-neutral-200/60 overflow-hidden text-xs font-medium">
+                        <button onclick="openModal('Métodos de Pago')" class="w-full p-4 text-left flex justify-between items-center hover:bg-neutral-100/50 transition">
                             <span>Métodos de pago</span>
                             <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400"></i>
                         </button>
-                        <button onclick="openModal('Mis Reservas')" class="w-full p-4 text-left flex justify-between items-center hover:bg-neutral-100 transition">
+                        <button onclick="openModal('Mis Reservas')" class="w-full p-4 text-left flex justify-between items-center hover:bg-neutral-100/50 transition">
                             <span>Mis reservas y tickets</span>
                             <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400"></i>
                         </button>
@@ -210,37 +206,37 @@
 
         </main>
 
-        <!-- BARRA DE NAVEGACIÓN INFERIOR FIJA -->
-        <nav class="absolute bottom-0 left-0 right-0 border-t border-neutral-200 bg-white/95 backdrop-blur-md px-4 py-3 flex justify-around items-center z-30 shadow-lg">
+        <!-- BARRA DE NAVEGACIÓN INFERIOR FIJA (Efecto cristal translúcido) -->
+        <nav class="absolute bottom-0 left-0 right-0 border-t border-neutral-200/60 bg-white/80 backdrop-blur-xl px-4 py-3 flex justify-around items-center z-30 shadow-[0_-10px_30px_rgba(0,0,0,0.03)]">
             <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center text-black space-y-1 transition">
                 <i data-lucide="home" class="w-5 h-5"></i>
-                <span class="text-[10px] font-medium tracking-tight">Inicio</span>
+                <span class="text-[9px] font-medium tracking-tight">Inicio</span>
             </button>
             <button onclick="switchTab('explore')" id="nav-explore" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1">
                 <i data-lucide="compass" class="w-5 h-5"></i>
-                <span class="text-[10px] font-medium tracking-tight">Explorar</span>
+                <span class="text-[9px] font-medium tracking-tight">Explorar</span>
             </button>
             <button onclick="switchTab('scan')" id="nav-scan" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1">
                 <i data-lucide="scan" class="w-5 h-5"></i>
-                <span class="text-[10px] font-medium tracking-tight">Scan</span>
+                <span class="text-[9px] font-medium tracking-tight">Scan</span>
             </button>
             <button onclick="switchTab('profile')" id="nav-profile" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1">
                 <i data-lucide="user" class="w-5 h-5"></i>
-                <span class="text-[10px] font-medium tracking-tight">Perfil</span>
+                <span class="text-[9px] font-medium tracking-tight">Perfil</span>
             </button>
         </nav>
 
         <!-- VENTANA MODAL "PRÓXIMAMENTE" -->
-        <div id="customModal" class="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6 hidden opacity-0 transition-opacity duration-300">
-            <div class="bg-white w-full max-w-xs rounded-3xl p-6 text-center space-y-4 shadow-2xl scale-95 transition-transform duration-300" id="modalContent">
-                <div class="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mx-auto text-black">
+        <div id="customModal" class="absolute inset-0 bg-black/40 backdrop-blur-md z-50 flex items-center justify-center p-6 hidden opacity-0 transition-opacity duration-300">
+            <div class="bg-white w-full max-w-xs rounded-[32px] p-6 text-center space-y-4 shadow-[0_20px_50px_rgba(0,0,0,0.2)] scale-95 transition-transform duration-300 border border-neutral-100" id="modalContent">
+                <div class="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto text-black">
                     <i data-lucide="clock" class="w-6 h-6"></i>
                 </div>
                 <div class="space-y-1">
-                    <h3 id="modalTitle" class="text-base font-semibold text-black">Próximamente</h3>
+                    <h3 id="modalTitle" class="text-sm font-bold text-black">Próximamente</h3>
                     <p class="text-xs text-neutral-500">Este módulo de NetWish estará disponible muy pronto.</p>
                 </div>
-                <button onclick="closeModal()" class="w-full py-3 bg-black text-white font-medium rounded-xl text-sm transition hover:bg-neutral-800 active:scale-[0.98]">
+                <button onclick="closeModal()" class="w-full py-3 bg-black text-white font-medium rounded-2xl text-xs transition hover:bg-neutral-800 active:scale-[0.98]">
                     OK
                 </button>
             </div>
