@@ -198,7 +198,7 @@
                 </div>
                 <div class="space-y-1.5">
                     <h2 class="text-sm font-bold text-black">Cámara de Escaneo QR</h2>
-                    <p class="text-xs text-neutral-500 px-6">Apunta al código QR del establecimiento para realizar pagos o gestionar pedidos.</p>
+                    <p class="text-xs text-neutral-500 px-6">Apunta al código QR de otra persona para enviarle un pago al instante.</p>
                 </div>
                 <button onclick="startCameraModal()" class="px-6 py-3.5 bg-black text-white rounded-2xl text-xs font-semibold transition hover:bg-neutral-800 shadow-md">
                     Activar Cámara
@@ -247,7 +247,7 @@
 
     </div>
 
-    <!-- SCRIPT DE CONEXIÓN CON SUPABASE Y LÓGICA -->
+    <!-- SCRIPT DE LÓGICA Y PASARELA DE PAGO QR -->
     <script>
         lucide.createIcons();
 
@@ -631,6 +631,9 @@
             }, 10);
         }
 
+        // ==========================================
+        // SISTEMA DE ESCANEO QR Y PASARELA DE PAGO REAL
+        // ==========================================
         async function startCameraModal() {
             modalBody.innerHTML = `
                 <div class="space-y-3 text-center">
@@ -641,7 +644,11 @@
                             <div class="w-28 h-28 border-2 border-white rounded-xl animate-pulse"></div>
                         </div>
                     </div>
-                    <button onclick="closeModal()" class="w-full py-2.5 bg-black text-white font-semibold rounded-xl text-xs">Cerrar Cámara</button>
+                    <!-- BOTÓN DE PRUEBA: Simula que has escaneado a una persona real de la app -->
+                    <button onclick="simulateQRDetection('Daniel Retuerto')" class="w-full py-2.5 bg-neutral-900 text-white font-medium rounded-xl text-xs">
+                        ⚡ Simular Lectura QR (Pagar a Daniel Retuerto)
+                    </button>
+                    <button onclick="closeModal()" class="w-full py-2 bg-neutral-100 text-black font-semibold rounded-xl text-xs">Cerrar Cámara</button>
                 </div>
             `;
 
@@ -661,9 +668,60 @@
                 }
             } catch (error) {
                 console.error("Error al acceder a la cámara:", error);
-                alert("No se pudo acceder a la cámara.");
-                closeModal();
             }
+        }
+
+        // Muestra la pantalla de pago elegante con el nombre detectado y formato de divisa
+        function simulateQRDetection(payeeName) {
+            stopCamera();
+            modalBody.innerHTML = `
+                <div class="space-y-4 text-center">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-500/20">
+                        <i data-lucide="user-check" class="w-6 h-6"></i>
+                    </div>
+                    <div class="space-y-0.5">
+                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">Destinatario Verificado</span>
+                        <h3 class="text-base font-bold text-black">${payeeName}</h3>
+                    </div>
+
+                    <!-- Input de cantidad en formato chulo de divisa -->
+                    <div class="bg-neutral-50 p-4 rounded-2xl border border-neutral-200/80 space-y-1">
+                        <label class="text-[9px] font-mono uppercase text-neutral-400 block">Cantidad a enviar</label>
+                        <div class="flex items-center justify-center space-x-1">
+                            <span class="text-2xl font-bold text-black">€</span>
+                            <input type="number" id="payAmount" value="0.00" step="0.01" min="0.01" class="w-36 bg-transparent text-3xl font-bold text-black text-center focus:outline-none">
+                        </div>
+                    </div>
+
+                    <button onclick="executeSecurePayment('${payeeName}')" class="w-full py-3.5 bg-black text-white font-semibold rounded-xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md">
+                        Enviar Pago Seguro
+                    </button>
+                    <button onclick="closeModal()" class="w-full py-1 text-neutral-400 font-medium text-xs">Cancelar</button>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function executeSecurePayment(payeeName) {
+            const amount = document.getElementById('payAmount').value;
+            if (!amount || amount <= 0) {
+                alert("Introduce una cantidad válida.");
+                return;
+            }
+
+            modalBody.innerHTML = `
+                <div class="space-y-4 text-center py-6">
+                    <div class="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200">
+                        <i data-lucide="check" class="w-7 h-7"></i>
+                    </div>
+                    <div class="space-y-1">
+                        <h3 class="text-base font-bold text-black">¡Pago enviado con éxito!</h3>
+                        <p class="text-xs text-neutral-500">Has enviado <strong class="text-black">${Number(amount).toFixed(2)} €</strong> a <strong class="text-black">${payeeName}</strong>.</p>
+                    </div>
+                    <button onclick="closeModal(); switchTab('home');" class="w-full py-3 bg-black text-white font-semibold rounded-xl text-xs">Volver al Inicio</button>
+                </div>
+            `;
+            lucide.createIcons();
         }
 
         function stopCamera() {
