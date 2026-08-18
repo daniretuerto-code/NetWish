@@ -214,7 +214,7 @@
                 </div>
             </div>
 
-            <!-- VISTA 5: PASARELA DE PAGO DESPLAZADA HACIA ABAJO Y AMPLIADA -->
+            <!-- VISTA 5: PASARELA DE PAGO AMPLIADA Y ESPACIADA -->
             <div id="view-payment" class="hidden w-full h-full flex flex-col justify-between pt-4 pb-3">
                 <!-- Header con indicador verde -->
                 <div class="flex items-center justify-between px-1 pt-2">
@@ -265,11 +265,9 @@
                     </button>
                 </div>
 
-                <!-- Botón de Confirmación Gigante y Gorduco con Barra Verde -->
+                <!-- Botón de Confirmación Gigante con Barra Verde -->
                 <div id="holdButtonContainer" class="relative w-full h-16 bg-black rounded-3xl overflow-hidden shadow-2xl select-none cursor-pointer flex items-center justify-center my-2">
-                    <!-- Barra verde fluida -->
                     <div id="progressBar" class="absolute top-0 left-0 bottom-0 w-0 bg-emerald-500 transition-all duration-100 ease-out pointer-events-none"></div>
-                    <!-- Texto superpuesto -->
                     <span class="relative z-10 text-white font-bold text-xs tracking-widest uppercase pointer-events-none">MANTENER PARA CONFIRMAR</span>
                 </div>
             </div>
@@ -296,11 +294,11 @@
             </button>
         </nav>
 
-        <!-- VENTANA MODAL DINÁMICA -->
+        <!-- VENTANA MODAL DINÁMICA (AMPLIADA) -->
         <div id="customModal" class="absolute inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
-            <div class="bg-white w-full max-w-[380px] rounded-[36px] p-6 text-center space-y-3.5 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100 flex flex-col overflow-hidden" id="modalContent">
+            <div class="bg-white w-full max-w-[400px] rounded-[40px] p-7 text-center space-y-4 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100 flex flex-col overflow-hidden" id="modalContent">
                 
-                <div id="modalBody" class="space-y-3 text-left">
+                <div id="modalBody" class="space-y-4 text-left">
                     <!-- Contenido dinámico -->
                 </div>
 
@@ -309,7 +307,7 @@
 
     </div>
 
-    <!-- SCRIPT DE LÓGICA Y TECLADO ESTILO CAJERO / MANTENER PULSADO -->
+    <!-- SCRIPT DE LÓGICA -->
     <script>
         lucide.createIcons();
 
@@ -324,7 +322,6 @@
         let activePayee = "";
         let rawAmountString = "000"; 
 
-        // Variables para el botón de mantener pulsado
         let holdTimer = null;
         let progressInterval = null;
         let holdProgress = 0;
@@ -645,15 +642,15 @@
             const meta = currentUser.user_metadata || {};
 
             modalBody.innerHTML = `
-                <div class="space-y-3 text-center">
-                    <h3 class="text-base font-bold text-black">Tu Código QR Personal</h3>
+                <div class="space-y-4 text-center">
+                    <h3 class="text-lg font-bold text-black">Tu Código QR Personal</h3>
                     <p class="text-xs text-neutral-500">Muestra este código seguro para recibir pagos en Palencia.</p>
-                    <div id="realQRCodeContainer" class="w-40 h-40 bg-white border-2 border-neutral-200 rounded-2xl mx-auto flex items-center justify-center p-2 relative shadow-sm"></div>
-                    <div class="p-2.5 bg-neutral-50 rounded-xl border border-neutral-200/60">
+                    <div id="realQRCodeContainer" class="w-52 h-52 bg-white border-2 border-neutral-200 rounded-3xl mx-auto flex items-center justify-center p-3 relative shadow-sm"></div>
+                    <div class="p-3 bg-neutral-50 rounded-2xl border border-neutral-200/60">
                         <span class="block text-xs font-bold text-black">${meta.name || ''} ${meta.surname || ''}</span>
-                        <span class="block text-[9px] text-neutral-400 font-mono">ID: NW-${meta.initials || 'USER'}-${currentUser.id.substring(0,6)}</span>
+                        <span class="block text-[10px] text-neutral-400 font-mono">ID: NW-${meta.initials || 'USER'}-${currentUser.id.substring(0,6)}</span>
                     </div>
-                    <button onclick="closeModal()" class="w-full py-3 bg-black text-white font-semibold rounded-xl text-xs tracking-wide">Cerrar</button>
+                    <button onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide">Cerrar</button>
                 </div>
             `;
             lucide.createIcons();
@@ -668,8 +665,8 @@
             qrContainer.innerHTML = "";
             new QRCode(qrContainer, {
                 text: `NETWISH_PAY:${meta.name || 'Usuario'} ${meta.surname || ''}:${currentUser.email}`,
-                width: 140,
-                height: 140,
+                width: 180,
+                height: 180,
                 colorDark: "#000000",
                 colorLight: "#ffffff",
                 correctLevel: QRCode.CorrectLevel.H
@@ -683,15 +680,15 @@
         function openModal(sectionName) {
             stopCamera();
             modalBody.innerHTML = `
-                <div class="space-y-3 text-center py-4">
-                    <div class="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto text-black">
-                        <i data-lucide="clock" class="w-6 h-6"></i>
+                <div class="space-y-4 text-center py-6">
+                    <div class="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto text-black">
+                        <i data-lucide="clock" class="w-7 h-7"></i>
                     </div>
                     <div class="space-y-1">
-                        <h3 class="text-base font-bold text-black">${sectionName} — Próximamente</h3>
+                        <h3 class="text-lg font-bold text-black">${sectionName} — Próximamente</h3>
                         <p class="text-xs text-neutral-500">Este módulo avanzado de NetWish estará disponible muy pronto.</p>
                     </div>
-                    <button onclick="closeModal()" class="w-full py-3 bg-black text-white font-semibold rounded-xl text-xs">Entendido</button>
+                    <button onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Entendido</button>
                 </div>
             `;
             lucide.createIcons();
@@ -704,21 +701,21 @@
         }
 
         // ==========================================
-        // ESCÁNER UNIVERSAL CON LIBRERÍA jsQR
+        // ESCÁNER UNIVERSAL CON LIBRERÍA jsQR (AMPLIADO)
         // ==========================================
         async function startCameraModal() {
             modalBody.innerHTML = `
-                <div class="space-y-3 text-center">
-                    <h3 class="text-base font-bold text-black">Escaneando Código QR</h3>
-                    <div class="w-full h-56 bg-black rounded-2xl overflow-hidden relative flex items-center justify-center shadow-inner">
+                <div class="space-y-4 text-center">
+                    <h3 class="text-lg font-bold text-black">Escaneando Código QR</h3>
+                    <div class="w-full h-72 bg-black rounded-3xl overflow-hidden relative flex items-center justify-center shadow-inner">
                         <video id="cameraPreview" autoplay playsinline muted class="w-full h-full object-cover"></video>
                         <canvas id="qrCanvas" class="hidden"></canvas>
-                        <div class="absolute inset-0 border-2 border-white/30 m-4 rounded-xl pointer-events-none flex items-center justify-center">
-                            <div class="w-24 h-24 border-2 border-white rounded-xl animate-pulse"></div>
+                        <div class="absolute inset-0 border-2 border-white/30 m-5 rounded-2xl pointer-events-none flex items-center justify-center">
+                            <div class="w-32 h-32 border-2 border-white rounded-2xl animate-pulse"></div>
                         </div>
                     </div>
-                    <p class="text-[10px] text-neutral-400">Apunta la cámara al código QR de la otra persona.</p>
-                    <button onclick="closeModal()" class="w-full py-2.5 bg-neutral-100 text-black font-semibold rounded-xl text-xs">Cerrar Cámara</button>
+                    <p class="text-xs text-neutral-400">Apunta la cámara al código QR de la otra persona.</p>
+                    <button onclick="closeModal()" class="w-full py-3.5 bg-neutral-100 text-black font-semibold rounded-2xl text-xs">Cerrar Cámara</button>
                 </div>
             `;
             lucide.createIcons();
@@ -819,7 +816,7 @@
         }
 
         // ==========================================
-        // LÓGICA DE MANTENER PULSADO PARA CONFIRMAR (MÁS LENTA Y FLUIDA)
+        // LÓGICA DE MANTENER PULSADO PARA CONFIRMAR
         // ==========================================
         function initHoldButtonListeners() {
             const btn = document.getElementById('holdButtonContainer');
@@ -833,7 +830,7 @@
                 const progressBar = document.getElementById('progressBar');
                 
                 progressInterval = setInterval(() => {
-                    holdProgress += 1; // Más lenta para que tarde más en completarse
+                    holdProgress += 1.5; 
                     if (progressBar) progressBar.style.width = holdProgress + '%';
 
                     if (holdProgress >= 100) {
@@ -843,7 +840,7 @@
                         progressInterval = null;
                         executeFullPayment();
                     }
-                }, 25);
+                }, 20);
             };
 
             const cancelHold = () => {
@@ -889,7 +886,7 @@
                         <h3 class="text-base font-bold text-black">¡Pago enviado con éxito!</h3>
                         <p class="text-xs text-neutral-500">Has enviado <strong class="text-black">${numericValue.toFixed(2)} €</strong> a <strong class="text-black">${activePayee}</strong>.</p>
                     </div>
-                    <button onclick="closeModal(); switchTab('home');" class="w-full py-3 bg-black text-white font-semibold rounded-xl text-xs">Volver al Inicio</button>
+                    <button onclick="closeModal(); switchTab('home');" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Volver al Inicio</button>
                 </div>
             `;
             lucide.createIcons();
