@@ -70,7 +70,7 @@
         <!-- CONTENIDO PRINCIPAL DINÁMICO -->
         <main class="flex-1 overflow-y-auto no-scrollbar px-6 pt-24 pb-28 flex flex-col">
             
-            <!-- VISTA 1: INICIO (Centrada verticalmente) -->
+            <!-- VISTA 1: INICIO -->
             <div id="view-home" class="flex-1 flex flex-col justify-center space-y-5 my-auto w-full">
                 
                 <!-- Tarjeta Principal de Pago -->
@@ -87,7 +87,7 @@
                         </div>
                     </div>
 
-                    <button onclick="openModal('Escáner QR de Pagos')" class="w-full py-3.5 bg-white text-black font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-100 active:scale-[0.98] relative z-10 shadow-lg flex items-center justify-center space-x-2">
+                    <button onclick="startCameraModal()" class="w-full py-3.5 bg-white text-black font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-100 active:scale-[0.98] relative z-10 shadow-lg flex items-center justify-center space-x-2">
                         <i data-lucide="scan-line" class="w-4 h-4"></i>
                         <span>Abrir Cámara de Pago</span>
                     </button>
@@ -105,7 +105,6 @@
 
                     <!-- Grid de Categorías -->
                     <div class="grid grid-cols-2 gap-3">
-                        <!-- Comercios -->
                         <button onclick="openModal('Comercios & Click&Collect')" class="group p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/70 hover:border-black/30 hover:bg-white transition-all duration-200 text-left active:scale-[0.97] shadow-sm flex flex-col justify-between h-24">
                             <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
                                 <i data-lucide="store" class="w-4 h-4 text-amber-600"></i>
@@ -116,7 +115,6 @@
                             </div>
                         </button>
 
-                        <!-- Restaurantes -->
                         <button onclick="openModal('Restaurantes & Cuentas')" class="group p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/70 hover:border-black/30 hover:bg-white transition-all duration-200 text-left active:scale-[0.97] shadow-sm flex flex-col justify-between h-24">
                             <div class="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
                                 <i data-lucide="utensils" class="w-4 h-4 text-rose-600"></i>
@@ -127,7 +125,6 @@
                             </div>
                         </button>
 
-                        <!-- Movilidad -->
                         <button onclick="openModal('Movilidad Urbana')" class="group p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/70 hover:border-black/30 hover:bg-white transition-all duration-200 text-left active:scale-[0.97] shadow-sm flex flex-col justify-between h-24">
                             <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
                                 <i data-lucide="car" class="w-4 h-4 text-emerald-600"></i>
@@ -138,7 +135,6 @@
                             </div>
                         </button>
 
-                        <!-- Peluquería -->
                         <button onclick="openModal('Peluquería & Reservas')" class="group p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/70 hover:border-black/30 hover:bg-white transition-all duration-200 text-left active:scale-[0.97] shadow-sm flex flex-col justify-between h-24">
                             <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
                                 <i data-lucide="scissors" class="w-4 h-4 text-blue-600"></i>
@@ -150,7 +146,6 @@
                         </button>
                     </div>
 
-                    <!-- Tarjeta Ancha de Ocio -->
                     <button onclick="openModal('Ocio y Experiencias')" class="w-full group p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/70 hover:border-black/30 hover:bg-white transition-all duration-200 text-left active:scale-[0.98] shadow-sm flex items-center justify-between">
                         <div class="flex items-center space-x-3.5">
                             <div class="w-10 h-10 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
@@ -168,7 +163,7 @@
                 </div>
             </div>
 
-            <!-- VISTA 2: EXPLORAR (Centrada, con título actualizado y texto recortado) -->
+            <!-- VISTA 2: EXPLORAR -->
             <div id="view-explore" class="space-y-5 hidden w-full pt-4 text-center">
                 <div class="space-y-1">
                     <h2 class="text-lg font-bold text-black tracking-tight">Explora tu ciudad</h2>
@@ -186,7 +181,7 @@
                 </div>
             </div>
 
-            <!-- VISTA 3: QR (Con botón "Activar Cámara") -->
+            <!-- VISTA 3: QR -->
             <div id="view-scan" class="space-y-6 hidden text-center py-16 my-auto w-full">
                 <div class="w-16 h-16 rounded-[28px] bg-black text-white flex items-center justify-center mx-auto shadow-xl">
                     <i data-lucide="scan" class="w-8 h-8"></i>
@@ -195,14 +190,13 @@
                     <h2 class="text-sm font-bold text-black">Cámara de Escaneo QR</h2>
                     <p class="text-xs text-neutral-500 px-6">Apunta al código QR del establecimiento para realizar pagos o gestionar pedidos.</p>
                 </div>
-                <button onclick="openModal('Cámara QR')" class="px-6 py-3.5 bg-black text-white rounded-2xl text-xs font-semibold transition hover:bg-neutral-800 shadow-md">
+                <button onclick="startCameraModal()" class="px-6 py-3.5 bg-black text-white rounded-2xl text-xs font-semibold transition hover:bg-neutral-800 shadow-md">
                     Activar Cámara
                 </button>
             </div>
 
             <!-- VISTA 4: PERFIL -->
             <div id="view-profile" class="space-y-5 hidden w-full pt-4">
-                <!-- Tarjeta de Usuario -->
                 <div class="flex items-center space-x-4 p-5 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 shadow-sm">
                     <div class="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center font-bold text-xs shadow-md shrink-0">
                         DR
@@ -213,7 +207,6 @@
                     </div>
                 </div>
 
-                <!-- Bloque de Configuración -->
                 <div class="space-y-2">
                     <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Configuración</span>
                     <div class="bg-neutral-50/80 border border-neutral-200/60 rounded-[32px] overflow-hidden shadow-sm">
@@ -231,7 +224,7 @@
 
         </main>
 
-        <!-- BARRA DE NAVEGACIÓN INFERIOR (Con "QR" en lugar de "Scan") -->
+        <!-- BARRA DE NAVEGACIÓN INFERIOR -->
         <nav class="absolute bottom-4 left-4 right-4 border border-neutral-200/80 bg-white/90 backdrop-blur-2xl px-6 py-3.5 rounded-[32px] flex justify-around items-center z-30 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
             <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center text-black space-y-1 transition group">
                 <i data-lucide="home" class="w-5 h-5 transition-transform group-active:scale-90"></i>
@@ -251,34 +244,54 @@
             </button>
         </nav>
 
-        <!-- VENTANA MODAL "PRÓXIMAMENTE" -->
-        <div id="customModal" class="absolute inset-0 bg-black/40 backdrop-blur-md z-50 flex items-center justify-center p-6 hidden opacity-0 transition-opacity duration-300">
-            <div class="bg-white w-full max-w-xs rounded-[36px] p-6 text-center space-y-4 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100" id="modalContent">
-                <div class="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto text-black">
-                    <i data-lucide="clock" class="w-6 h-6"></i>
+        <!-- VENTANA MODAL DINÁMICA (Soporta Avisos y Cámara en Vivo) -->
+        <div id="customModal" class="absolute inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-6 hidden opacity-0 transition-opacity duration-300">
+            <div class="bg-white w-full max-w-xs rounded-[36px] p-6 text-center space-y-4 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100 overflow-hidden" id="modalContent">
+                
+                <!-- Contenedor dinámico de contenido (Texto o Cámara) -->
+                <div id="modalBody" class="space-y-4">
+                    <div class="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto text-black">
+                        <i data-lucide="clock" class="w-6 h-6"></i>
+                    </div>
+                    <div class="space-y-1">
+                        <h3 id="modalTitle" class="text-sm font-bold text-black">Próximamente</h3>
+                        <p id="modalText" class="text-xs text-neutral-500">Este módulo avanzado de NetWish estará disponible muy pronto.</p>
+                    </div>
                 </div>
-                <div class="space-y-1">
-                    <h3 id="modalTitle" class="text-sm font-bold text-black">Próximamente</h3>
-                    <p class="text-xs text-neutral-500">Este módulo avanzado de NetWish estará disponible muy pronto.</p>
-                </div>
+
                 <button onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-medium rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 active:scale-[0.98]">
-                    Entendido
+                    Cerrar / Entendido
                 </button>
             </div>
         </div>
 
     </div>
 
-    <!-- SCRIPT DE LÓGICA E INTERACCIÓN -->
+    <!-- SCRIPT DE LÓGICA E INTERACCIÓN Y CÁMARA NATIVA -->
     <script>
         lucide.createIcons();
 
         const modal = document.getElementById('customModal');
         const modalContent = document.getElementById('modalContent');
-        const modalTitle = document.getElementById('modalTitle');
+        const modalBody = document.getElementById('modalBody');
+        let currentStream = null;
 
         function openModal(sectionName) {
-            modalTitle.innerText = sectionName + " — Próximamente";
+            stopCamera();
+            document.getElementById('modalTitle').innerText = sectionName + " — Próximamente";
+            document.getElementById('modalText').innerText = "Este módulo avanzado de NetWish estará disponible muy pronto.";
+            
+            modalBody.innerHTML = `
+                <div class="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto text-black">
+                    <i data-lucide="clock" class="w-6 h-6"></i>
+                </div>
+                <div class="space-y-1">
+                    <h3 id="modalTitle" class="text-sm font-bold text-black">${sectionName} — Próximamente</h3>
+                    <p class="text-xs text-neutral-500">Este módulo avanzado de NetWish estará disponible muy pronto.</p>
+                </div>
+            `;
+            lucide.createIcons();
+
             modal.classList.remove('hidden');
             setTimeout(() => {
                 modal.classList.remove('opacity-0');
@@ -286,7 +299,51 @@
             }, 10);
         }
 
+        // Función para activar y mostrar la cámara real en el modal
+        async function startCameraModal() {
+            modalBody.innerHTML = `
+                <div class="space-y-2">
+                    <h3 class="text-sm font-bold text-black">Escaneando Código QR</h3>
+                    <div class="w-full h-64 bg-black rounded-2xl overflow-hidden relative flex items-center justify-center">
+                        <video id="cameraPreview" autoplay playsinline class="w-full h-full object-cover"></video>
+                        <div class="absolute inset-0 border-2 border-white/30 m-6 rounded-xl pointer-events-none flex items-center justify-center">
+                            <div class="w-32 h-32 border-2 border-white rounded-lg animate-pulse"></div>
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-neutral-400">Apunta el código QR del comercio o mesa.</p>
+                </div>
+            `;
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
+
+            try {
+                currentStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                const videoElement = document.getElementById('cameraPreview');
+                if (videoElement) {
+                    videoElement.srcObject = currentStream;
+                }
+            } catch (error) {
+                console.error("Error al acceder a la cámara:", error);
+                alert("No se pudo acceder a la cámara. Asegúrate de dar permisos en tu navegador.");
+                closeModal();
+            }
+        }
+
+        function stopCamera() {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+            }
+        }
+
         function closeModal() {
+            stopCamera();
             modal.classList.add('opacity-0');
             modalContent.classList.add('scale-95');
             setTimeout(() => {
