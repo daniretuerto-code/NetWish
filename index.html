@@ -73,23 +73,23 @@
             <!-- VISTA 1: INICIO -->
             <div id="view-home" class="flex-1 flex flex-col justify-center space-y-5 my-auto w-full">
                 
-                <!-- Tarjeta Principal de Pago -->
+                <!-- Tarjeta Principal: Mostrar Código QR Personal -->
                 <section class="glass-dark p-6 rounded-[32px] text-white flex flex-col justify-between space-y-5 relative overflow-hidden shadow-xl">
                     <div class="absolute -right-10 -top-10 w-36 h-36 bg-gradient-to-br from-neutral-700/30 to-transparent rounded-full blur-2xl pointer-events-none"></div>
                     
                     <div class="flex justify-between items-start relative z-10">
                         <div>
-                            <span class="text-[9px] text-neutral-400 font-mono tracking-widest uppercase bg-white/10 px-2.5 py-1 rounded-full border border-white/5">PAGO URBANO NFC/QR</span>
-                            <h2 class="text-lg font-medium tracking-tight mt-2 text-white">Escanea para Pagar</h2>
+                            <span class="text-[9px] text-neutral-400 font-mono tracking-widest uppercase bg-white/10 px-2.5 py-1 rounded-full border border-white/5">IDENTIFICACIÓN URBANA</span>
+                            <h2 class="text-lg font-medium tracking-tight mt-2 text-white">Mostrar Código QR</h2>
                         </div>
                         <div class="w-10 h-10 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center backdrop-blur-md">
                             <i data-lucide="qr-code" class="w-5 h-5 text-white"></i>
                         </div>
                     </div>
 
-                    <button onclick="startCameraModal()" class="w-full py-3.5 bg-white text-black font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-100 active:scale-[0.98] relative z-10 shadow-lg flex items-center justify-center space-x-2">
-                        <i data-lucide="scan-line" class="w-4 h-4"></i>
-                        <span>Abrir Cámara de Pago</span>
+                    <button onclick="openModal('Código QR Personal')" class="w-full py-3.5 bg-white text-black font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-100 active:scale-[0.98] relative z-10 shadow-lg flex items-center justify-center space-x-2">
+                        <i data-lucide="qr-code" class="w-4 h-4"></i>
+                        <span>Abrir Código QR</span>
                     </button>
                 </section>
 
@@ -181,7 +181,7 @@
                 </div>
             </div>
 
-            <!-- VISTA 3: QR -->
+            <!-- VISTA 3: QR (Activa la cámara real) -->
             <div id="view-scan" class="space-y-6 hidden text-center py-16 my-auto w-full">
                 <div class="w-16 h-16 rounded-[28px] bg-black text-white flex items-center justify-center mx-auto shadow-xl">
                     <i data-lucide="scan" class="w-8 h-8"></i>
@@ -244,11 +244,10 @@
             </button>
         </nav>
 
-        <!-- VENTANA MODAL DINÁMICA (Ampliadísima y con mayor espacio para la cámara) -->
+        <!-- VENTANA MODAL DINÁMICA -->
         <div id="customModal" class="absolute inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
             <div class="bg-white w-full max-w-md rounded-[36px] p-6 text-center space-y-4 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100 overflow-hidden" id="modalContent">
                 
-                <!-- Contenedor dinámico de contenido -->
                 <div id="modalBody" class="space-y-4">
                     <div class="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto text-black">
                         <i data-lucide="clock" class="w-6 h-6"></i>
@@ -267,7 +266,7 @@
 
     </div>
 
-    <!-- SCRIPT DE LÓGICA E INTERACCIÓN Y CÁMARA NATIVA -->
+    <!-- SCRIPT DE LÓGICA E INTERACCIÓN -->
     <script>
         lucide.createIcons();
 
@@ -297,7 +296,7 @@
             }, 10);
         }
 
-        // Función para activar y mostrar la cámara real con tamaño ampliado en el modal
+        // Función exclusiva de la pestaña QR / Activar Cámara
         async function startCameraModal() {
             modalBody.innerHTML = `
                 <div class="space-y-3">
