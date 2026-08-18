@@ -59,7 +59,7 @@
     <!-- Contenedor Principal App Shell -->
     <div class="w-full h-[100dvh] sm:h-[844px] sm:max-w-[390px] sm:rounded-[48px] bg-white flex flex-col relative shadow-[0_30px_90px_rgba(0,0,0,0.12)] overflow-hidden sm:border-[8px] sm:border-neutral-900">
         
-        <!-- HEADER SUPERIOR FIJO (Dinámico según sesión) -->
+        <!-- HEADER SUPERIOR FIJO -->
         <header class="absolute top-0 left-0 right-0 px-6 pt-8 pb-3 border-b border-neutral-100/80 flex justify-between items-center glass-panel z-30">
             <h1 class="text-2xl font-bold tracking-tight text-black font-serif italic">NetWish</h1>
             <button onclick="handleHeaderProfileClick()" id="headerAvatar" class="w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner transition hover:scale-105 active:scale-95">
@@ -181,7 +181,7 @@
                 </div>
             </div>
 
-            <!-- VISTA 3: QR (Cámara) -->
+            <!-- VISTA 3: QR -->
             <div id="view-scan" class="space-y-6 hidden text-center py-16 my-auto w-full">
                 <div class="w-16 h-16 rounded-[28px] bg-black text-white flex items-center justify-center mx-auto shadow-xl">
                     <i data-lucide="scan" class="w-8 h-8"></i>
@@ -195,8 +195,8 @@
                 </button>
             </div>
 
-            <!-- VISTA 4: PERFIL (Dinámica con control estricto de centrado) -->
-            <div id="view-profile" class="hidden w-full">
+            <!-- VISTA 4: PERFIL -->
+            <div id="view-profile" class="space-y-5 hidden w-full pt-4">
                 <div id="profileContentContainer" class="w-full">
                     <!-- Se inyecta por JS -->
                 </div>
@@ -224,7 +224,7 @@
             </button>
         </nav>
 
-        <!-- VENTANA MODAL DINÁMICA UNIVERSAL -->
+        <!-- VENTANA MODAL DINÁMICA -->
         <div id="customModal" class="absolute inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
             <div class="bg-white w-full max-w-md rounded-[36px] p-6 text-center space-y-4 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100 overflow-hidden" id="modalContent">
                 
@@ -267,12 +267,12 @@
         }
 
         function renderProfileView() {
-            const viewProfile = document.getElementById('view-profile');
             const container = document.getElementById('profileContentContainer');
+            const viewProfile = document.getElementById('view-profile');
 
             if (currentUser) {
-                // Con sesión: flujo natural ordenado desde arriba
-                viewProfile.className = "space-y-5 hidden w-full pt-4";
+                viewProfile.classList.remove('flex-1', 'flex', 'flex-col', 'justify-center', 'my-auto');
+                viewProfile.classList.add('space-y-5', 'pt-4');
                 container.innerHTML = `
                     <div class="flex items-center space-x-4 p-5 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 shadow-sm">
                         <div class="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center font-bold text-xs shadow-md shrink-0">
@@ -303,8 +303,8 @@
                     </div>
                 `;
             } else {
-                // Sin sesión: estrictamente CENTRADO verticalmente en medio de la pantalla
-                viewProfile.className = "flex-1 flex flex-col justify-center space-y-5 my-auto w-full hidden";
+                viewProfile.classList.add('flex-1', 'flex', 'flex-col', 'justify-center', 'my-auto');
+                viewProfile.classList.remove('space-y-5', 'pt-4');
                 container.innerHTML = `
                     <div class="p-8 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 text-center space-y-4 shadow-sm">
                         <div class="w-14 h-14 rounded-2xl bg-black text-white flex items-center justify-center mx-auto shadow-md">
