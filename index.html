@@ -62,11 +62,11 @@
             </div>
         </header>
 
-        <!-- CONTENIDO PRINCIPAL DINÁMICO (Ajustado con espacio superior extra para bajar el bloque y centrarlo visualmente) -->
-        <main class="flex-1 overflow-y-auto no-scrollbar px-5 pt-32 pb-28 flex flex-col justify-center space-y-6">
+        <!-- CONTENIDO PRINCIPAL DINÁMICO -->
+        <main class="flex-1 overflow-y-auto no-scrollbar px-5 pt-28 pb-28 flex flex-col">
             
-            <!-- VISTA 1: INICIO -->
-            <div id="view-home" class="space-y-6">
+            <!-- VISTA 1: INICIO (Centrada verticalmente) -->
+            <div id="view-home" class="flex-1 flex flex-col justify-center space-y-6 my-auto">
                 
                 <!-- Frase de cabecera con fuente elegante -->
                 <div class="text-center px-2 pb-1">
@@ -152,9 +152,9 @@
                 </section>
             </div>
 
-            <!-- VISTA 2: EXPLORAR -->
+            <!-- VISTA 2: EXPLORAR (Alineada arriba) -->
             <div id="view-explore" class="space-y-6 hidden">
-                <div class="space-y-2">
+                <div class="space-y-2 pt-2">
                     <h2 class="text-lg font-bold text-black tracking-tight">Explorar Palencia</h2>
                     <p class="text-xs text-neutral-500">Encuentra comercios, locales y servicios al instante.</p>
                 </div>
@@ -169,7 +169,7 @@
             </div>
 
             <!-- VISTA 3: SCAN -->
-            <div id="view-scan" class="space-y-6 hidden text-center py-10">
+            <div id="view-scan" class="space-y-6 hidden text-center py-10 my-auto">
                 <div class="w-16 h-16 rounded-full bg-black text-white flex items-center justify-center mx-auto shadow-xl">
                     <i data-lucide="scan" class="w-8 h-8"></i>
                 </div>
@@ -182,9 +182,9 @@
                 </button>
             </div>
 
-            <!-- VISTA 4: PERFIL -->
+            <!-- VISTA 4: PERFIL (Alineada arriba) -->
             <div id="view-profile" class="space-y-6 hidden">
-                <div class="flex items-center space-x-4 p-4 rounded-2xl bg-neutral-50 border border-neutral-200">
+                <div class="flex items-center space-x-4 p-4 rounded-2xl bg-neutral-50 border border-neutral-200 pt-2">
                     <div class="w-12 h-12 rounded-full bg-black text-white flex items-center justify-center font-bold text-sm shadow-md">
                         DR
                     </div>
