@@ -73,8 +73,7 @@
         <main class="flex-1 overflow-y-auto no-scrollbar px-6 pt-20 pb-28 flex flex-col">
             
             <!-- VISTA 1: INICIO -->
-            <div id="view-home" class="flex-1 flex flex-col justify-center space-y-5 my-auto w-full">
-                
+            <div id="view-home" class="space-y-5 w-full pt-2">
                 <!-- Tarjeta Principal: Recibe tu pago -->
                 <section class="glass-dark p-6 rounded-[32px] text-white flex flex-col justify-between space-y-5 relative overflow-hidden shadow-xl">
                     <div class="absolute -right-10 -top-10 w-36 h-36 bg-gradient-to-br from-neutral-700/30 to-transparent rounded-full blur-2xl pointer-events-none"></div>
@@ -198,9 +197,9 @@
             </div>
 
             <!-- VISTA 4: PERFIL -->
-            <div id="view-profile" class="hidden w-full">
+            <div id="view-profile" class="space-y-5 hidden w-full pt-4">
                 <div id="profileContentContainer" class="w-full">
-                    <!-- Se inyecta por JS con control total -->
+                    <!-- Se inyecta por JS de forma segura -->
                 </div>
             </div>
 
@@ -269,11 +268,9 @@
         }
 
         function renderProfileView() {
-            const viewProfile = document.getElementById('view-profile');
             const container = document.getElementById('profileContentContainer');
 
             if (currentUser) {
-                viewProfile.className = "space-y-5 w-full pt-4";
                 container.innerHTML = `
                     <div class="flex items-center space-x-4 p-5 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 shadow-sm">
                         <div class="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center font-bold text-xs shadow-md shrink-0">
@@ -304,7 +301,6 @@
                     </div>
                 `;
             } else {
-                viewProfile.className = "flex-1 flex flex-col justify-center space-y-5 my-auto w-full";
                 container.innerHTML = `
                     <div class="p-8 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 text-center space-y-4 shadow-sm">
                         <div class="w-14 h-14 rounded-2xl bg-black text-white flex items-center justify-center mx-auto shadow-md">
