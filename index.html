@@ -198,9 +198,9 @@
             </div>
 
             <!-- VISTA 4: PERFIL -->
-            <div id="view-profile" class="space-y-5 hidden w-full pt-4">
+            <div id="view-profile" class="hidden w-full">
                 <div id="profileContentContainer" class="w-full">
-                    <!-- Se inyecta por JS de forma segura -->
+                    <!-- Se inyecta por JS con control total -->
                 </div>
             </div>
 
@@ -273,8 +273,7 @@
             const container = document.getElementById('profileContentContainer');
 
             if (currentUser) {
-                viewProfile.className = "space-y-5 hidden w-full pt-4";
-                viewProfile.classList.remove('flex-1', 'flex', 'flex-col', 'justify-center', 'my-auto');
+                viewProfile.className = "space-y-5 w-full pt-4";
                 container.innerHTML = `
                     <div class="flex items-center space-x-4 p-5 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 shadow-sm">
                         <div class="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center font-bold text-xs shadow-md shrink-0">
@@ -305,7 +304,7 @@
                     </div>
                 `;
             } else {
-                viewProfile.className = "flex-1 flex flex-col justify-center space-y-5 my-auto w-full hidden";
+                viewProfile.className = "flex-1 flex flex-col justify-center space-y-5 my-auto w-full";
                 container.innerHTML = `
                     <div class="p-8 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 text-center space-y-4 shadow-sm">
                         <div class="w-14 h-14 rounded-2xl bg-black text-white flex items-center justify-center mx-auto shadow-md">
@@ -324,7 +323,6 @@
             lucide.createIcons();
         }
 
-        // Abrir modal de Registro / Login real
         function openAuthModal() {
             const modal = document.getElementById('customModal');
             const modalContent = document.getElementById('modalContent');
@@ -398,7 +396,6 @@
             switchTab('profile');
         }
 
-        // Generación de un Código QR VÁLIDO y real con qrcode.js
         function openPersonalQR() {
             if (!currentUser) {
                 openAuthModal();
@@ -430,9 +427,8 @@
                 modal.classList.remove('opacity-0');
                 modalContent.classList.remove('scale-95');
                 
-                // Generar el QR real con los datos del usuario
                 const qrContainer = document.getElementById('realQRCodeContainer');
-                qrContainer.innerHTML = ""; // Limpiar contenedor por si acaso
+                qrContainer.innerHTML = "";
                 new QRCode(qrContainer, {
                     text: `NETWISH_USER_PAY:${currentUser.email}:${currentUser.name}`,
                     width: 160,
