@@ -327,6 +327,12 @@
         let holdProgress = 0;
 
         document.addEventListener('DOMContentLoaded', async () => {
+            // Detección automática de recuperación de contraseña por token de URL
+            const hash = window.location.hash;
+            if (hash && hash.includes('type=recovery')) {
+                openNewPasswordModal();
+            }
+
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) {
                 currentUser = session.user;
@@ -464,7 +470,7 @@
                         </div>
 
                         ${isLogin ? `
-                        <div class="text-right">
+                        <div class="text-right pt-0.5">
                             <button onclick="sendPasswordResetEmail()" class="text-[10px] font-medium text-neutral-500 hover:text-black underline">
                                 ¿Has olvidado tu contraseña?
                             </button>
@@ -526,13 +532,61 @@
                 return;
             }
             const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-                redirectTo: window.location.origin + '/reset-password.html'
+                redirectTo: 'https://net-wish.vercel.app'
             });
             if (error) {
                 alert("Error: " + error.message);
             } else {
                 alert("Se ha enviado un enlace de recuperación a tu correo.");
                 closeModal();
+            }
+        }
+
+        function openNewPasswordModal() {
+            const modal = document.getElementById('customModal');
+            const modalContent = document.getElementById('modalContent');
+            const modalBody = document.getElementById('modalBody');
+
+            modalBody.innerHTML = `
+                <div class="space-y-4 text-center">
+                    <h3 class="text-lg font-bold text-black">Nueva Contraseña</h3>
+                    <p class="text-xs text-neutral-500">Introduce tu nueva contraseña de acceso seguro para NetWish.</p>
+                    
+                    <div class="space-y-2 text-left">
+                        <label class="text-[9px] font-mono uppercase text-neutral-400 block">Nueva Contraseña</label>
+                        <input type="password" id="newPassInput" placeholder="Mínimo 6 caracteres" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-3 px-4 text-xs text-black focus:outline-none focus:border-black">
+                    </div>
+
+                    <button onclick="saveNewPassword()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide shadow-md">
+                        Actualizar Contraseña
+                    </button>
+                </div>
+            `;
+            lucide.createIcons();
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
+        }
+
+        async function saveNewPassword() {
+            const newPassword = document.getElementById('newPassInput').value.trim();
+            if (!newPassword || newPassword.length < 6) {
+                alert("La contraseña debe tener al menos 6 caracteres.");
+                return;
+            }
+
+            const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
+            
+            if (error) {
+                alert("Error al actualizar: " + error.message);
+            } else {
+                alert("¡Contraseña actualizada con éxito! Ya puedes iniciar sesión.");
+                window.location.hash = '';
+                closeModal();
+                switchTab('home');
             }
         }
 
