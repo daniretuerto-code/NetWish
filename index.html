@@ -27,6 +27,8 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Librería QRCode.js real y válida -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Supabase JS SDK Real -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
         * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
@@ -241,14 +243,22 @@
 
     </div>
 
-    <!-- SCRIPT DE LÓGICA CON VALIDACIÓN DE CONTRASEÑA ACTUALIZADA -->
+    <!-- SCRIPT DE CONEXIÓN CON SUPABASE -->
     <script>
         lucide.createIcons();
 
-        let currentUser = JSON.parse(localStorage.getItem('netwish_session')) || null;
-        let registeredUsers = JSON.parse(localStorage.getItem('netwish_db_users')) || [];
+        // CREDENCIALES REALES DE SUPABASE
+        const SUPABASE_URL = 'https://gamjjnyomhnyswbxlhgq.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_096WH9RGLik4I_DsDR5iBg_QEKxC7bK';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        document.addEventListener('DOMContentLoaded', () => {
+        let currentUser = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                currentUser = session.user;
+            }
             updateHeaderAvatar();
             renderProfileView();
         });
@@ -256,7 +266,8 @@
         function updateHeaderAvatar() {
             const avatarBtn = document.getElementById('headerAvatar');
             if (currentUser) {
-                avatarBtn.innerText = currentUser.initials;
+                const meta = currentUser.user_metadata || {};
+                avatarBtn.innerText = meta.initials || "NW";
                 avatarBtn.className = "w-9 h-9 rounded-2xl bg-black text-white border border-neutral-800 flex items-center justify-center text-xs font-bold shadow-md transition hover:scale-105 active:scale-95";
             } else {
                 avatarBtn.innerText = "IN";
@@ -272,14 +283,15 @@
             const container = document.getElementById('profileContentContainer');
 
             if (currentUser) {
+                const meta = currentUser.user_metadata || {};
                 container.innerHTML = `
                     <div class="flex items-center space-x-4 p-5 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 shadow-sm">
                         <div class="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center font-bold text-xs shadow-md shrink-0">
-                            ${currentUser.initials}
+                            ${meta.initials || 'NW'}
                         </div>
                         <div class="overflow-hidden text-left">
-                            <h2 class="text-xs font-bold text-black truncate">${currentUser.name} ${currentUser.surname}</h2>
-                            <p class="text-[10px] text-neutral-500 truncate">${currentUser.email} • Nac: ${currentUser.dob}</p>
+                            <h2 class="text-xs font-bold text-black truncate">${meta.name || ''} ${meta.surname || ''}</h2>
+                            <p class="text-[10px] text-neutral-500 truncate">${currentUser.email} • Nac: ${meta.dob || ''}</p>
                         </div>
                     </div>
 
@@ -309,7 +321,7 @@
                         </div>
                         <div class="space-y-1">
                             <h2 class="text-sm font-bold text-black">Inicia sesión en NetWish</h2>
-                            <p class="text-xs text-neutral-500">Accede a tu cuenta para gestionar tus pagos y códigos QR urbanos.</p>
+                            <p class="text-xs text-neutral-500">Accede a tu cuenta segura en la nube para gestionar tus pagos y códigos QR.</p>
                         </div>
                         <button onclick="openAuthModal('login')" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md">
                             Iniciar Sesión / Registrarse
@@ -429,10 +441,8 @@
             lucide.createIcons();
         }
 
-        // Validación visual en tiempo real con los nuevos criterios
         function checkPasswordStrength() {
             const pass = document.getElementById('authPass').value;
-
             const hasLength = pass.length > 6;
             const hasNumber = /[0-9]/.test(pass);
             const hasUpper = /[A-Z]/.test(pass);
@@ -460,7 +470,7 @@
             }
         }
 
-        function processAuthAction(mode) {
+        async function processAuthAction(mode) {
             const email = document.getElementById('authEmail').value.trim();
             const pass = document.getElementById('authPass').value.trim();
 
@@ -482,70 +492,70 @@
                     return;
                 }
                 if (email !== emailConfirm) {
-                    alert("Los correos electrónicos no coinciden. Compruébalos.");
+                    alert("Los correos electrónicos no coinciden.");
                     return;
                 }
 
-                // Validación final de seguridad estricta
                 const hasLength = pass.length > 6;
                 const hasNumber = /[0-9]/.test(pass);
                 const hasUpper = /[A-Z]/.test(pass);
                 const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(pass);
 
                 if (!hasLength || !hasNumber || !hasUpper || !hasSpecial) {
-                    alert("La contraseña no cumple con todos los requisitos de seguridad obligatorios (>6 caracteres, número, mayúscula y carácter especial).");
+                    alert("La contraseña no cumple con los requisitos de seguridad obligatorios.");
                     return;
                 }
-
                 if (pass !== passConfirm) {
-                    alert("Las contraseñas no coinciden. Compruébalas.");
-                    return;
-                }
-
-                let existingUser = registeredUsers.find(u => u.email === email);
-                if (existingUser) {
-                    alert("Este correo ya está registrado. Por favor, inicia sesión.");
-                    renderAuthForm('login');
+                    alert("Las contraseñas no coinciden.");
                     return;
                 }
 
                 const initials = (name[0] + (surname[0] || '')).toUpperCase();
-                currentUser = {
-                    name: name,
-                    surname: surname,
-                    dob: dob,
+
+                const { data, error } = await supabaseClient.auth.signUp({
                     email: email,
-                    pass: pass,
-                    initials: initials,
-                    id: 'NW-' + initials + '-' + Math.floor(1000 + Math.random() * 9000)
-                };
-                registeredUsers.push(currentUser);
-                localStorage.setItem('netwish_db_users', JSON.stringify(registeredUsers));
-                alert("¡Registro completado con éxito!");
+                    password: pass,
+                    options: {
+                        data: {
+                            name: name,
+                            surname: surname,
+                            dob: dob,
+                            initials: initials
+                        }
+                    }
+                });
+
+                if (error) {
+                    alert("Error en el registro: " + error.message);
+                    return;
+                }
+
+                alert("¡Registro completado en la nube con éxito!");
+                currentUser = data.user;
 
             } else {
-                let foundUser = registeredUsers.find(u => u.email === email);
-                if (!foundUser) {
-                    alert("No existe ninguna cuenta registrada con este correo.");
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: pass
+                });
+
+                if (error) {
+                    alert("Error al iniciar sesión: Credenciales incorrectas o usuario no registrado.");
                     return;
                 }
-                if (foundUser.pass !== pass) {
-                    alert("Contraseña incorrecta.");
-                    return;
-                }
-                currentUser = foundUser;
-                alert("¡Bienvenido de nuevo, " + currentUser.name + "!");
+
+                currentUser = data.user;
+                alert("¡Sesión iniciada correctamente!");
             }
 
-            localStorage.setItem('netwish_session', JSON.stringify(currentUser));
             closeModal();
             updateHeaderAvatar();
             renderProfileView();
             switchTab('home');
         }
 
-        function logoutUser() {
-            localStorage.removeItem('netwish_session');
+        async function logoutUser() {
+            await supabaseClient.auth.signOut();
             currentUser = null;
             updateHeaderAvatar();
             renderProfileView();
@@ -564,6 +574,7 @@
             const closeBtn = document.getElementById('modalCloseBtn');
             
             closeBtn.style.display = 'block';
+            const meta = currentUser.user_metadata || {};
 
             modalBody.innerHTML = `
                 <div class="space-y-3 text-center">
@@ -571,8 +582,8 @@
                     <p class="text-xs text-neutral-500">Muestra este código seguro para recibir pagos en Palencia.</p>
                     <div id="realQRCodeContainer" class="w-48 h-48 bg-white border-2 border-neutral-200 rounded-3xl mx-auto flex items-center justify-center p-3 relative shadow-sm"></div>
                     <div class="p-3 bg-neutral-50 rounded-2xl border border-neutral-200/60">
-                        <span class="block text-xs font-bold text-black">${currentUser.name} ${currentUser.surname}</span>
-                        <span class="block text-[10px] text-neutral-400 font-mono">ID: ${currentUser.id}</span>
+                        <span class="block text-xs font-bold text-black">${meta.name || ''} ${meta.surname || ''}</span>
+                        <span class="block text-[10px] text-neutral-400 font-mono">ID: NW-${meta.initials || 'USER'}-${currentUser.id.substring(0,6)}</span>
                     </div>
                 </div>
             `;
