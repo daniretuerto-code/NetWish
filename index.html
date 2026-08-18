@@ -29,7 +29,7 @@
     <style>
         * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
         body { 
-            background-color: #ffffff; /* Fondo general en blanco puro */
+            background-color: #ffffff; 
             color: #171717; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             margin: 0;
@@ -44,30 +44,29 @@
 </head>
 <body class="flex justify-center items-center">
 
-    <!-- Contenedor Principal (Fondo Blanco, App en Negro/Grises) -->
+    <!-- Contenedor Principal App Shell -->
     <div class="w-full h-full sm:max-w-md sm:h-[844px] sm:rounded-3xl bg-white sm:border sm:border-neutral-200 flex flex-col shadow-2xl overflow-hidden relative">
         
-        <!-- Header Superior -->
-        <header class="px-5 pt-4 pb-3 border-b border-neutral-100 flex justify-between items-center bg-white/90 backdrop-blur-md z-20">
-            <h1 class="text-xl font-bold tracking-tighter text-black font-mono">NetWish</h1>
+        <!-- Header Superior Fijo -->
+        <header class="absolute top-0 left-0 right-0 px-5 pt-4 pb-3 border-b border-neutral-100 flex justify-between items-center bg-white/95 backdrop-blur-md z-30">
+            <h1 class="text-2xl font-bold tracking-tight text-black font-serif italic">NetWish</h1>
             <div class="w-9 h-9 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-xs font-semibold text-neutral-800 shadow-sm">
                 DR
             </div>
         </header>
 
-        <!-- Contenido Desplazable -->
-        <main class="flex-1 overflow-y-auto no-scrollbar p-5 space-y-6">
+        <!-- Contenido Desplazable (Con padding superior e inferior para no chocar con las barras fijas) -->
+        <main class="flex-1 overflow-y-auto no-scrollbar px-5 pt-20 pb-24 space-y-6">
             
-            <!-- Barra de Búsqueda de Comercios Locales -->
-            <section class="space-y-2">
-                <label class="block text-xs font-medium text-neutral-500 tracking-wide">Busca los comercios locales</label>
-                <div class="relative flex items-center">
-                    <i data-lucide="search" class="absolute left-3.5 w-4 h-4 text-neutral-400"></i>
-                    <input type="text" placeholder="Panaderías, peluquerías, taxis..." class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-3 pl-10 pr-4 text-sm text-black placeholder-neutral-400 focus:outline-none focus:border-black transition shadow-sm">
+            <!-- Barra de Búsqueda Centrada -->
+            <section class="pt-2">
+                <div class="relative flex items-center shadow-sm">
+                    <i data-lucide="search" class="absolute left-4 w-4 h-4 text-neutral-400"></i>
+                    <input type="text" placeholder="Buscar comercios, servicios..." class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-3 pl-11 pr-4 text-sm text-black placeholder-neutral-400 focus:outline-none focus:border-black transition">
                 </div>
             </section>
 
-            <!-- Acceso Directo Destacado: Escáner QR de Pagos (Tarjeta Oscura) -->
+            <!-- Acceso Directo Destacado: Escáner QR de Pagos -->
             <section class="p-5 rounded-2xl bg-black text-white flex flex-col justify-between space-y-4 shadow-xl">
                 <div class="flex justify-between items-start">
                     <div>
@@ -84,7 +83,7 @@
             <!-- Muestra Rápida: Panadería en Directo (Click & Collect) -->
             <section class="space-y-3">
                 <div class="flex justify-between items-center">
-                    <h3 class="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Destacado en Palencia</h3>
+                    <h3 class="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Panadería Recomendada</h3>
                     <span class="text-[10px] text-emerald-600 font-mono bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Stock en vivo</span>
                 </div>
                 
@@ -105,12 +104,12 @@
                 </div>
             </section>
 
-            <!-- Nueva Sección: Categorías de Infraestructura Urbana con Logos en Color -->
+            <!-- Categorías de la Ciudad -->
             <section class="space-y-3">
                 <h3 class="text-[10px] font-mono uppercase tracking-wider text-neutral-500">Categorías de la Ciudad</h3>
                 <div class="grid grid-cols-2 gap-3">
                     <!-- Infraestructuras -->
-                    <button onclick="alert('Sección Infraestructuras')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left group">
+                    <button onclick="alert('Sección Infraestructuras')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left">
                         <div class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
                             <i data-lucide="building-2" class="w-5 h-5 text-blue-600"></i>
                         </div>
@@ -121,7 +120,7 @@
                     </button>
 
                     <!-- Comercios -->
-                    <button onclick="alert('Sección Comercios')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left group">
+                    <button onclick="alert('Sección Comercios')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left">
                         <div class="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
                             <i data-lucide="store" class="w-5 h-5 text-amber-600"></i>
                         </div>
@@ -132,7 +131,7 @@
                     </button>
 
                     <!-- Restaurantes -->
-                    <button onclick="alert('Sección Restaurantes')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left group">
+                    <button onclick="alert('Sección Restaurantes')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left">
                         <div class="w-9 h-9 rounded-xl bg-rose-50 flex items-center justify-center shrink-0">
                             <i data-lucide="utensils" class="w-5 h-5 text-rose-600"></i>
                         </div>
@@ -143,7 +142,7 @@
                     </button>
 
                     <!-- Movilidad -->
-                    <button onclick="alert('Sección Movilidad')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left group">
+                    <button onclick="alert('Sección Movilidad')" class="flex items-center space-x-3 p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left">
                         <div class="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
                             <i data-lucide="car" class="w-5 h-5 text-emerald-600"></i>
                         </div>
@@ -154,7 +153,7 @@
                     </button>
                 </div>
 
-                <!-- Ocio (Ancho completo) -->
+                <!-- Ocio -->
                 <button onclick="alert('Sección Ocio')" class="w-full flex items-center justify-between p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 hover:border-neutral-300 transition text-left">
                     <div class="flex items-center space-x-3">
                         <div class="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center shrink-0">
@@ -171,8 +170,8 @@
 
         </main>
 
-        <!-- Barra de Navegación Inferior (Inicio, Explorar, Scan, Perfil) -->
-        <nav class="border-t border-neutral-200 bg-white/95 backdrop-blur-md px-4 py-2.5 flex justify-around items-center z-20 shadow-lg">
+        <!-- Barra de Navegación Inferior Fija (Inicio, Explorar, Scan, Perfil) -->
+        <nav class="absolute bottom-0 left-0 right-0 border-t border-neutral-200 bg-white/95 backdrop-blur-md px-4 py-3 flex justify-around items-center z-30 shadow-lg">
             <button class="flex flex-col items-center text-black space-y-1">
                 <i data-lucide="home" class="w-5 h-5"></i>
                 <span class="text-[10px] font-medium tracking-tight">Inicio</span>
