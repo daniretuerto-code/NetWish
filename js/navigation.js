@@ -47,12 +47,11 @@ function switchTab(tabId) {
     }
 }
 
-// Nueva función: Resetea el filtro y va al directorio completo desde el NavBar
+// Resetea el filtro y va al directorio completo
 function resetAndExplore() {
     const searchInput = document.getElementById('directorySearch');
     if (searchInput) searchInput.value = '';
     
-    // Al venir desde explorar, nos aseguramos de que la barra se muestre
     const filterBar = document.getElementById('directoryFilters');
     if (filterBar) filterBar.classList.remove('hidden');
 
@@ -78,4 +77,67 @@ function updateHeaderAvatar() {
 
 function handleHeaderProfileClick() {
     switchTab('profile');
+}
+
+
+// ==========================================
+// --- MOTOR DE NAVEGACIÓN POR DESLIZAMIENTO ---
+// ==========================================
+let touchstartX = 0;
+let touchendX = 0;
+let touchstartY = 0;
+let touchendY = 0;
+
+document.addEventListener('touchstart', e => {
+    touchstartX = e.changedTouches[0].screenX;
+    touchstartY = e.changedTouches[0].screenY;
+}, { passive: true });
+
+document.addEventListener('touchend', e => {
+    touchendX = e.changedTouches[0].screenX;
+    touchendY = e.changedTouches[0].screenY;
+    handleSwipeGesture();
+}, { passive: true });
+
+function handleSwipeGesture() {
+    const xDiff = touchstartX - touchendX;
+    const yDiff = touchstartY - touchendY;
+    
+    // Si desliza hacia arriba o abajo (scroll normal), no hacemos nada
+    if (Math.abs(yDiff) > Math.abs(xDiff)) return;
+
+    // Distancia mínima para considerarlo un "swipe" intencionado y no un roce
+    if (Math.abs(xDiff) < 60) return;
+
+    // Orden de las pestañas principales
+    const tabs = ['home', 'explore', 'scan', 'profile'];
+    let activeTabIndex = -1;
+    
+    for (let i = 0; i < tabs.length; i++) {
+        if (!document.getElementById('view-' + tabs[i]).classList.contains('hidden')) {
+            activeTabIndex = i;
+            break;
+        }
+    }
+
+    const isPublicBusiness = !document.getElementById('view-public-business').classList.contains('hidden');
+    const isCart = !document.getElementById('view-cart').classList.contains('hidden');
+
+    if (xDiff > 0) {
+        // Deslizar IZQUIERDA (Avanzar pestaña ->)
+        if (activeTabIndex >= 0 && activeTabIndex < tabs.length - 1) {
+            switchTab(tabs[activeTabIndex + 1]);
+        }
+    } else {
+        // Deslizar DERECHA (Retroceder pestaña <- o Volver atrás)
+        if (activeTabIndex > 0) {
+            switchTab(tabs[activeTabIndex - 1]);
+        } else if (isCart) {
+            // Si estás en la cesta, volver a la tienda
+            switchTab('public-business'); 
+        } else if (isPublicBusiness) {
+            // Si estás en la tienda, volver al directorio general
+            goToDirectory('todos'); 
+        }
+    }
 }
