@@ -384,7 +384,7 @@
             if (savedBusiness) {
                 currentBusiness = JSON.parse(savedBusiness);
                 switchTab('business-dashboard');
-                document.getElementById('businessTitleName').innerText = currentBusiness.Nombre || currentBusiness.name;
+                document.getElementById('businessTitleName').innerText = currentBusiness.name;
                 generateBusinessQR(currentBusiness);
             } else {
                 updateHeaderAvatar();
@@ -645,7 +645,7 @@
             lucide.createIcons();
         }
 
-        // --- AUTENTICACIÓN CONECTADA A LA BASE DE DATOS DE SUPABASE (TABLA: Negocios) ---
+        // --- AUTENTICACIÓN CONECTADA A LA TABLA "businesses" DE SUPABASE ---
         async function authenticateBusiness() {
             const user = document.getElementById('bizUser').value.trim();
             const pass = document.getElementById('bizPass').value.trim();
@@ -656,12 +656,12 @@
             }
 
             try {
-                // Consultamos directamente la tabla "Negocios" en Supabase
+                // Consulta adaptada exactamente a los campos reales de tu tabla "businesses"
                 const { data, error } = await supabaseClient
-                    .from('Negocios')
+                    .from('businesses')
                     .select('*')
-                    .eq('Usuario', user)
-                    .eq('contraseña', pass)
+                    .eq('username', user)
+                    .eq('password', pass)
                     .single();
 
                 if (error || !data) {
@@ -669,11 +669,10 @@
                     return;
                 }
 
-                // Si existe en la base de datos, guardamos los datos reales del comercio
                 currentBusiness = {
                     id: data.id || 'biz_db',
-                    name: data.Nombre,
-                    category: data.Categoria
+                    name: data.name,
+                    category: data.category
                 };
 
                 localStorage.setItem('netwish_business', JSON.stringify(currentBusiness));
@@ -685,7 +684,7 @@
 
             } catch (err) {
                 console.error("Error al conectar con Supabase:", err);
-                alert("Error al verificar las credenciales en la base de datos.");
+                alert("Error de conexión al verificar las credenciales.");
             }
         }
 
