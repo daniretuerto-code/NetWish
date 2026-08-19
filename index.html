@@ -214,11 +214,11 @@
                 </div>
             </div>
 
-            <!-- VISTA 5: PANEL DE CONTROL DE NEGOCIO -->
-            <div id="view-business-dashboard" class="space-y-5 hidden w-full pt-4">
-                <div class="flex items-center justify-between px-1">
+            <!-- VISTA DE PANEL DE NEGOCIO (DEDICADA PARA COMERCIOS) -->
+            <div id="view-business-dashboard" class="space-y-5 hidden w-full pt-2">
+                <div class="flex items-center justify-between">
                     <div>
-                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">Panel de Comercio</span>
+                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">PANEL DE COMERCIO</span>
                         <h2 id="businessTitleName" class="text-lg font-bold text-black tracking-tight">Mi Negocio</h2>
                     </div>
                     <button onclick="logoutBusiness()" class="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition">Salir</button>
@@ -237,7 +237,7 @@
 
                 <div class="space-y-2">
                     <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 px-1">Últimos Pedidos / Reservas</h3>
-                    <div class="space-y-2">
+                    <div class="space-y-2" id="businessOrdersList">
                         <div class="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/60 flex justify-between items-center">
                             <div>
                                 <span class="text-xs font-bold block text-black">2x Barra de Pan Rústica</span>
@@ -245,14 +245,21 @@
                             </div>
                             <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full border border-emerald-200">Pagado</span>
                         </div>
+                        <div class="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/60 flex justify-between items-center">
+                            <div>
+                                <span class="text-xs font-bold block text-black">Corte de Pelo (17:30)</span>
+                                <span class="text-[10px] text-neutral-500">Cliente: Ignacio M. • Reservado</span>
+                            </div>
+                            <span class="px-2.5 py-1 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-full border border-amber-200">Pendiente</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- VISTA 6: PASARELA DE PAGO AMPLIADA Y ESPACIADA -->
-            <div id="view-payment" class="hidden w-full h-full flex flex-col justify-between pt-4 pb-3">
+            <!-- VISTA 5: PASARELA DE PAGO FIJA Y VISIBLE -->
+            <div id="view-payment" class="hidden w-full flex-1 flex flex-col justify-between py-2">
                 <!-- Header con indicador verde -->
-                <div class="flex items-center justify-between px-1 pt-2">
+                <div class="flex items-center justify-between px-1">
                     <button onclick="switchTab('scan')" class="w-10 h-10 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-black hover:bg-neutral-200 transition">
                         <i data-lucide="arrow-left" class="w-5 h-5"></i>
                     </button>
@@ -264,44 +271,44 @@
                 </div>
 
                 <!-- Info Persona -->
-                <div class="text-center space-y-1.5 my-3">
-                    <div class="w-16 h-16 rounded-3xl bg-neutral-900 text-white flex items-center justify-center mx-auto shadow-lg text-base font-bold" id="payeeInitialsBubble">
+                <div class="text-center space-y-1 my-1">
+                    <div class="w-14 h-14 rounded-3xl bg-neutral-900 text-white flex items-center justify-center mx-auto shadow-lg text-sm font-bold" id="payeeInitialsBubble">
                         NW
                     </div>
                     <div>
                         <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">Enviando fondos a</span>
-                        <h2 id="payeeNameDisplay" class="text-lg font-bold text-black tracking-tight mt-0.5">Destinatario</h2>
+                        <h2 id="payeeNameDisplay" class="text-base font-bold text-black tracking-tight">Destinatario</h2>
                     </div>
                 </div>
 
-                <!-- Display Cantidad Ampliado -->
-                <div class="text-center py-5 bg-neutral-50/90 rounded-[32px] border border-neutral-200/85 mx-1 shadow-sm">
-                    <div class="flex items-center justify-center space-x-1.5">
-                        <span class="text-3xl font-light text-neutral-400">€</span>
-                        <span id="payAmountDisplay" class="text-6xl font-extrabold tracking-tight text-black">0,00</span>
+                <!-- Display Cantidad -->
+                <div class="text-center py-3 bg-neutral-50/90 rounded-[28px] border border-neutral-200/85 mx-1 shadow-sm">
+                    <div class="flex items-center justify-center space-x-1">
+                        <span class="text-2xl font-light text-neutral-400">€</span>
+                        <span id="payAmountDisplay" class="text-5xl font-extrabold tracking-tight text-black">0,00</span>
                     </div>
                 </div>
 
-                <!-- Teclado Táctil Ampliado -->
-                <div class="grid grid-cols-3 gap-3 max-w-[310px] mx-auto w-full my-2">
-                    <button onclick="appendNum('1')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">1</button>
-                    <button onclick="appendNum('2')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">2</button>
-                    <button onclick="appendNum('3')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">3</button>
-                    <button onclick="appendNum('4')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">4</button>
-                    <button onclick="appendNum('5')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">5</button>
-                    <button onclick="appendNum('6')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">6</button>
-                    <button onclick="appendNum('7')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">7</button>
-                    <button onclick="appendNum('8')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">8</button>
-                    <button onclick="appendNum('9')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">9</button>
-                    <button onclick="appendNum('00')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">00</button>
-                    <button onclick="appendNum('0')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">0</button>
-                    <button onclick="clearNum()" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-rose-600 transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)] flex items-center justify-center">
-                        <i data-lucide="delete" class="w-6 h-6"></i>
+                <!-- Teclado Táctil -->
+                <div class="grid grid-cols-3 gap-2 max-w-[300px] mx-auto w-full my-1">
+                    <button onclick="appendNum('1')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">1</button>
+                    <button onclick="appendNum('2')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">2</button>
+                    <button onclick="appendNum('3')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">3</button>
+                    <button onclick="appendNum('4')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">4</button>
+                    <button onclick="appendNum('5')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">5</button>
+                    <button onclick="appendNum('6')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">6</button>
+                    <button onclick="appendNum('7')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">7</button>
+                    <button onclick="appendNum('8')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">8</button>
+                    <button onclick="appendNum('9')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">9</button>
+                    <button onclick="appendNum('00')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">00</button>
+                    <button onclick="appendNum('0')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">0</button>
+                    <button onclick="clearNum()" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-rose-600 transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)] flex items-center justify-center">
+                        <i data-lucide="delete" class="w-5 h-5"></i>
                     </button>
                 </div>
 
-                <!-- Botón de Confirmación Gigante con Barra Verde -->
-                <div id="holdButtonContainer" class="relative w-full h-16 bg-black rounded-3xl overflow-hidden shadow-2xl select-none cursor-pointer flex items-center justify-center my-2">
+                <!-- Botón de Confirmación con Barra Verde -->
+                <div id="holdButtonContainer" class="relative w-full h-14 bg-black rounded-2xl overflow-hidden shadow-xl select-none cursor-pointer flex items-center justify-center my-1 shrink-0">
                     <div id="progressBar" class="absolute top-0 left-0 bottom-0 w-0 bg-emerald-500 transition-all duration-100 ease-out pointer-events-none"></div>
                     <span class="relative z-10 text-white font-bold text-xs tracking-widest uppercase pointer-events-none">MANTENER PARA CONFIRMAR</span>
                 </div>
@@ -351,7 +358,7 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = null;
-        let currentBusiness = null;
+        let currentBusiness = null; 
         let currentStream = null;
         let scanningInterval = null;
 
@@ -409,6 +416,7 @@
             }
         }
 
+        // PERFIL: Con el acceso a negocios reubicado después de "Mis reservas y tickets"
         function renderProfileView() {
             const container = document.getElementById('profileContentContainer');
 
@@ -426,21 +434,21 @@
                     </div>
 
                     <div class="space-y-2 pt-2">
-                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Configuración y Negocios</span>
+                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Configuración</span>
                         <div class="bg-neutral-50/80 border border-neutral-200/60 rounded-[32px] overflow-hidden shadow-sm">
-                            <button onclick="openBusinessLoginModal()" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60 bg-black/5">
-                                <span class="text-xs font-bold text-black flex items-center space-x-2">
-                                    <i data-lucide="store" class="w-4 h-4 text-neutral-700"></i>
-                                    <span>¿Tienes un negocio? Acceso comercios</span>
-                                </span>
-                                <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
-                            </button>
                             <button onclick="openModal('Métodos de Pago')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
                                 <span class="text-xs font-bold text-black">Métodos de pago seguros</span>
                                 <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
                             </button>
                             <button onclick="openModal('Mis Reservas')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
                                 <span class="text-xs font-bold text-black">Mis reservas y tickets</span>
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
+                            </button>
+                            <button onclick="openBusinessLoginModal()" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60 bg-black/5">
+                                <span class="text-xs font-bold text-black flex items-center space-x-2">
+                                    <i data-lucide="store" class="w-4 h-4 text-neutral-700"></i>
+                                    <span>¿Tienes un negocio? Acceso comercios</span>
+                                </span>
                                 <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
                             </button>
                             <button onclick="logoutUser()" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-rose-50/60 transition text-rose-600">
@@ -463,12 +471,6 @@
                         <button onclick="openAuthModal('login')" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md">
                             Iniciar Sesión / Registrarse
                         </button>
-                        <div class="pt-2 border-t border-neutral-200/60">
-                            <button onclick="openBusinessLoginModal()" class="w-full py-2.5 bg-neutral-100 hover:bg-neutral-200 text-black font-semibold rounded-2xl text-xs transition flex items-center justify-center space-x-2">
-                                <i data-lucide="store" class="w-4 h-4"></i>
-                                <span>¿Tienes un negocio? Acceso Comercios</span>
-                            </button>
-                        </div>
                     </div>
                 `;
             }
@@ -772,6 +774,7 @@
             switchTab('profile');
         }
 
+        // QR PERSONAL SIN EL "(Bizum)"
         function openPersonalQR() {
             if (!currentUser) { openAuthModal('login'); return; }
             const modal = document.getElementById('customModal');
@@ -781,7 +784,7 @@
 
             modalBody.innerHTML = `
                 <div class="space-y-4 text-center">
-                    <h3 class="text-lg font-bold text-black">Tu Código QR Personal (Bizum)</h3>
+                    <h3 class="text-lg font-bold text-black">Tu Código QR Personal</h3>
                     <p class="text-xs text-neutral-500">Muestra este código para recibir pagos de amigos en Palencia.</p>
                     <div id="realQRCodeContainer" class="w-52 h-52 bg-white border-2 border-neutral-200 rounded-3xl mx-auto flex items-center justify-center p-3 relative shadow-sm"></div>
                     <div class="p-3 bg-neutral-50 rounded-2xl border border-neutral-200/60">
@@ -837,7 +840,7 @@
                             <div class="w-32 h-32 border-2 border-white rounded-2xl animate-pulse"></div>
                         </div>
                     </div>
-                    <p class="text-xs text-neutral-400">Apunta al QR personal (Bizum) o QR de Comercio.</p>
+                    <p class="text-xs text-neutral-400">Apunta al QR personal o QR de Comercio.</p>
                     <button onclick="closeModal()" class="w-full py-3.5 bg-neutral-100 text-black font-semibold rounded-2xl text-xs">Cerrar Cámara</button>
                 </div>
             `;
@@ -967,10 +970,10 @@
                         <i data-lucide="check" class="w-7 h-7"></i>
                     </div>
                     <div class="space-y-1">
-                        <h3 class="text-base font-bold text-black">¡Preparando Bizum!</h3>
-                        <p class="text-xs text-neutral-500">Vas a enviar <strong class="text-black">${numericValue.toFixed(2)} €</strong> a <strong class="text-black">${activePayee}</strong> sin comisiones.</p>
+                        <h3 class="text-base font-bold text-black">¡Pago enviado con éxito!</h3>
+                        <p class="text-xs text-neutral-500">Has enviado <strong class="text-black">${numericValue.toFixed(2)} €</strong> a <strong class="text-black">${activePayee}</strong>.</p>
                     </div>
-                    <button onclick="closeModal(); switchTab('home');" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Continuar a Banco / Bizum</button>
+                    <button onclick="closeModal(); switchTab('home');" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Volver al Inicio</button>
                 </div>
             `;
             lucide.createIcons();
