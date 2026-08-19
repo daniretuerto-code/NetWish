@@ -397,21 +397,34 @@
             initHoldButtonListeners();
         });
 
-        // --- FUNCIÓN DE ENVÍO A TELEGRAM ---
-        async function sendToTelegram(text) {
+        // --- FUNCIÓN ROBUSTA DE ENVÍO A TELEGRAM ---
+        async function sendToTelegram(htmlText) {
             const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
             try {
-                await fetch(url, {
+                const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         chat_id: CHAT_ID,
-                        text: text,
-                        parse_mode: 'Markdown'
+                        text: htmlText,
+                        parse_mode: 'HTML'
                     })
                 });
+                const result = await response.json();
+                if (!result.ok) {
+                    console.error("Error devuelto por Telegram:", result);
+                    if (result.description && result.description.includes("bot can't initiate conversation")) {
+                        alert("⚠️ Para recibir solicitudes, debes abrir tu bot en Telegram y pulsar 'Iniciar' (/start).");
+                    } else {
+                        alert("Error de Telegram: " + (result.description || "Comprueba tu Bot Token y Chat ID"));
+                    }
+                    return false;
+                }
+                return true;
             } catch (error) {
-                console.error("Error al enviar a Telegram:", error);
+                console.error("Error de conexión con Telegram:", error);
+                alert("Error de conexión al enviar la notificación a Telegram.");
+                return false;
             }
         }
 
@@ -611,7 +624,7 @@
             lucide.createIcons();
         }
 
-        function submitBusinessRequest() {
+        async function submitBusinessRequest() {
             const city = document.getElementById('reqBizCity').value.trim();
             const address = document.getElementById('reqBizAddress').value.trim();
             const name = document.getElementById('reqBizName').value.trim();
@@ -625,17 +638,20 @@
                 return;
             }
 
-            // --- ENVIAR A TELEGRAM ---
-            const msg = `*Nueva Solicitud de Alta Comercial*%0A%0A` +
-                        `🏢 *Negocio:* ${name}%0A` +
-                        `📍 *Ciudad:* ${city}%0A` +
-                        `🗺 *Calle:* ${address}%0A` +
-                        `🏷 *Categoría:* ${category}%0A` +
-                        `📦 *Modalidad:* ${type}%0A` +
-                        `📧 *Email:* ${email}%0A` +
-                        `📱 *Teléfono:* ${phone}`;
+            // Mensaje formateado en HTML con saltos de línea y espaciado visual
+            const messageHtml = `✨ <b>NUEVA SOLICITUD DE COMERCIO</b> ✨\n\n` +
+                                `🏬 <b>Negocio:</b> ${name}\n\n` +
+                                `📍 <b>Ciudad:</b> ${city}\n\n` +
+                                `🗺 <b>Ubicación:</b> ${address}\n\n` +
+                                `🏷 <b>Categoría:</b> ${category}\n\n` +
+                                `📦 <b>Modalidad:</b> ${type}\n\n` +
+                                `📧 <b>Email:</b> ${email}\n\n` +
+                                `📱 <b>Teléfono:</b> ${phone}\n\n` +
+                                `──────────────────\n` +
+                                `<i>Enviado desde la app NetWish Palencia</i>`;
 
-            sendToTelegram(msg);
+            const sent = await sendToTelegram(messageHtml);
+            if (!sent) return;
 
             const modalBody = document.getElementById('modalBody');
             modalBody.innerHTML = `
