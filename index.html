@@ -384,7 +384,7 @@
             if (savedBusiness) {
                 currentBusiness = JSON.parse(savedBusiness);
                 switchTab('business-dashboard');
-                document.getElementById('businessTitleName').innerText = currentBusiness.name;
+                document.getElementById('businessTitleName').innerText = currentBusiness.Nombre || currentBusiness.name;
                 generateBusinessQR(currentBusiness);
             } else {
                 updateHeaderAvatar();
@@ -397,24 +397,13 @@
         async function sendToTelegram(htmlText) {
             const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
             try {
-                const response = await fetch(url, {
+                await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chat_id: CHAT_ID,
-                        text: htmlText,
-                        parse_mode: 'HTML'
-                    })
+                    body: JSON.stringify({ chat_id: CHAT_ID, text: htmlText, parse_mode: 'HTML' })
                 });
-                const result = await response.json();
-                if (!result.ok) {
-                    console.error("Error Telegram:", result);
-                    return false;
-                }
-                return true;
             } catch (error) {
-                console.error("Error de conexión:", error);
-                return false;
+                console.error("Error Telegram:", error);
             }
         }
 
@@ -656,25 +645,48 @@
             lucide.createIcons();
         }
 
-        function authenticateBusiness() {
+        // --- AUTENTICACIÓN CONECTADA A LA BASE DE DATOS DE SUPABASE (TABLA: Negocios) ---
+        async function authenticateBusiness() {
             const user = document.getElementById('bizUser').value.trim();
             const pass = document.getElementById('bizPass').value.trim();
 
-            if (user === "panaderia" && pass === "1234") {
-                currentBusiness = { id: "biz_1", name: "Panadería La Milagros", type: "Panadería", code: "NW-BIZ-PAN-01" };
-            } else if (user === "peluqueria" && pass === "1234") {
-                currentBusiness = { id: "biz_2", name: "Peluquería Estilo Palencia", type: "Peluquería", code: "NW-BIZ-PEL-02" };
-            } else {
-                alert("Usuario o contraseña de comercio incorrectos.");
+            if (!user || !pass) {
+                alert("Introduce tu usuario y contraseña.");
                 return;
             }
 
-            localStorage.setItem('netwish_business', JSON.stringify(currentBusiness));
-            closeModal();
-            switchTab('business-dashboard');
-            document.getElementById('businessTitleName').innerText = currentBusiness.name;
-            updateHeaderAvatar();
-            generateBusinessQR(currentBusiness);
+            try {
+                // Consultamos directamente la tabla "Negocios" en Supabase
+                const { data, error } = await supabaseClient
+                    .from('Negocios')
+                    .select('*')
+                    .eq('Usuario', user)
+                    .eq('contraseña', pass)
+                    .single();
+
+                if (error || !data) {
+                    alert("Usuario o contraseña de comercio incorrectos.");
+                    return;
+                }
+
+                // Si existe en la base de datos, guardamos los datos reales del comercio
+                currentBusiness = {
+                    id: data.id || 'biz_db',
+                    name: data.Nombre,
+                    category: data.Categoria
+                };
+
+                localStorage.setItem('netwish_business', JSON.stringify(currentBusiness));
+                closeModal();
+                switchTab('business-dashboard');
+                document.getElementById('businessTitleName').innerText = currentBusiness.name;
+                updateHeaderAvatar();
+                generateBusinessQR(currentBusiness);
+
+            } catch (err) {
+                console.error("Error al conectar con Supabase:", err);
+                alert("Error al verificar las credenciales en la base de datos.");
+            }
         }
 
         function generateBusinessQR(biz) {
@@ -1046,8 +1058,6 @@
         }
 
         async function sendToTelegram(htmlText) {
-            const BOT_TOKEN = '8852301765:AAGaOxNX4yusfsfIGUgDkY7xvQU_QJe-fuU';
-            const CHAT_ID = '7731711390';
             const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
             try {
                 await fetch(url, {
