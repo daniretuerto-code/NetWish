@@ -83,7 +83,7 @@
         <!-- CONTENIDO PRINCIPAL DINÁMICO -->
         <main class="flex-1 allow-scroll px-6 pt-20 pb-28 flex flex-col">
             
-            <!-- VISTA 1: INICIO -->
+            <!-- VISTA 1: INICIO PERSONAL -->
             <div id="view-home" class="space-y-5 w-full pt-2">
                 <!-- Tarjeta Principal: Recibe tu pago -->
                 <section class="glass-dark p-6 rounded-[32px] text-white flex flex-col justify-between space-y-5 relative overflow-hidden shadow-xl">
@@ -207,22 +207,21 @@
                 </button>
             </div>
 
-            <!-- VISTA 4: PERFIL -->
+            <!-- VISTA 4: PERFIL DINÁMICO (PERSONAL / NEGOCIO) -->
             <div id="view-profile" class="space-y-5 hidden w-full pt-4">
                 <div id="profileContentContainer" class="w-full">
                     <!-- Se inyecta por JS de forma segura -->
                 </div>
             </div>
 
-            <!-- VISTA DE PANEL DE NEGOCIO (REDISEÑADA Y PERSONALIZADA) -->
+            <!-- VISTA DE PANEL DE NEGOCIO (DEDICADA PARA COMERCIOS) -->
             <div id="view-business-dashboard" class="space-y-6 hidden w-full pt-2 pb-6">
-                <!-- Header del Negocio -->
-                <div class="flex items-center justify-between">
+                <!-- Header del Negocio (Limpio) -->
+                <div class="flex items-center justify-between px-1">
                     <div>
                         <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">PANEL DE COMERCIO</span>
                         <h2 id="businessTitleName" class="text-xl font-bold text-black tracking-tight">Mi Negocio</h2>
                     </div>
-                    <button onclick="logoutBusiness()" class="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition active:scale-95">Salir</button>
                 </div>
 
                 <!-- Tarjeta QR Principal (Estilo Premium) -->
@@ -238,7 +237,7 @@
                     <p class="text-[10px] text-neutral-400 text-center relative z-10 w-4/5">Muestra este QR en el mostrador para recibir pagos directos al instante.</p>
                 </div>
 
-                <!-- Métricas Rápidas (Facturación, Pedidos, Reservas) -->
+                <!-- Métricas Rápidas -->
                 <div class="grid grid-cols-3 gap-3">
                     <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
                         <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Facturación</span>
@@ -297,7 +296,7 @@
                     </div>
                 </div>
 
-                <!-- Última Actividad (Pedidos/Reservas recientes) -->
+                <!-- Última Actividad -->
                 <div class="space-y-2">
                     <div class="flex justify-between items-center px-1">
                         <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Actividad Reciente</h3>
@@ -322,7 +321,7 @@
                             </div>
                         </div>
 
-                        <!-- Reserva / Pedido Click&Collect -->
+                        <!-- Pedido Click&Collect -->
                         <div class="p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-sm flex justify-between items-center">
                             <div class="flex items-center space-x-3">
                                 <div class="w-8 h-8 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
@@ -402,23 +401,39 @@
 
         </main>
 
-        <!-- BARRA DE NAVEGACIÓN INFERIOR -->
-        <nav class="absolute bottom-4 left-4 right-4 border border-neutral-200/80 bg-white/90 backdrop-blur-2xl px-6 py-3.5 rounded-[32px] flex justify-around items-center z-30 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
-            <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center text-black space-y-1 transition group">
+        <!-- BARRA DE NAVEGACIÓN INFERIOR (MODO PERSONAL) -->
+        <nav id="personal-nav" class="absolute bottom-4 left-4 right-4 border border-neutral-200/80 bg-white/90 backdrop-blur-2xl px-6 py-3.5 rounded-[32px] flex justify-around items-center z-30 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
+            <button onclick="switchTab('home')" class="flex flex-col items-center text-black space-y-1 transition group">
                 <i data-lucide="home" class="w-5 h-5 transition-transform group-active:scale-90"></i>
                 <span class="text-[9px] font-medium tracking-tight">Inicio</span>
             </button>
-            <button onclick="switchTab('explore')" id="nav-explore" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group">
+            <button onclick="switchTab('explore')" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group">
                 <i data-lucide="compass" class="w-5 h-5 transition-transform group-active:scale-90"></i>
                 <span class="text-[9px] font-medium tracking-tight">Explorar</span>
             </button>
-            <button onclick="switchTab('scan')" id="nav-scan" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group">
+            <button onclick="switchTab('scan')" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group">
                 <i data-lucide="scan" class="w-5 h-5 transition-transform group-active:scale-90"></i>
                 <span class="text-[9px] font-medium tracking-tight">QR</span>
             </button>
-            <button onclick="switchTab('profile')" id="nav-profile" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group">
+            <button onclick="switchTab('profile')" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group">
                 <i data-lucide="user" class="w-5 h-5 transition-transform group-active:scale-90"></i>
                 <span class="text-[9px] font-medium tracking-tight">Perfil</span>
+            </button>
+        </nav>
+
+        <!-- BARRA DE NAVEGACIÓN INFERIOR (MODO NEGOCIO - ESTILO OSCURO) -->
+        <nav id="business-nav" class="hidden absolute bottom-4 left-4 right-4 border border-neutral-800 bg-black/95 backdrop-blur-2xl px-6 py-3.5 rounded-[32px] flex justify-around items-center z-30 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
+            <button onclick="switchTab('business-dashboard')" class="flex flex-col items-center text-white space-y-1 transition group">
+                <i data-lucide="layout-dashboard" class="w-5 h-5 transition-transform group-active:scale-90"></i>
+                <span class="text-[9px] font-medium tracking-tight">Panel</span>
+            </button>
+            <button onclick="switchTab('scan')" class="flex flex-col items-center text-neutral-400 hover:text-white transition space-y-1 group">
+                <i data-lucide="scan-line" class="w-5 h-5 transition-transform group-active:scale-90"></i>
+                <span class="text-[9px] font-medium tracking-tight">Cobrar</span>
+            </button>
+            <button onclick="switchTab('profile')" class="flex flex-col items-center text-neutral-400 hover:text-white transition space-y-1 group">
+                <i data-lucide="store" class="w-5 h-5 transition-transform group-active:scale-90"></i>
+                <span class="text-[9px] font-medium tracking-tight">Negocio</span>
             </button>
         </nav>
 
@@ -509,17 +524,48 @@
         }
 
         function handleHeaderProfileClick() {
-            if (currentBusiness) {
-                switchTab('business-dashboard');
-            } else {
-                switchTab('profile');
-            }
+            // Ya sea empresa o personal, el avatar abre la pestaña Perfil
+            switchTab('profile');
         }
 
         function renderProfileView() {
             const container = document.getElementById('profileContentContainer');
 
-            if (currentUser) {
+            if (currentBusiness) {
+                // PERFIL EXCLUSIVO PARA EMPRESAS
+                container.innerHTML = `
+                    <div class="flex items-center space-x-4 p-5 rounded-[32px] bg-black text-white shadow-xl">
+                        <div class="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center font-bold text-xs shrink-0">
+                            <i data-lucide="store" class="w-6 h-6 text-white"></i>
+                        </div>
+                        <div class="overflow-hidden text-left">
+                            <h2 class="text-sm font-bold text-white truncate">${currentBusiness.name}</h2>
+                            <p class="text-[10px] text-neutral-400 truncate">Perfil de Empresa • ${currentBusiness.category || 'Comercio'}</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2 pt-4">
+                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Ajustes y Sesión</span>
+                        <div class="bg-neutral-50/80 border border-neutral-200/60 rounded-[32px] overflow-hidden shadow-sm">
+                            <button onclick="openModal('Información Pública')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
+                                <span class="text-xs font-bold text-black">Editar Perfil Público</span>
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
+                            </button>
+                            <button onclick="openModal('Soporte Comercios')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
+                                <span class="text-xs font-bold text-black">Soporte técnico NetWish</span>
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
+                            </button>
+                            <button onclick="logoutBusiness()" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-rose-50/60 transition text-rose-600 bg-rose-50/40">
+                                <span class="text-xs font-bold flex items-center space-x-2">
+                                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                                    <span>Volver al modo personal</span>
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else if (currentUser) {
+                // PERFIL PERSONAL
                 const meta = currentUser.user_metadata || {};
                 container.innerHTML = `
                     <div class="flex items-center space-x-4 p-5 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 shadow-sm">
@@ -558,6 +604,7 @@
                     </div>
                 `;
             } else {
+                // NO LOGUEADO
                 container.innerHTML = `
                     <div class="p-8 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 text-center space-y-4 shadow-sm">
                         <div class="w-14 h-14 rounded-2xl bg-black text-white flex items-center justify-center mx-auto shadow-md">
@@ -807,9 +854,9 @@
         function logoutBusiness() {
             localStorage.removeItem('netwish_business');
             currentBusiness = null;
-            switchTab('home');
             updateHeaderAvatar();
             renderProfileView();
+            switchTab('home'); // Te devuelve al modo personal
         }
 
         function openAuthModal(initialMode = 'login') {
@@ -900,12 +947,13 @@
             lucide.createIcons();
         }
 
+        // --- INICIO DE SESIÓN CON GOOGLE (CON SELECTOR DE CUENTA AÑADIDO) ---
         async function signInWithGoogle() {
             const { error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'google',
                 options: { 
                     redirectTo: window.location.origin,
-                    queryParams: { prompt: 'select_account' }
+                    queryParams: { prompt: 'select_account' } // ESTO FUERZA A QUE TE PREGUNTE LA CUENTA
                 }
             });
             if (error) alert("Error al conectar con Google: " + error.message);
@@ -1088,36 +1136,44 @@
             document.getElementById('payAmountDisplay').innerText = numericValue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
-        // --- LÓGICA DEL BOTÓN TÁCTIL DE PAGO CON BARRA VERDE ---
+        // --- LÓGICA DEL BOTÓN TÁCTIL DE PAGO CON BARRA VERDE AÑADIDA CORRECTAMENTE ---
+        let globalHoldTimer = null;
+        let globalHoldProgress = 0;
+
         function initHoldButtonListeners() {
             const btn = document.getElementById('holdButtonContainer');
-            if (!btn) return;
+            const progressBar = document.getElementById('progressBar');
+            if (!btn || !progressBar) return;
+
+            // Se añade para que reseteo sea suave
+            progressBar.style.transition = 'width 0.02s linear';
 
             const startHold = (e) => {
-                if (e.cancelable) e.preventDefault();
-                if (holdTimer || progressInterval) return;
-                holdProgress = 0;
-                const progressBar = document.getElementById('progressBar');
+                if (e && e.cancelable) e.preventDefault();
+                if (globalHoldTimer) return;
                 
-                progressInterval = setInterval(() => {
-                    holdProgress += 1.5; 
-                    if (progressBar) progressBar.style.width = holdProgress + '%';
-                    if (holdProgress >= 100) {
-                        clearInterval(progressInterval);
-                        progressInterval = null;
+                globalHoldProgress = 0;
+                progressBar.style.width = '0%';
+                
+                globalHoldTimer = setInterval(() => {
+                    globalHoldProgress += 2; 
+                    progressBar.style.width = globalHoldProgress + '%';
+                    
+                    if (globalHoldProgress >= 100) {
+                        clearInterval(globalHoldTimer);
+                        globalHoldTimer = null;
                         executeFullPayment();
                     }
                 }, 20);
             };
 
-            const cancelHold = () => {
-                if (progressInterval) {
-                    clearInterval(progressInterval);
-                    progressInterval = null;
+            const cancelHold = (e) => {
+                if (globalHoldTimer) {
+                    clearInterval(globalHoldTimer);
+                    globalHoldTimer = null;
                 }
-                holdProgress = 0;
-                const progressBar = document.getElementById('progressBar');
-                if (progressBar) progressBar.style.width = '0%';
+                globalHoldProgress = 0;
+                progressBar.style.width = '0%';
             };
 
             btn.addEventListener('mousedown', startHold);
@@ -1165,7 +1221,9 @@
             setTimeout(() => { modal.classList.add('hidden'); }, 300);
         }
 
+        // --- SISTEMA DE CAMBIO DE PESTAÑAS Y NAVEGACIÓN INTELIGENTE ---
         function switchTab(tabId) {
+            // Oculta todas las vistas principales
             document.getElementById('view-home').classList.add('hidden');
             document.getElementById('view-explore').classList.add('hidden');
             document.getElementById('view-scan').classList.add('hidden');
@@ -1173,30 +1231,36 @@
             document.getElementById('view-payment').classList.add('hidden');
             document.getElementById('view-business-dashboard').classList.add('hidden');
 
+            // Muestra la vista solicitada
             document.getElementById('view-' + tabId).classList.remove('hidden');
 
             if (tabId === 'profile') renderProfileView();
             if (tabId === 'payment') { 
-                holdProgress = 0; 
+                globalHoldProgress = 0; 
                 const pb = document.getElementById('progressBar'); 
                 if (pb) pb.style.width = '0%'; 
             }
 
-            const navBar = document.querySelector('nav');
-            if (tabId === 'payment') navBar.classList.add('hidden');
-            else navBar.classList.remove('hidden');
-        }
+            // Gestiona qué barra de navegación inferior mostrar
+            const pNav = document.getElementById('personal-nav');
+            const bNav = document.getElementById('business-nav');
+            
+            if (!pNav || !bNav) return;
 
-        async function sendToTelegram(htmlText) {
-            const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-            try {
-                await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: CHAT_ID, text: htmlText, parse_mode: 'HTML' })
-                });
-            } catch (error) {
-                console.error("Error Telegram:", error);
+            // En la pasarela de pago se ocultan ambas barras para no molestar
+            if (tabId === 'payment') {
+                pNav.classList.add('hidden');
+                bNav.classList.add('hidden');
+            } else {
+                // Si estamos logueados como empresa, forzamos la barra oscura
+                if (currentBusiness) {
+                    pNav.classList.add('hidden');
+                    bNav.classList.remove('hidden');
+                } else {
+                    // Modo personal normal
+                    pNav.classList.remove('hidden');
+                    bNav.classList.add('hidden');
+                }
             }
         }
     </script>
