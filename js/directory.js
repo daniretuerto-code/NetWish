@@ -127,10 +127,6 @@ function openPublicBusiness(name, type) {
                 <div class="flex-1 pr-4"><h4 class="text-sm font-bold text-black">Hogaza de Pueblo</h4><p class="text-[10px] text-neutral-500 mt-0.5">500g de masa madre pura.</p><p class="text-xs font-extrabold text-black mt-2">2,50 €</p></div>
                 <button onclick="addToCart(2.50, 'Hogaza de Pueblo')" class="w-10 h-10 rounded-2xl bg-white border border-neutral-200 shadow-sm flex items-center justify-center text-black active:scale-90"><i data-lucide="plus" class="w-4 h-4"></i></button>
             </div>
-            <div class="p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/60 flex justify-between items-center shadow-sm">
-                <div class="flex-1 pr-4"><h4 class="text-sm font-bold text-black">Croissant de Mantequilla</h4><p class="text-[10px] text-neutral-500 mt-0.5">Clásico francés.</p><p class="text-xs font-extrabold text-black mt-2">1,50 €</p></div>
-                <button onclick="addToCart(1.50, 'Croissant de Mantequilla')" class="w-10 h-10 rounded-2xl bg-white border border-neutral-200 shadow-sm flex items-center justify-center text-black active:scale-90"><i data-lucide="plus" class="w-4 h-4"></i></button>
-            </div>
         `;
     } else if (type.includes('pel')) {
         imgEl.src = "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=800&q=80";
@@ -222,7 +218,9 @@ function processCartChoice(action) {
     }
 }
 
-// --- CONSTRUCCIÓN DEL PANEL DE NEGOCIO PERSONALIZADO ---
+// ==========================================
+// --- CONSTRUCCIÓN DEL PANEL DE NEGOCIO ---
+// ==========================================
 function renderBusinessOrders() {
     if (!currentBusiness) return;
     
@@ -231,7 +229,6 @@ function renderBusinessOrders() {
     
     const cat = (currentBusiness.category || '').toLowerCase();
     
-    // Filtramos las ventas en local para este negocio
     const orders = JSON.parse(localStorage.getItem('netwish_global_orders') || '[]');
     const myOrders = orders.filter(o => {
         const bName = (currentBusiness.name || '').toLowerCase();
@@ -246,7 +243,6 @@ function renderBusinessOrders() {
         if (o.status.includes('Pendiente') || o.status === 'Pagado Online') pendingOrdersCount++;
     });
 
-    // 1. Tarjeta QR Visual (Común para todos)
     let html = `
         <div class="glass-dark p-6 rounded-[32px] text-white flex flex-col items-center space-y-4 relative overflow-hidden shadow-xl">
             <div class="absolute -right-10 -top-10 w-36 h-36 bg-gradient-to-br from-neutral-500/30 to-transparent rounded-full blur-2xl pointer-events-none"></div>
@@ -256,9 +252,7 @@ function renderBusinessOrders() {
         </div>
     `;
 
-    // 2. Interfaz Personalizada según Categoría
     if (cat.includes('pel')) {
-        // PELUQUERÍAS: Citas y Agenda
         html += `
             <div class="grid grid-cols-2 gap-3">
                 <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
@@ -275,7 +269,6 @@ function renderBusinessOrders() {
             </button>
         `;
     } else if (cat.includes('rest') || cat.includes('bar')) {
-        // RESTAURANTES: Mesas y Cocina
         html += `
             <div class="grid grid-cols-3 gap-3">
                 <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
@@ -301,7 +294,6 @@ function renderBusinessOrders() {
             </div>
         `;
     } else {
-        // PANADERÍAS / COMERCIOS: Pedidos y Stock
         html += `
             <div class="grid grid-cols-2 gap-3">
                 <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
@@ -319,7 +311,6 @@ function renderBusinessOrders() {
         `;
     }
 
-    // 3. Actividad Reciente (Lista de pedidos real)
     html += `
         <div class="space-y-2 pt-2">
             <div class="flex justify-between items-center px-1">
@@ -361,6 +352,5 @@ function renderBusinessOrders() {
     container.innerHTML = html;
     lucide.createIcons();
 
-    // Regenerar el QR en el nuevo contenedor que hemos creado
     if (typeof generateBusinessQR === 'function') generateBusinessQR(currentBusiness);
 }

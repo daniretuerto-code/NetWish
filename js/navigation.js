@@ -21,7 +21,7 @@ function switchTab(tabId) {
         targetView.classList.remove('hidden');
         targetView.classList.add(swipeAnim);
     }
-    swipeAnim = 'fade-in'; // Reset para los clicks normales
+    swipeAnim = 'fade-in'; 
 
     if (tabId === 'profile') renderProfileView();
     if (tabId === 'business-dashboard') renderBusinessOrders();
@@ -66,7 +66,6 @@ function updateNavHighlight(activeTabId) {
         if(!btn) return;
         const icon = btn.querySelector('i');
         
-        // Si entramos a un negocio, mantenemos "explore" o "home" encendido
         if (tab === activeTabId || (activeTabId === 'public-business' && tab === lastMainTab) || (activeTabId === 'cart' && tab === lastMainTab)) {
             btn.classList.remove('text-neutral-400');
             btn.classList.add('text-black');
