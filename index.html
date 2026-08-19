@@ -32,40 +32,8 @@
     <!-- Supabase JS SDK Real -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <style>
-        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-        html, body { 
-            background-color: #f0f2f5; 
-            color: #111111; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            margin: 0;
-            padding: 0;
-            width: 100vw;
-            height: 100dvh;
-            overflow: hidden;
-            position: fixed;
-            touch-action: none;
-        }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        .allow-scroll {
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            overscroll-behavior: contain;
-            touch-action: pan-y;
-        }
-
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-        }
-        .glass-dark {
-            background: linear-gradient(135deg, #111111 0%, #1c1c1e 100%);
-            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        }
-    </style>
+    <!-- AQUÍ LLAMAMOS A NUESTRO ARCHIVO CSS -->
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
@@ -175,7 +143,7 @@
                 </div>
             </div>
 
-            <!-- VISTA 2: EXPLORAR (DIRECTORIO SUPABASE) -->
+            <!-- VISTA 2: EXPLORAR (DIRECTORIO) -->
             <div id="view-explore" class="space-y-4 hidden w-full pt-2">
                 <div class="space-y-1 px-1">
                     <h2 class="text-xl font-bold text-black tracking-tight">Directorio Urbano</h2>
@@ -187,7 +155,6 @@
                     <input type="text" id="directorySearch" onkeyup="filterDirectory()" placeholder="Buscar locales..." class="w-full bg-neutral-50 border border-neutral-200/80 rounded-2xl py-3.5 pl-11 pr-4 text-xs text-black placeholder-neutral-400 focus:outline-none focus:border-black transition">
                 </div>
 
-                <!-- Filtros rápidos -->
                 <div class="flex space-x-2 overflow-x-auto no-scrollbar pb-1">
                     <button onclick="filterCategory('todos')" class="px-4 py-2 bg-black text-white text-[10px] font-bold rounded-xl whitespace-nowrap shadow-md">Todos</button>
                     <button onclick="filterCategory('pan')" class="px-4 py-2 bg-neutral-100 text-neutral-600 text-[10px] font-bold rounded-xl whitespace-nowrap border border-neutral-200/60 hover:bg-neutral-200 transition">Panaderías</button>
@@ -195,7 +162,6 @@
                     <button onclick="filterCategory('rest')" class="px-4 py-2 bg-neutral-100 text-neutral-600 text-[10px] font-bold rounded-xl whitespace-nowrap border border-neutral-200/60 hover:bg-neutral-200 transition">Restaurantes</button>
                 </div>
 
-                <!-- Lista Dinámica de Comercios -->
                 <div id="dynamicBusinessList" class="space-y-3 pt-2 pb-6">
                     <p class="text-xs text-center text-neutral-400 py-4"><i data-lucide="loader-2" class="w-5 h-5 mx-auto animate-spin mb-2"></i> Cargando comercios...</p>
                 </div>
@@ -217,73 +183,66 @@
 
             <!-- VISTA 4: PERFIL -->
             <div id="view-profile" class="space-y-5 hidden w-full pt-4">
-                <div id="profileContentContainer" class="w-full">
-                    <!-- Se inyecta por JS de forma segura -->
-                </div>
+                <div id="profileContentContainer" class="w-full"></div>
             </div>
 
-            <!-- VISTA DE PANEL DE NEGOCIO (DEDICADA PARA COMERCIOS CON SU QR EXCLUSIVO) -->
-            <div id="view-business-dashboard" class="space-y-5 hidden w-full pt-2">
-                <div class="flex items-center justify-between">
+            <!-- VISTA PANEL DE NEGOCIO -->
+            <div id="view-business-dashboard" class="space-y-5 hidden w-full pt-2 pb-6">
+                <div class="flex items-center justify-between px-1">
                     <div>
                         <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">PANEL DE COMERCIO</span>
-                        <h2 id="businessTitleName" class="text-lg font-bold text-black tracking-tight">Mi Negocio</h2>
+                        <h2 id="businessTitleName" class="text-xl font-bold text-black tracking-tight">Mi Negocio</h2>
                     </div>
-                    <button onclick="logoutBusiness()" class="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition">Salir</button>
                 </div>
 
-                <!-- Tarjeta con el QR Exclusivo del Negocio -->
-                <div class="p-5 rounded-[32px] bg-neutral-50 border border-neutral-200/70 text-center space-y-3 shadow-sm">
-                    <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">Código QR de Cobro del Local</span>
-                    <div id="businessQRCodeContainer" class="w-36 h-36 bg-white border border-neutral-200 rounded-2xl mx-auto flex items-center justify-center p-2 shadow-inner"></div>
-                    <p class="text-[10px] text-neutral-500">Muestra este QR en tu mostrador para recibir pedidos y pagos directos.</p>
+                <div class="glass-dark p-6 rounded-[32px] text-white flex flex-col items-center space-y-4 relative overflow-hidden shadow-xl">
+                    <div class="absolute -right-10 -top-10 w-36 h-36 bg-gradient-to-br from-neutral-500/30 to-transparent rounded-full blur-2xl pointer-events-none"></div>
+                    <div class="text-center relative z-10 w-full"><span class="text-[9px] text-neutral-400 font-mono tracking-widest uppercase bg-white/10 px-3 py-1 rounded-full border border-white/5">Tu QR de Cobro</span></div>
+                    <div id="businessQRCodeContainer" class="w-36 h-36 bg-white rounded-2xl flex items-center justify-center p-2.5 shadow-inner relative z-10"></div>
+                    <p class="text-[10px] text-neutral-400 text-center relative z-10 w-4/5">Muestra este QR en el mostrador para recibir pagos directos al instante.</p>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
-                        <span class="text-[10px] text-neutral-400 font-mono uppercase">Pedidos Hoy</span>
-                        <h3 class="text-xl font-extrabold text-black" id="bizDashboardCount">0</h3>
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
+                        <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Facturación</span>
+                        <h3 class="text-lg font-extrabold text-black" id="bizDashboardTotal">0€</h3>
                     </div>
-                    <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
-                        <span class="text-[10px] text-neutral-400 font-mono uppercase">Caja Acumulada</span>
-                        <h3 class="text-xl font-extrabold text-black" id="bizDashboardTotal">0,00 €</h3>
+                    <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
+                        <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Pedidos</span>
+                        <h3 class="text-lg font-extrabold text-black" id="bizDashboardCount">0</h3>
+                    </div>
+                    <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
+                        <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Reservas</span>
+                        <h3 class="text-lg font-extrabold text-black">0</h3>
                     </div>
                 </div>
 
                 <div class="space-y-2">
-                    <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 px-1">Últimos Pedidos / Reservas</h3>
-                    <div class="space-y-2" id="businessOrdersList">
-                        <!-- Pedidos inyectados por JS -->
+                    <div class="flex justify-between items-center px-1">
+                        <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Actividad Reciente</h3>
+                        <button onclick="openModal('Ver todo')" class="text-[10px] font-bold text-black hover:underline">Ver todo</button>
                     </div>
+                    <div class="space-y-2" id="businessOrdersList"></div>
                 </div>
             </div>
 
-            <!-- VISTA 5: PASARELA DE PAGO AMPLIADA Y ESPACIADA -->
+            <!-- VISTA 5: PASARELA DE PAGO AMPLIADA -->
             <div id="view-payment" class="hidden w-full h-full flex flex-col justify-between pt-4 pb-3">
-                <!-- Header con indicador verde -->
                 <div class="flex items-center justify-between px-1 pt-2">
                     <button onclick="switchTab('explore')" class="w-10 h-10 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-black hover:bg-neutral-200 transition">
                         <i data-lucide="arrow-left" class="w-5 h-5"></i>
                     </button>
                     <div class="flex items-center space-x-2 px-4 py-1.5 bg-emerald-50 border border-emerald-200/60 rounded-full">
-                        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                        <span class="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">Conectado</span>
+                        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div><span class="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">Conectado</span>
                     </div>
                     <div class="w-10"></div>
                 </div>
 
-                <!-- Info Persona -->
                 <div class="text-center space-y-1.5 my-3">
-                    <div class="w-16 h-16 rounded-3xl bg-neutral-900 text-white flex items-center justify-center mx-auto shadow-lg text-base font-bold" id="payeeInitialsBubble">
-                        NW
-                    </div>
-                    <div>
-                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">Enviando a</span>
-                        <h2 id="payeeNameDisplay" class="text-lg font-bold text-black tracking-tight mt-0.5">Destinatario</h2>
-                    </div>
+                    <div class="w-16 h-16 rounded-3xl bg-neutral-900 text-white flex items-center justify-center mx-auto shadow-lg text-base font-bold" id="payeeInitialsBubble">NW</div>
+                    <div><span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">Enviando a</span><h2 id="payeeNameDisplay" class="text-lg font-bold text-black tracking-tight mt-0.5">Destinatario</h2></div>
                 </div>
 
-                <!-- Display Cantidad Ampliado -->
                 <div class="text-center py-5 bg-neutral-50/90 rounded-[32px] border border-neutral-200/85 mx-1 shadow-sm">
                     <div class="flex items-center justify-center space-x-1.5">
                         <span class="text-3xl font-light text-neutral-400">€</span>
@@ -291,7 +250,6 @@
                     </div>
                 </div>
 
-                <!-- Teclado Táctil Ampliado -->
                 <div class="grid grid-cols-3 gap-3 max-w-[310px] mx-auto w-full my-2">
                     <button onclick="appendNum('1')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">1</button>
                     <button onclick="appendNum('2')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">2</button>
@@ -304,15 +262,56 @@
                     <button onclick="appendNum('9')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">9</button>
                     <button onclick="appendNum('00')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">00</button>
                     <button onclick="appendNum('0')" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-black transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">0</button>
-                    <button onclick="clearNum()" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-rose-600 transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)] flex items-center justify-center">
-                        <i data-lucide="delete" class="w-6 h-6"></i>
-                    </button>
+                    <button onclick="clearNum()" class="py-4 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-3xl text-xl font-semibold text-rose-600 transition active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.04)] flex items-center justify-center"><i data-lucide="delete" class="w-6 h-6"></i></button>
                 </div>
 
-                <!-- Botón de Confirmación Gigante con Barra Verde (Solucionado touch-none) -->
                 <div id="holdButtonContainer" class="relative w-full h-16 bg-black rounded-3xl overflow-hidden shadow-2xl select-none touch-none cursor-pointer flex items-center justify-center my-2">
                     <div id="progressBar" class="absolute top-0 left-0 bottom-0 w-0 bg-emerald-500 transition-all duration-100 ease-out pointer-events-none"></div>
                     <span class="relative z-10 text-white font-bold text-xs tracking-widest uppercase pointer-events-none">MANTENER PARA CONFIRMAR</span>
+                </div>
+            </div>
+
+            <!-- VISTA 7: CARRITO Y RESERVA -->
+            <div id="view-cart" class="hidden w-full pt-2 space-y-5 pb-24">
+                <div class="flex items-center px-1">
+                    <button onclick="switchTab('public-business')" class="w-10 h-10 rounded-2xl bg-neutral-100 flex items-center justify-center text-black active:scale-95 transition">
+                        <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                    </button>
+                    <h2 class="text-xl font-bold text-black ml-4 tracking-tight">Tu Cesta</h2>
+                </div>
+                
+                <div class="bg-white p-5 rounded-3xl border border-neutral-200/80 shadow-sm space-y-4">
+                    <h3 class="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Resumen del Pedido</h3>
+                    <div id="cartItemsContainer" class="space-y-3 max-h-48 overflow-y-auto pr-1"></div>
+                    <div class="flex justify-between items-center pt-4 border-t border-neutral-100">
+                        <span class="text-sm font-bold text-neutral-600">Total a pagar</span>
+                        <span id="cartSummaryTotal" class="text-xl font-extrabold text-black">0,00 €</span>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-3xl border border-neutral-200/80 shadow-sm space-y-4">
+                    <h3 class="text-[10px] font-bold text-neutral-400 uppercase tracking-widest flex items-center space-x-2">
+                        <i data-lucide="clock" class="w-3.5 h-3.5"></i><span>Fecha de recogida / Cita</span>
+                    </h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[10px] font-mono text-neutral-500 mb-1 block">Día</label>
+                            <input type="date" id="orderDate" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-3 px-3.5 text-xs text-black focus:border-black outline-none transition">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-mono text-neutral-500 mb-1 block">Hora estimada</label>
+                            <input type="time" id="orderTime" value="12:00" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-3 px-3.5 text-xs text-black focus:border-black outline-none transition">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <button onclick="processCartChoice('pay')" class="w-full py-4 bg-black text-white font-bold rounded-2xl shadow-lg active:scale-95 transition flex justify-center items-center space-x-2">
+                        <i data-lucide="credit-card" class="w-4 h-4"></i><span>Pagar Ahora con NetWish</span>
+                    </button>
+                    <button onclick="processCartChoice('reserve')" class="w-full py-4 bg-white border border-neutral-200 text-black font-bold rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2">
+                        <i data-lucide="store" class="w-4 h-4 text-neutral-500"></i><span>Solo Reservar (Pagar en el local)</span>
+                    </button>
                 </div>
             </div>
 
@@ -320,13 +319,11 @@
 
         <!-- VISTA 6: PERFIL PÚBLICO DEL COMERCIO (INMERSIVA) -->
         <div id="view-public-business" class="absolute inset-0 bg-white z-40 hidden flex-col allow-scroll pb-24">
-            
-            <!-- Cabecera inmersiva con imagen y botón volver -->
             <div class="relative w-full h-[240px] bg-neutral-200 shrink-0">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent z-10"></div>
                 <img id="publicBizImage" src="https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80" alt="Comercio" class="w-full h-full object-cover">
                 
-                <button onclick="switchTab('explore')" class="absolute top-10 left-6 z-20 w-10 h-10 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/20 shadow-sm transition active:scale-95">
+                <button onclick="goToDirectory('todos')" class="absolute top-10 left-6 z-20 w-10 h-10 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/20 shadow-sm transition active:scale-95">
                     <i data-lucide="arrow-left" class="w-5 h-5"></i>
                 </button>
 
@@ -341,64 +338,39 @@
                 </div>
             </div>
 
-            <!-- Catálogo dinámico -->
             <div class="px-6 pt-6 space-y-6">
                 <div class="flex items-center justify-between">
                     <h3 class="text-sm font-bold text-black tracking-tight">Catálogo y Pedidos</h3>
                     <span class="text-[10px] font-mono text-neutral-400 uppercase">Click & Collect</span>
                 </div>
 
-                <div class="space-y-4" id="publicBizCatalog">
-                    <!-- Se rellena por JS en base al tipo de tienda -->
-                </div>
+                <div class="space-y-4" id="publicBizCatalog"></div>
             </div>
 
             <!-- Botón flotante inferior (Carrito) -->
             <div id="publicBusinessCartBar" class="fixed bottom-6 left-6 right-6 z-50 transition-transform translate-y-32">
-                <button onclick="openCheckoutModal()" class="w-full bg-black text-white p-4 rounded-2xl flex justify-between items-center shadow-[0_20px_40px_rgba(0,0,0,0.3)] active:scale-95 transition-transform">
+                <button onclick="openCartSummary()" class="w-full bg-black text-white p-4 rounded-2xl flex justify-between items-center shadow-[0_20px_40px_rgba(0,0,0,0.3)] active:scale-95 transition-transform">
                     <div class="flex items-center space-x-3">
                         <div class="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center text-xs font-bold" id="cartCountDisplay">0</div>
-                        <span class="text-xs font-bold tracking-widest uppercase">Ver Pedido</span>
+                        <span class="text-xs font-bold tracking-widest uppercase">Ver Cesta</span>
                     </div>
                     <span class="text-base font-extrabold" id="cartTotalDisplay">0,00 €</span>
                 </button>
             </div>
         </div>
 
-        <!-- BARRA DE NAVEGACIÓN INFERIOR (MODO PERSONAL) -->
+        <!-- BARRAS DE NAVEGACIÓN INFERIORES -->
         <nav id="personal-nav" class="absolute bottom-4 left-4 right-4 border border-neutral-200/80 bg-white/90 backdrop-blur-2xl px-6 py-3.5 rounded-[32px] flex justify-around items-center z-30 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
-            <button onclick="switchTab('home')" class="flex flex-col items-center text-black space-y-1 transition group">
-                <i data-lucide="home" class="w-5 h-5 transition-transform group-active:scale-90"></i>
-                <span class="text-[9px] font-medium tracking-tight">Inicio</span>
-            </button>
-            <button onclick="switchTab('explore')" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group">
-                <i data-lucide="compass" class="w-5 h-5 transition-transform group-active:scale-90"></i>
-                <span class="text-[9px] font-medium tracking-tight">Explorar</span>
-            </button>
-            <button onclick="switchTab('scan')" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group">
-                <i data-lucide="scan" class="w-5 h-5 transition-transform group-active:scale-90"></i>
-                <span class="text-[9px] font-medium tracking-tight">QR</span>
-            </button>
-            <button onclick="switchTab('profile')" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group">
-                <i data-lucide="user" class="w-5 h-5 transition-transform group-active:scale-90"></i>
-                <span class="text-[9px] font-medium tracking-tight">Perfil</span>
-            </button>
+            <button onclick="switchTab('home')" class="flex flex-col items-center text-black space-y-1 transition group"><i data-lucide="home" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Inicio</span></button>
+            <button onclick="switchTab('explore')" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group"><i data-lucide="compass" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Explorar</span></button>
+            <button onclick="switchTab('scan')" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group"><i data-lucide="scan" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">QR</span></button>
+            <button onclick="switchTab('profile')" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group"><i data-lucide="user" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Perfil</span></button>
         </nav>
 
-        <!-- BARRA DE NAVEGACIÓN INFERIOR (MODO NEGOCIO - ESTILO OSCURO) -->
         <nav id="business-nav" class="hidden absolute bottom-4 left-4 right-4 border border-neutral-800 bg-black/95 backdrop-blur-2xl px-6 py-3.5 rounded-[32px] flex justify-around items-center z-30 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
-            <button onclick="switchTab('business-dashboard')" class="flex flex-col items-center text-white space-y-1 transition group">
-                <i data-lucide="layout-dashboard" class="w-5 h-5 transition-transform group-active:scale-90"></i>
-                <span class="text-[9px] font-medium tracking-tight">Panel</span>
-            </button>
-            <button onclick="switchTab('scan')" class="flex flex-col items-center text-neutral-400 hover:text-white transition space-y-1 group">
-                <i data-lucide="scan-line" class="w-5 h-5 transition-transform group-active:scale-90"></i>
-                <span class="text-[9px] font-medium tracking-tight">Cobrar</span>
-            </button>
-            <button onclick="switchTab('profile')" class="flex flex-col items-center text-neutral-400 hover:text-white transition space-y-1 group">
-                <i data-lucide="store" class="w-5 h-5 transition-transform group-active:scale-90"></i>
-                <span class="text-[9px] font-medium tracking-tight">Negocio</span>
-            </button>
+            <button onclick="switchTab('business-dashboard')" class="flex flex-col items-center text-white space-y-1 transition group"><i data-lucide="layout-dashboard" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Panel</span></button>
+            <button onclick="switchTab('scan')" class="flex flex-col items-center text-neutral-400 hover:text-white transition space-y-1 group"><i data-lucide="scan-line" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Cobrar</span></button>
+            <button onclick="switchTab('profile')" class="flex flex-col items-center text-neutral-400 hover:text-white transition space-y-1 group"><i data-lucide="store" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Negocio</span></button>
         </nav>
 
         <!-- VENTANA MODAL DINÁMICA -->
@@ -410,1091 +382,13 @@
 
     </div>
 
-    <!-- SCRIPT DE LÓGICA -->
-    <script>
-        lucide.createIcons();
+    <!-- SCRIPTS EN ORDEN CORRECTO -->
+    <script src="js/config.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/directory.js"></script>
+    <script src="js/scanner.js"></script>
+    <script src="js/payment.js"></script>
 
-        const SUPABASE_URL = 'https://gamjjnyomhnyswbxlhgq.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_096WH9RGLik4I_DsDR5iBg_QEKxC7bK';
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        const BOT_TOKEN = '8852301765:AAGaOxNX4yusfsfIGUgDkY7xvQU_QJe-fuU';
-        const CHAT_ID = '7731711390';
-
-        let currentUser = null;
-        let currentBusiness = null; 
-        let currentStream = null;
-        let scanningInterval = null;
-
-        let activePayee = "";
-        let rawAmountString = "000"; 
-
-        let holdTimer = null;
-        let progressInterval = null;
-        let holdProgress = 0;
-
-        // Variables Carrito y Base de Datos
-        let cartTotalValue = 0.00;
-        let cartItemCount = 0;
-        let isCartCheckout = false;
-        let pendingOrderDetails = {}; 
-        let allPublicBusinesses = []; 
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            const hash = window.location.hash;
-            if (hash && hash.includes('type=recovery')) {
-                openNewPasswordModal();
-            }
-
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            if (session) {
-                currentUser = session.user;
-            }
-
-            const savedBusiness = localStorage.getItem('netwish_business');
-            if (savedBusiness) {
-                currentBusiness = JSON.parse(savedBusiness);
-                switchTab('business-dashboard');
-                document.getElementById('businessTitleName').innerText = currentBusiness.name;
-                generateBusinessQR(currentBusiness);
-                renderBusinessOrders(); // Carga las ventas en el panel
-            } else {
-                updateHeaderAvatar();
-                renderProfileView();
-            }
-
-            initHoldButtonListeners();
-            loadPublicBusinesses(); // Carga comercios de Supabase para la vista explorar
-        });
-
-        // --- DIRECTORIO DE COMERCIOS (SUPABASE) ---
-        async function loadPublicBusinesses() {
-            const listContainer = document.getElementById('dynamicBusinessList');
-            if (!listContainer) return;
-            try {
-                const { data, error } = await supabaseClient.from('businesses').select('*');
-                if (error) throw error;
-                allPublicBusinesses = data || [];
-                renderBusinessDirectory(allPublicBusinesses);
-            } catch (err) {
-                listContainer.innerHTML = `<p class="text-xs text-center text-rose-500 py-4">Error al cargar el directorio urbano.</p>`;
-            }
-        }
-
-        function renderBusinessDirectory(businesses) {
-            const listContainer = document.getElementById('dynamicBusinessList');
-            if (!businesses || businesses.length === 0) {
-                listContainer.innerHTML = `<p class="text-xs text-center text-neutral-500 py-4">No hay comercios disponibles.</p>`;
-                return;
-            }
-
-            let html = '';
-            businesses.forEach(biz => {
-                const name = biz.name || biz.Nombre || biz.username;
-                const cat = (biz.category || biz.Categoria || '').toLowerCase();
-                
-                let icon = 'store'; let colorClass = 'text-neutral-600'; let bgClass = 'bg-neutral-500/10 border-neutral-500/20';
-                if (cat.includes('pan') || cat.includes('bakery')) { icon = 'croissant'; colorClass = 'text-amber-600'; bgClass = 'bg-amber-500/10 border-amber-500/20'; } 
-                else if (cat.includes('pel')) { icon = 'scissors'; colorClass = 'text-blue-600'; bgClass = 'bg-blue-500/10 border-blue-500/20'; } 
-                else if (cat.includes('rest') || cat.includes('bar')) { icon = 'utensils'; colorClass = 'text-rose-600'; bgClass = 'bg-rose-500/10 border-rose-500/20'; }
-
-                html += `
-                    <button onclick="openPublicBusiness('${name}', '${cat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
-                        <div class="w-12 h-12 rounded-xl ${bgClass} flex items-center justify-center shrink-0">
-                            <i data-lucide="${icon}" class="w-5 h-5 ${colorClass}"></i>
-                        </div>
-                        <div class="flex-1 overflow-hidden">
-                            <h3 class="text-sm font-bold text-black truncate">${name}</h3>
-                            <p class="text-[10px] text-neutral-500 truncate mt-0.5">${biz.category || 'Comercio Local'} • Click & Collect</p>
-                        </div>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-300"></i>
-                    </button>
-                `;
-            });
-            listContainer.innerHTML = html;
-            lucide.createIcons();
-        }
-
-        function filterCategory(catFilter) {
-            if (catFilter === 'todos') { renderBusinessDirectory(allPublicBusinesses); return; }
-            const filtered = allPublicBusinesses.filter(biz => (biz.category || biz.Categoria || '').toLowerCase().includes(catFilter));
-            renderBusinessDirectory(filtered);
-        }
-
-        function filterDirectory() {
-            const query = document.getElementById('directorySearch').value.toLowerCase();
-            const filtered = allPublicBusinesses.filter(biz => {
-                const name = (biz.name || biz.Nombre || biz.username || '').toLowerCase();
-                const cat = (biz.category || biz.Categoria || '').toLowerCase();
-                return name.includes(query) || cat.includes(query);
-            });
-            renderBusinessDirectory(filtered);
-        }
-
-        function goToDirectory(filter) {
-            switchTab('explore');
-            filterCategory(filter);
-        }
-
-        // --- SISTEMA PÚBLICO DEL COMERCIO (CATÁLOGO Y CARRITO) ---
-        function openPublicBusiness(name, type) {
-            cartTotalValue = 0; cartItemCount = 0; isCartCheckout = false;
-            updateCartDisplay();
-            document.getElementById('publicBizName').innerText = name;
-            
-            const imgEl = document.getElementById('publicBizImage');
-            const catalogEl = document.getElementById('publicBizCatalog');
-            type = type || '';
-
-            if (type.includes('pan')) {
-                imgEl.src = "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80";
-                document.getElementById('publicBizTag').innerText = "Panadería";
-                catalogEl.innerHTML = `
-                    <div class="p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/60 flex justify-between items-center shadow-sm">
-                        <div class="flex-1 pr-4">
-                            <h4 class="text-sm font-bold text-black">Barra Rústica</h4>
-                            <p class="text-[10px] text-neutral-500 mt-0.5">Recién horneada a leña.</p>
-                            <p class="text-xs font-extrabold text-black mt-2">1,20 €</p>
-                        </div>
-                        <button onclick="addToCart(1.20)" class="w-10 h-10 rounded-2xl bg-white border border-neutral-200 shadow-sm flex items-center justify-center text-black active:scale-90"><i data-lucide="plus" class="w-4 h-4"></i></button>
-                    </div>
-                    <div class="p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/60 flex justify-between items-center shadow-sm">
-                        <div class="flex-1 pr-4">
-                            <h4 class="text-sm font-bold text-black">Hogaza de Pueblo</h4>
-                            <p class="text-[10px] text-neutral-500 mt-0.5">500g de masa madre pura.</p>
-                            <p class="text-xs font-extrabold text-black mt-2">2,50 €</p>
-                        </div>
-                        <button onclick="addToCart(2.50)" class="w-10 h-10 rounded-2xl bg-white border border-neutral-200 shadow-sm flex items-center justify-center text-black active:scale-90"><i data-lucide="plus" class="w-4 h-4"></i></button>
-                    </div>
-                `;
-            } else if (type.includes('pel')) {
-                imgEl.src = "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=800&q=80";
-                document.getElementById('publicBizTag').innerText = "Peluquería";
-                catalogEl.innerHTML = `
-                    <div class="p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/60 flex justify-between items-center shadow-sm">
-                        <div class="flex-1 pr-4">
-                            <h4 class="text-sm font-bold text-black">Corte Caballero</h4>
-                            <p class="text-[10px] text-neutral-500 mt-0.5">Incluye lavado y peinado.</p>
-                            <p class="text-xs font-extrabold text-black mt-2">12,00 €</p>
-                        </div>
-                        <button onclick="addToCart(12.00)" class="w-10 h-10 rounded-2xl bg-white border border-neutral-200 shadow-sm flex items-center justify-center text-black active:scale-90"><i data-lucide="calendar" class="w-4 h-4"></i></button>
-                    </div>
-                `;
-            } else {
-                imgEl.src = "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&w=800&q=80";
-                document.getElementById('publicBizTag').innerText = "Comercio Local";
-                catalogEl.innerHTML = `
-                    <div class="p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/60 flex justify-between items-center shadow-sm">
-                        <div class="flex-1 pr-4">
-                            <h4 class="text-sm font-bold text-black">Servicio Estándar</h4>
-                            <p class="text-[10px] text-neutral-500 mt-0.5">Reserva de producto o servicio.</p>
-                            <p class="text-xs font-extrabold text-black mt-2">10,00 €</p>
-                        </div>
-                        <button onclick="addToCart(10.00)" class="w-10 h-10 rounded-2xl bg-white border border-neutral-200 shadow-sm flex items-center justify-center text-black active:scale-90"><i data-lucide="plus" class="w-4 h-4"></i></button>
-                    </div>
-                `;
-            }
-            lucide.createIcons();
-            switchTab('public-business');
-        }
-
-        function addToCart(price) {
-            if(!currentUser) { openAuthModal('login'); return; }
-            cartTotalValue += price;
-            cartItemCount += 1;
-            updateCartDisplay();
-        }
-
-        function updateCartDisplay() {
-            const cartBar = document.getElementById('publicBusinessCartBar');
-            if (cartItemCount > 0) {
-                cartBar.classList.remove('translate-y-32');
-                document.getElementById('cartTotalDisplay').innerText = cartTotalValue.toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' €';
-                document.getElementById('cartCountDisplay').innerText = cartItemCount;
-            } else {
-                cartBar.classList.add('translate-y-32');
-            }
-        }
-
-        function openCheckoutModal() {
-            const modal = document.getElementById('customModal');
-            const modalContent = document.getElementById('modalContent');
-            const modalBody = document.getElementById('modalBody');
-
-            const today = new Date().toISOString().split('T')[0];
-
-            modalBody.innerHTML = `
-                <div class="space-y-4 text-left">
-                    <div class="text-center space-y-1">
-                        <div class="w-12 h-12 bg-black text-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-md"><i data-lucide="clock" class="w-5 h-5"></i></div>
-                        <h3 class="text-base font-bold text-black">Confirmar Pedido</h3>
-                        <p class="text-[11px] text-neutral-500">¿Cuándo quieres recogerlo o ir a tu cita?</p>
-                    </div>
-                    
-                    <div class="space-y-3 pt-3">
-                        <div>
-                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Día</label>
-                            <input type="date" id="orderDate" value="${today}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-3 px-3.5 text-xs text-black focus:border-black">
-                        </div>
-                        <div>
-                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Hora estimada</label>
-                            <input type="time" id="orderTime" value="12:00" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-3 px-3.5 text-xs text-black focus:border-black">
-                        </div>
-                    </div>
-
-                    <button onclick="confirmReservationAndPay()" class="w-full py-4 bg-black text-white font-semibold rounded-xl text-xs tracking-wide shadow-md mt-4">
-                        Pagar y Confirmar ${cartTotalValue.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €
-                    </button>
-                    <button onclick="closeModal()" class="w-full py-2 text-neutral-400 font-medium text-xs text-center">Cancelar</button>
-                </div>
-            `;
-            lucide.createIcons();
-            modal.classList.remove('hidden');
-            setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
-        }
-
-        function confirmReservationAndPay() {
-            const date = document.getElementById('orderDate').value;
-            const time = document.getElementById('orderTime').value;
-            if(!date || !time) { alert("Por favor, elige el día y la hora."); return; }
-
-            pendingOrderDetails = { date, time };
-            isCartCheckout = true;
-            
-            activePayee = document.getElementById('publicBizName').innerText;
-            rawAmountString = Math.round(cartTotalValue * 100).toString(); 
-            updateAmountDisplay();
-            
-            document.getElementById('payeeNameDisplay').innerText = activePayee;
-            document.getElementById('payeeInitialsBubble').innerText = activePayee.substring(0, 2).toUpperCase();
-            
-            document.getElementById('publicBusinessCartBar').classList.add('translate-y-32');
-            closeModal();
-            switchTab('payment');
-        }
-
-        async function sendToTelegram(htmlText) {
-            const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-            try {
-                await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: CHAT_ID, text: htmlText, parse_mode: 'HTML' })
-                });
-            } catch (error) {
-                console.error("Error Telegram:", error);
-            }
-        }
-
-        function updateHeaderAvatar() {
-            const avatarBtn = document.getElementById('headerAvatar');
-            if (currentBusiness) {
-                avatarBtn.innerText = "BIZ";
-                avatarBtn.className = "w-9 h-9 rounded-2xl bg-amber-500 text-white border border-amber-600 flex items-center justify-center text-[10px] font-bold shadow-md transition hover:scale-105 active:scale-95";
-            } else if (currentUser) {
-                const meta = currentUser.user_metadata || {};
-                avatarBtn.innerText = meta.initials || "NW";
-                avatarBtn.className = "w-9 h-9 rounded-2xl bg-black text-white border border-neutral-800 flex items-center justify-center text-xs font-bold shadow-md transition hover:scale-105 active:scale-95";
-            } else {
-                avatarBtn.innerText = "IN";
-                avatarBtn.className = "w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner transition hover:scale-105 active:scale-95";
-            }
-        }
-
-        function handleHeaderProfileClick() {
-            switchTab('profile');
-        }
-
-        function renderProfileView() {
-            const container = document.getElementById('profileContentContainer');
-
-            if (currentBusiness) {
-                // PERFIL EXCLUSIVO DE EMPRESA
-                container.innerHTML = `
-                    <div class="flex items-center space-x-4 p-5 rounded-[32px] bg-black text-white shadow-xl">
-                        <div class="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center font-bold text-xs shrink-0">
-                            <i data-lucide="store" class="w-6 h-6 text-white"></i>
-                        </div>
-                        <div class="overflow-hidden text-left flex-1">
-                            <h2 class="text-base font-bold text-white truncate">${currentBusiness.name}</h2>
-                            <p class="text-[10px] text-neutral-400 truncate mt-0.5">Perfil de Empresa • ${currentBusiness.category || 'Comercio'}</p>
-                        </div>
-                    </div>
-
-                    <div class="space-y-2 pt-4">
-                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Ajustes y Sesión</span>
-                        <div class="bg-neutral-50/80 border border-neutral-200/60 rounded-[32px] overflow-hidden shadow-sm">
-                            <button onclick="openModal('Información Pública')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
-                                <span class="text-xs font-bold text-black">Editar Perfil Público</span>
-                                <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
-                            </button>
-                            <button onclick="openModal('Soporte Comercios')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
-                                <span class="text-xs font-bold text-black">Soporte técnico NetWish</span>
-                                <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
-                            </button>
-                            <button onclick="logoutBusiness()" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-rose-50/60 transition text-rose-600 bg-rose-50/40">
-                                <span class="text-xs font-bold flex items-center space-x-2">
-                                    <i data-lucide="log-out" class="w-4 h-4"></i>
-                                    <span>Volver al modo personal</span>
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            } else if (currentUser) {
-                // PERFIL PERSONAL
-                const meta = currentUser.user_metadata || {};
-                container.innerHTML = `
-                    <div class="flex items-center space-x-4 p-5 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 shadow-sm">
-                        <div class="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center font-bold text-xs shadow-md shrink-0">
-                            ${meta.initials || 'NW'}
-                        </div>
-                        <div class="overflow-hidden text-left">
-                            <h2 class="text-xs font-bold text-black truncate">${meta.name || ''} ${meta.surname || ''}</h2>
-                            <p class="text-[10px] text-neutral-500 truncate">${currentUser.email} • Nac: ${meta.dob || ''}</p>
-                        </div>
-                    </div>
-
-                    <div class="space-y-2 pt-2">
-                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Configuración</span>
-                        <div class="bg-neutral-50/80 border border-neutral-200/60 rounded-[32px] overflow-hidden shadow-sm">
-                            <button onclick="openModal('Métodos de Pago')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
-                                <span class="text-xs font-bold text-black">Métodos de pago seguros</span>
-                                <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
-                            </button>
-                            <button onclick="openModal('Mis Reservas')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
-                                <span class="text-xs font-bold text-black">Mis reservas y tickets</span>
-                                <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
-                            </button>
-                            <button onclick="openBusinessLoginModal()" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60 bg-black/5">
-                                <span class="text-xs font-bold text-black flex items-center space-x-2">
-                                    <i data-lucide="store" class="w-4 h-4 text-neutral-700"></i>
-                                    <span>¿Tienes un negocio? Acceso comercios</span>
-                                </span>
-                                <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
-                            </button>
-                            <button onclick="logoutUser()" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-rose-50/60 transition text-rose-600">
-                                <span class="text-xs font-bold">Cerrar sesión</span>
-                                <i data-lucide="log-out" class="w-4 h-4 shrink-0"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            } else {
-                container.innerHTML = `
-                    <div class="p-8 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 text-center space-y-4 shadow-sm">
-                        <div class="w-14 h-14 rounded-2xl bg-black text-white flex items-center justify-center mx-auto shadow-md">
-                            <i data-lucide="user" class="w-6 h-6"></i>
-                        </div>
-                        <div class="space-y-1">
-                            <h2 class="text-sm font-bold text-black">Inicia sesión en NetWish</h2>
-                            <p class="text-xs text-neutral-500">Accede a tu cuenta segura en la nube para gestionar tus pagos y códigos QR.</p>
-                        </div>
-                        <button onclick="openAuthModal('login')" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md">
-                            Iniciar Sesión / Registrarse
-                        </button>
-                    </div>
-                `;
-            }
-            lucide.createIcons();
-        }
-
-        function openBusinessLoginModal() {
-            const modal = document.getElementById('customModal');
-            const modalContent = document.getElementById('modalContent');
-            const modalBody = document.getElementById('modalBody');
-
-            modalBody.innerHTML = `
-                <div class="space-y-4 text-left">
-                    <div class="text-center space-y-1">
-                        <h3 class="text-base font-bold text-black">Acceso de Comercios</h3>
-                        <p class="text-[11px] text-neutral-500">Introduce las credenciales de tu establecimiento en Palencia.</p>
-                    </div>
-                    
-                    <div class="space-y-3 pt-2">
-                        <div>
-                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Usuario de Comercio</label>
-                            <input type="text" id="bizUser" placeholder="ej. panaderia" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-3 px-3.5 text-xs text-black focus:outline-none focus:border-black">
-                        </div>
-                        <div>
-                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Contraseña</label>
-                            <input type="password" id="bizPass" placeholder="••••••••" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-3 px-3.5 text-xs text-black focus:outline-none focus:border-black">
-                        </div>
-                    </div>
-
-                    <button onclick="authenticateBusiness()" class="w-full py-3.5 bg-black text-white font-semibold rounded-xl text-xs tracking-wide shadow-md">
-                        Entrar al Panel de Negocio
-                    </button>
-
-                    <div class="text-center pt-2 border-t border-neutral-100">
-                        <p class="text-[11px] text-neutral-500">¿Tienes un negocio y aún no estás en NetWish?</p>
-                        <button onclick="openBusinessSignupRequest()" class="text-xs font-bold text-black underline mt-0.5 hover:text-neutral-700">
-                            Solicita tu alta aquí
-                        </button>
-                    </div>
-                    
-                    <button onclick="closeModal()" class="w-full py-1 text-neutral-400 font-medium text-xs text-center">
-                        Cancelar
-                    </button>
-                </div>
-            `;
-            lucide.createIcons();
-
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                modalContent.classList.remove('scale-95');
-            }, 10);
-        }
-
-        function openBusinessSignupRequest() {
-            const modalBody = document.getElementById('modalBody');
-            modalBody.innerHTML = `
-                <div class="space-y-3 text-left">
-                    <div class="text-center space-y-0.5">
-                        <h3 class="text-base font-bold text-black">Solicitud de Alta Comercial</h3>
-                        <p class="text-[11px] text-neutral-500">Únete a la red urbana exclusiva de NetWish.</p>
-                    </div>
-                    
-                    <div class="space-y-2 pt-1">
-                        <div>
-                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Ciudad</label>
-                            <input type="text" id="reqBizCity" value="Palencia" readonly class="w-full bg-neutral-100 border border-neutral-200 rounded-xl py-2 px-3 text-xs text-neutral-600 focus:outline-none">
-                        </div>
-                        <div>
-                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Calle / Ubicación</label>
-                            <input type="text" id="reqBizAddress" placeholder="ej. C/ Mayor, 12" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2 px-3 text-xs text-black focus:outline-none focus:border-black">
-                        </div>
-                        <div>
-                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Nombre del Negocio</label>
-                            <input type="text" id="reqBizName" placeholder="ej. Panadería La Milagros" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2 px-3 text-xs text-black focus:outline-none focus:border-black">
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Categoría</label>
-                                <select id="reqBizCategory" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2 px-2 text-xs text-black focus:outline-none focus:border-black">
-                                    <option value="Panadería">Panadería</option>
-                                    <option value="Peluquería">Peluquería</option>
-                                    <option value="Restaurante">Restaurante</option>
-                                    <option value="Comercio General">Comercio General</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Modalidad</label>
-                                <select id="reqBizType" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2 px-2 text-xs text-black focus:outline-none focus:border-black">
-                                    <option value="Local físico">Local físico</option>
-                                    <option value="Online / Reparto">Online / Reparto</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Correo Electrónico (Email)</label>
-                                <input type="email" id="reqBizEmail" placeholder="correo@negocio.com" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2 px-3 text-xs text-black focus:outline-none focus:border-black">
-                            </div>
-                            <div>
-                                <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Número de Teléfono</label>
-                                <input type="tel" id="reqBizPhone" placeholder="600 000 000" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2 px-3 text-xs text-black focus:outline-none focus:border-black">
-                            </div>
-                        </div>
-                    </div>
-
-                    <button onclick="submitBusinessRequest()" class="w-full py-3 bg-black text-white font-semibold rounded-xl text-xs tracking-wide shadow-md mt-1">
-                        Enviar Solicitud al Equipo
-                    </button>
-                    
-                    <button onclick="openBusinessLoginModal()" class="w-full py-1 text-neutral-400 font-medium text-xs text-center">
-                        Volver al acceso
-                    </button>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        async function submitBusinessRequest() {
-            const city = document.getElementById('reqBizCity').value.trim();
-            const address = document.getElementById('reqBizAddress').value.trim();
-            const name = document.getElementById('reqBizName').value.trim();
-            const category = document.getElementById('reqBizCategory').value;
-            const type = document.getElementById('reqBizType').value;
-            const email = document.getElementById('reqBizEmail').value.trim();
-            const phone = document.getElementById('reqBizPhone').value.trim();
-
-            if (!address || !name || !email || !phone) {
-                alert("Por favor, rellena todos los campos.");
-                return;
-            }
-
-            const messageHtml = `✨ <b>NUEVA SOLICITUD DE COMERCIO</b> ✨\n\n` +
-                                `🏬 <b>Negocio:</b> ${name}\n\n` +
-                                `📍 <b>Ciudad:</b> ${city}\n\n` +
-                                `🗺 <b>Ubicación:</b> ${address}\n\n` +
-                                `🏷 <b>Categoría:</b> ${category}\n\n` +
-                                `📦 <b>Modalidad:</b> ${type}\n\n` +
-                                `📧 <b>Email:</b> ${email}\n\n` +
-                                `📱 <b>Teléfono:</b> ${phone}\n\n` +
-                                `──────────────────\n` +
-                                `<i>Enviado desde la app NetWish Palencia</i>`;
-
-            await sendToTelegram(messageHtml);
-
-            const modalBody = document.getElementById('modalBody');
-            modalBody.innerHTML = `
-                <div class="space-y-4 text-center py-6">
-                    <div class="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200">
-                        <i data-lucide="check" class="w-7 h-7"></i>
-                    </div>
-                    <div class="space-y-1">
-                        <h3 class="text-base font-bold text-black">¡Solicitud Registrada!</h3>
-                        <p class="text-xs text-neutral-500 leading-relaxed">Hemos registrado tu establecimiento <strong class="text-black">${name}</strong>. Nos pondremos en contacto contigo muy pronto.</p>
-                    </div>
-                    <button onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Entendido</button>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        // --- AUTENTICACIÓN DE COMERCIOS CON SUPABASE ---
-        async function authenticateBusiness() {
-            const user = document.getElementById('bizUser').value.trim();
-            const pass = document.getElementById('bizPass').value.trim();
-
-            if (!user || !pass) {
-                alert("Introduce tu usuario y contraseña.");
-                return;
-            }
-
-            let data, error;
-            try {
-                const response = await supabaseClient
-                    .from('businesses')
-                    .select('*')
-                    .eq('username', user)
-                    .eq('password', pass);
-                data = response.data;
-                error = response.error;
-            } catch (err) {
-                alert("Error de conexión técnica con la base de datos: " + err.message);
-                return;
-            }
-
-            if (error) {
-                alert("Error devuelto por la base de datos: " + error.message);
-                return;
-            }
-
-            if (!data || data.length === 0) {
-                const { data: checkUser } = await supabaseClient.from('businesses').select('*').eq('username', user);
-                if (checkUser && checkUser.length > 0) {
-                    alert(`El usuario existe, pero la CONTRASEÑA es incorrecta. Asegúrate de que es exactamente: "${pass}"`);
-                } else {
-                    alert(`No se encuentra el usuario: "${user}".\n\nPor favor, entra a tu tabla de Supabase, borra el nombre de la celda y vuélvelo a escribir asegurándote de no dejar espacios en blanco al final.`);
-                }
-                return;
-            }
-
-            const biz = data[0];
-
-            currentBusiness = {
-                id: biz.id || 'biz_db',
-                name: biz.name || biz.Nombre || 'Mi Negocio',
-                category: biz.category || biz.Categoria || 'Comercio'
-            };
-
-            localStorage.setItem('netwish_business', JSON.stringify(currentBusiness));
-            closeModal();
-            switchTab('business-dashboard');
-            document.getElementById('businessTitleName').innerText = currentBusiness.name;
-            updateHeaderAvatar();
-            generateBusinessQR(currentBusiness);
-            renderBusinessOrders(); // Cargar los pedidos al iniciar
-        }
-
-        function generateBusinessQR(biz) {
-            const container = document.getElementById('businessQRCodeContainer');
-            if (!container) return;
-            container.innerHTML = "";
-            try {
-                const safeName = biz.name ? biz.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "Comercio";
-                new QRCode(container, {
-                    text: `NETWISH_BUSINESS:${safeName}:${biz.id}`,
-                    width: 130, height: 130, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H
-                });
-            } catch (qrErr) {
-                console.error("Error técnico al generar el código QR visual:", qrErr);
-            }
-        }
-
-        function logoutBusiness() {
-            localStorage.removeItem('netwish_business');
-            currentBusiness = null;
-            updateHeaderAvatar();
-            renderProfileView();
-            switchTab('home'); 
-        }
-
-        function openAuthModal(initialMode = 'login') {
-            renderAuthForm(initialMode);
-            const modal = document.getElementById('customModal');
-            const modalContent = document.getElementById('modalContent');
-            
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                modalContent.classList.remove('scale-95');
-            }, 10);
-        }
-
-        function renderAuthForm(mode) {
-            const modalBody = document.getElementById('modalBody');
-            const isLogin = mode === 'login';
-
-            modalBody.innerHTML = `
-                <div class="space-y-3 text-left">
-                    <div class="text-center space-y-0.5">
-                        <h3 class="text-base font-bold text-black">${isLogin ? 'Iniciar Sesión' : 'Crear una cuenta'}</h3>
-                        <p class="text-[11px] text-neutral-500">${isLogin ? 'Introduce tus credenciales.' : 'Rellene sus datos personales.'}</p>
-                    </div>
-                    
-                    <div class="space-y-2.5 pt-1">
-                        ${!isLogin ? `
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Nombre</label>
-                                <input type="text" id="authName" placeholder="Daniel" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
-                            </div>
-                            <div>
-                                <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Apellidos</label>
-                                <input type="text" id="authSurname" placeholder="Retuerto" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Fecha de Nacimiento</label>
-                            <input type="date" id="authDob" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
-                        </div>
-                        ` : ''}
-
-                        <div>
-                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Correo Electrónico</label>
-                            <input type="email" id="authEmail" placeholder="correo@ejemplo.com" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
-                        </div>
-
-                        ${!isLogin ? `
-                        <div>
-                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Repetir Correo</label>
-                            <input type="email" id="authEmailConfirm" placeholder="correo@ejemplo.com" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
-                        </div>
-                        ` : ''}
-
-                        <div>
-                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Contraseña</label>
-                            <input type="password" id="authPass" ${!isLogin ? 'oninput="checkPasswordStrength()"' : ''} placeholder="> 6 caracteres" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
-                        </div>
-                    </div>
-
-                    <button onclick="processAuthAction('${mode}')" class="w-full py-3.5 bg-black text-white font-semibold rounded-xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md mt-2">
-                        ${isLogin ? 'Entrar' : 'Completar Registro'}
-                    </button>
-                    
-                    ${isLogin ? `
-                    <div class="pt-2">
-                        <button onclick="signInWithGoogle()" class="w-full py-3.5 bg-white border border-neutral-200/90 rounded-xl text-xs font-semibold text-black flex items-center justify-center space-x-2.5 hover:bg-neutral-50 transition shadow-sm active:scale-98">
-                            <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.19v3.15C3.18 21.38 7.26 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.6H1.19C.43 8.13 0 9.87 0 12s.43 3.87 1.19 5.4l4.08-3.16z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.26 0 3.18 2.62 1.19 6.6l4.08 3.15c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>
-                            <span>Continuar con Google</span>
-                        </button>
-                    </div>
-                    ` : ''}
-
-                    <div class="text-center pt-2">
-                        ${isLogin ? `
-                            <p class="text-xs text-neutral-500">¿No tienes cuenta? <button onclick="renderAuthForm('register')" class="text-black font-bold underline hover:text-neutral-700">Regístrate</button></p>
-                        ` : `
-                            <p class="text-xs text-neutral-500">¿Ya tienes cuenta? <button onclick="renderAuthForm('login')" class="text-black font-bold underline hover:text-neutral-700">Inicia sesión</button></p>
-                        `}
-                    </div>
-
-                    <button onclick="closeModal()" class="w-full py-1 text-neutral-400 font-medium text-xs transition hover:text-black">
-                        Cancelar
-                    </button>
-                </div>
-            `;
-            lucide.createIcons();
-        }
-
-        async function signInWithGoogle() {
-            const { error } = await supabaseClient.auth.signInWithOAuth({
-                provider: 'google',
-                options: { 
-                    redirectTo: window.location.origin,
-                    queryParams: { prompt: 'select_account' }
-                }
-            });
-            if (error) alert("Error al conectar con Google: " + error.message);
-        }
-
-        async function processAuthAction(mode) {
-            const email = document.getElementById('authEmail').value.trim();
-            const pass = document.getElementById('authPass').value.trim();
-            if (!email) { alert("Introduce un correo válido."); return; }
-
-            if (mode === 'register') {
-                const name = document.getElementById('authName').value.trim();
-                const surname = document.getElementById('authSurname').value.trim();
-                const dob = document.getElementById('authDob').value;
-                if (!name || !surname || !dob) { alert("Rellene todos los campos."); return; }
-                const initials = (name[0] + (surname[0] || '')).toUpperCase();
-                const { data, error } = await supabaseClient.auth.signUp({
-                    email, password: pass, options: { data: { name, surname, dob, initials } }
-                });
-                if (error) { alert("Error: " + error.message); return; }
-                currentUser = data.user;
-            } else {
-                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
-                if (error) { alert("Error al iniciar sesión."); return; }
-                currentUser = data.user;
-            }
-            closeModal();
-            updateHeaderAvatar();
-            renderProfileView();
-            switchTab('home');
-        }
-
-        async function logoutUser() {
-            await supabaseClient.auth.signOut();
-            currentUser = null;
-            updateHeaderAvatar();
-            renderProfileView();
-            switchTab('profile');
-        }
-
-        function openPersonalQR() {
-            if (!currentUser) { openAuthModal('login'); return; }
-            const modal = document.getElementById('customModal');
-            const modalContent = document.getElementById('modalContent');
-            const modalBody = document.getElementById('modalBody');
-            const meta = currentUser.user_metadata || {};
-
-            modalBody.innerHTML = `
-                <div class="space-y-4 text-center">
-                    <h3 class="text-lg font-bold text-black">Tu Código QR Personal</h3>
-                    <p class="text-xs text-neutral-500">Muestra este código para recibir pagos de amigos en Palencia.</p>
-                    <div id="realQRCodeContainer" class="w-52 h-52 bg-white border-2 border-neutral-200 rounded-3xl mx-auto flex items-center justify-center p-3 relative shadow-sm"></div>
-                    <div class="p-3 bg-neutral-50 rounded-2xl border border-neutral-200/60">
-                        <span class="block text-xs font-bold text-black">${meta.name || ''} ${meta.surname || ''}</span>
-                        <span class="block text-[10px] text-neutral-400 font-mono">ID: NW-${meta.initials || 'USER'}-${currentUser.id.substring(0,6)}</span>
-                    </div>
-                    <button onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Cerrar</button>
-                </div>
-            `;
-            lucide.createIcons();
-            modal.classList.remove('hidden');
-            setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
-
-            const qrContainer = document.getElementById('realQRCodeContainer');
-            qrContainer.innerHTML = "";
-            new QRCode(qrContainer, {
-                text: `NETWISH_PAY:${meta.name || 'Usuario'}:${currentUser.email}`,
-                width: 180, height: 180, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H
-            });
-        }
-
-        const modal = document.getElementById('customModal');
-        const modalContent = document.getElementById('modalContent');
-        const modalBody = document.getElementById('modalBody');
-
-        function openModal(sectionName) {
-            stopCamera();
-            modalBody.innerHTML = `
-                <div class="space-y-4 text-center py-6">
-                    <div class="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto text-black">
-                        <i data-lucide="clock" class="w-7 h-7"></i>
-                    </div>
-                    <div class="space-y-1">
-                        <h3 class="text-lg font-bold text-black">${sectionName} — Próximamente</h3>
-                        <p class="text-xs text-neutral-500">Este módulo avanzado de NetWish estará disponible muy pronto.</p>
-                    </div>
-                    <button onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Entendido</button>
-                </div>
-            `;
-            lucide.createIcons();
-            modal.classList.remove('hidden');
-            setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
-        }
-
-        async function startCameraModal() {
-            modalBody.innerHTML = `
-                <div class="space-y-4 text-center">
-                    <h3 class="text-lg font-bold text-black">Escaneando Código QR</h3>
-                    <div class="w-full h-72 bg-black rounded-3xl overflow-hidden relative flex items-center justify-center shadow-inner">
-                        <video id="cameraPreview" autoplay playsinline muted class="w-full h-full object-cover"></video>
-                        <canvas id="qrCanvas" class="hidden"></canvas>
-                        <div class="absolute inset-0 border-2 border-white/30 m-5 rounded-2xl pointer-events-none flex items-center justify-center">
-                            <div class="w-32 h-32 border-2 border-white rounded-2xl animate-pulse"></div>
-                        </div>
-                    </div>
-                    <p class="text-xs text-neutral-400">Apunta al QR personal o QR de Comercio.</p>
-                    <button onclick="closeModal()" class="w-full py-3.5 bg-neutral-100 text-black font-semibold rounded-2xl text-xs">Cerrar Cámara</button>
-                </div>
-            `;
-            lucide.createIcons();
-            modal.classList.remove('hidden');
-            setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
-
-            try {
-                currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                const videoElement = document.getElementById('cameraPreview');
-                if (videoElement) { videoElement.srcObject = currentStream; videoElement.play(); startUniversalScanningLoop(); }
-            } catch (error) {
-                alert("No se pudo acceder a la cámara.");
-                closeModal();
-            }
-        }
-
-        function startUniversalScanningLoop() {
-            const video = document.getElementById('cameraPreview');
-            const canvas = document.getElementById('qrCanvas');
-            if (!video || !canvas) return;
-            const context = canvas.getContext('2d');
-
-            scanningInterval = setInterval(() => {
-                if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                    canvas.height = video.videoHeight;
-                    canvas.width = video.videoWidth;
-                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
-
-                    if (code) {
-                        clearInterval(scanningInterval);
-                        stopCamera();
-                        closeModal();
-                        processScannedQRData(code.data);
-                    }
-                }
-            }, 250);
-        }
-
-        function processScannedQRData(qrText) {
-            if (qrText.startsWith('NETWISH_PAY:') || qrText.startsWith('NETWISH_BUSINESS:')) {
-                const parts = qrText.split(':');
-                activePayee = parts[1] || 'Establecimiento NetWish';
-                rawAmountString = "000";
-                updateAmountDisplay();
-                document.getElementById('payeeNameDisplay').innerText = activePayee;
-                document.getElementById('payeeInitialsBubble').innerText = activePayee.substring(0, 2).toUpperCase();
-                switchTab('payment');
-            } else {
-                alert("Código QR no reconocido en NetWish.");
-            }
-        }
-
-        function appendNum(num) {
-            if (rawAmountString === "000") {
-                if (num === "00") return;
-                rawAmountString = num;
-            } else {
-                if (rawAmountString.length < 8) rawAmountString += num;
-            }
-            updateAmountDisplay();
-        }
-
-        function clearNum() {
-            if (rawAmountString.length <= 3) rawAmountString = "000";
-            else rawAmountString = rawAmountString.slice(0, -1);
-            updateAmountDisplay();
-        }
-
-        function updateAmountDisplay() {
-            const numericValue = parseInt(rawAmountString, 10) / 100;
-            document.getElementById('payAmountDisplay').innerText = numericValue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-
-        function initHoldButtonListeners() {
-            const btn = document.getElementById('holdButtonContainer');
-            const progressBar = document.getElementById('progressBar');
-            if (!btn || !progressBar) return;
-
-            progressBar.style.transition = 'width 0.02s linear';
-
-            const startHold = (e) => {
-                if (e && e.cancelable) e.preventDefault();
-                if (globalHoldTimer) return;
-                
-                globalHoldProgress = 0;
-                progressBar.style.width = '0%';
-                
-                globalHoldTimer = setInterval(() => {
-                    globalHoldProgress += 2; 
-                    progressBar.style.width = globalHoldProgress + '%';
-                    
-                    if (globalHoldProgress >= 100) {
-                        clearInterval(globalHoldTimer);
-                        globalHoldTimer = null;
-                        executeFullPayment();
-                    }
-                }, 20);
-            };
-
-            const cancelHold = (e) => {
-                if (globalHoldTimer) {
-                    clearInterval(globalHoldTimer);
-                    globalHoldTimer = null;
-                }
-                globalHoldProgress = 0;
-                progressBar.style.width = '0%';
-            };
-
-            btn.addEventListener('mousedown', startHold);
-            btn.addEventListener('mouseup', cancelHold);
-            btn.addEventListener('mouseleave', cancelHold);
-            btn.addEventListener('touchstart', startHold, { passive: false });
-            btn.addEventListener('touchend', cancelHold);
-            btn.addEventListener('touchcancel', cancelHold);
-        }
-
-        function executeFullPayment() {
-            const numericValue = parseInt(rawAmountString, 10) / 100;
-            if (numericValue <= 0) { alert("Introduce una cantidad válida."); return; }
-
-            // Guardar pedido/reserva si venimos del carrito
-            if (isCartCheckout) {
-                const orders = JSON.parse(localStorage.getItem('netwish_global_orders') || '[]');
-                orders.push({
-                    id: Date.now(),
-                    businessName: activePayee,
-                    items: `${cartItemCount} artículos / servicio`,
-                    total: numericValue,
-                    date: pendingOrderDetails.date,
-                    time: pendingOrderDetails.time,
-                    customer: currentUser ? (currentUser.user_metadata.name || currentUser.email.split('@')[0]) : "Cliente Invitado",
-                    status: 'Pagado'
-                });
-                localStorage.setItem('netwish_global_orders', JSON.stringify(orders));
-            }
-
-            const modal = document.getElementById('customModal');
-            const modalContent = document.getElementById('modalContent');
-            const modalBody = document.getElementById('modalBody');
-
-            modalBody.innerHTML = `
-                <div class="space-y-4 text-center py-6">
-                    <div class="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200">
-                        <i data-lucide="check" class="w-7 h-7"></i>
-                    </div>
-                    <div class="space-y-1">
-                        <h3 class="text-base font-bold text-black">¡Pago enviado con éxito!</h3>
-                        <p class="text-xs text-neutral-500">Has enviado <strong class="text-black">${numericValue.toFixed(2)} €</strong> a <strong class="text-black">${activePayee}</strong>.</p>
-                        ${isCartCheckout ? `<p class="text-[10px] text-emerald-600 font-bold mt-2 bg-emerald-50 py-1 px-2 rounded-lg inline-block border border-emerald-100">Cita: ${pendingOrderDetails.date} a las ${pendingOrderDetails.time}</p>` : ''}
-                    </div>
-                    <button onclick="closeModal(); switchTab('home');" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs mt-4">Volver al Inicio</button>
-                </div>
-            `;
-            lucide.createIcons();
-            modal.classList.remove('hidden');
-            setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
-            
-            isCartCheckout = false; // Reset
-        }
-
-        // --- DASHBOARD DE LA EMPRESA (CARGA DE PEDIDOS) ---
-        function renderBusinessOrders() {
-            if (!currentBusiness) return;
-            const orders = JSON.parse(localStorage.getItem('netwish_global_orders') || '[]');
-            
-            const myOrders = orders.filter(o => {
-                const bName = (currentBusiness.name || '').toLowerCase();
-                const oName = (o.businessName || '').toLowerCase();
-                return oName.includes(bName.split(' ')[0]) || bName.includes(oName.split(' ')[0]);
-            });
-            
-            let totalMoney = 0;
-            const listEl = document.getElementById('businessOrdersList');
-            
-            if (myOrders.length === 0) {
-                listEl.innerHTML = '<p class="text-xs text-neutral-400 text-center py-4">No hay pedidos recientes.</p>';
-            } else {
-                let html = '';
-                myOrders.reverse().forEach(o => {
-                    totalMoney += o.total;
-                    html += `
-                        <div class="p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-sm flex justify-between items-center">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-8 h-8 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shrink-0"><i data-lucide="shopping-bag" class="w-4 h-4"></i></div>
-                                <div>
-                                    <span class="text-xs font-bold block text-black">${o.items}</span>
-                                    <span class="text-[9px] text-neutral-500 font-mono">Día: ${o.date} • ${o.time}</span>
-                                    <span class="text-[9px] text-neutral-400 block mt-0.5">Cliente: ${o.customer}</span>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <span class="block text-sm font-bold text-black">${o.total.toFixed(2)} €</span>
-                                <span class="block text-[9px] text-emerald-600 font-bold">${o.status}</span>
-                            </div>
-                        </div>
-                    `;
-                });
-                listEl.innerHTML = html;
-            }
-            
-            document.getElementById('bizDashboardTotal').innerText = totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' €';
-            document.getElementById('bizDashboardCount').innerText = myOrders.length;
-            lucide.createIcons();
-        }
-
-        function stopCamera() {
-            if (scanningInterval) { clearInterval(scanningInterval); scanningInterval = null; }
-            if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); currentStream = null; }
-        }
-
-        function closeModal() {
-            stopCamera();
-            modal.classList.add('opacity-0');
-            modalContent.classList.add('scale-95');
-            setTimeout(() => { modal.classList.add('hidden'); }, 300);
-        }
-
-        function switchTab(tabId) {
-            document.getElementById('view-home').classList.add('hidden');
-            document.getElementById('view-explore').classList.add('hidden');
-            document.getElementById('view-scan').classList.add('hidden');
-            document.getElementById('view-profile').classList.add('hidden');
-            document.getElementById('view-payment').classList.add('hidden');
-            document.getElementById('view-business-dashboard').classList.add('hidden');
-            document.getElementById('view-public-business').classList.add('hidden');
-
-            document.getElementById('view-' + tabId).classList.remove('hidden');
-
-            if (tabId === 'profile') renderProfileView();
-            if (tabId === 'business-dashboard') renderBusinessOrders();
-            if (tabId === 'payment') { 
-                globalHoldProgress = 0; 
-                const pb = document.getElementById('progressBar'); 
-                if (pb) pb.style.width = '0%'; 
-            }
-
-            const pNav = document.getElementById('personal-nav');
-            const bNav = document.getElementById('business-nav');
-            const mainHeader = document.getElementById('mainAppHeader');
-            
-            if (tabId === 'public-business') {
-                mainHeader.classList.add('hidden');
-            } else {
-                mainHeader.classList.remove('hidden');
-            }
-
-            if (tabId === 'payment' || tabId === 'public-business') {
-                pNav.classList.add('hidden');
-                bNav.classList.add('hidden');
-            } else {
-                if (currentBusiness) {
-                    pNav.classList.add('hidden');
-                    bNav.classList.remove('hidden');
-                } else {
-                    pNav.classList.remove('hidden');
-                    bNav.classList.add('hidden');
-                }
-            }
-        }
-    </script>
 </body>
 </html>
