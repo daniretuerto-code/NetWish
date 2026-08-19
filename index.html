@@ -214,7 +214,42 @@
                 </div>
             </div>
 
-            <!-- VISTA 5: PASARELA DE PAGO AMPLIADA Y ESPACIADA -->
+            <!-- VISTA 5: PANEL DE CONTROL DE NEGOCIO -->
+            <div id="view-business-dashboard" class="space-y-5 hidden w-full pt-4">
+                <div class="flex items-center justify-between px-1">
+                    <div>
+                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">Panel de Comercio</span>
+                        <h2 id="businessTitleName" class="text-lg font-bold text-black tracking-tight">Mi Negocio</h2>
+                    </div>
+                    <button onclick="logoutBusiness()" class="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition">Salir</button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
+                        <span class="text-[10px] text-neutral-400 font-mono uppercase">Pedidos Hoy</span>
+                        <h3 class="text-xl font-extrabold text-black mt-1">12</h3>
+                    </div>
+                    <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
+                        <span class="text-[10px] text-neutral-400 font-mono uppercase">Caja Acumulada</span>
+                        <h3 class="text-xl font-extrabold text-black mt-1">148,50 €</h3>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 px-1">Últimos Pedidos / Reservas</h3>
+                    <div class="space-y-2">
+                        <div class="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/60 flex justify-between items-center">
+                            <div>
+                                <span class="text-xs font-bold block text-black">2x Barra de Pan Rústica</span>
+                                <span class="text-[10px] text-neutral-500">Cliente: Daniel R. • Hace 10 min</span>
+                            </div>
+                            <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full border border-emerald-200">Pagado</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VISTA 6: PASARELA DE PAGO AMPLIADA Y ESPACIADA -->
             <div id="view-payment" class="hidden w-full h-full flex flex-col justify-between pt-4 pb-3">
                 <!-- Header con indicador verde -->
                 <div class="flex items-center justify-between px-1 pt-2">
@@ -316,6 +351,7 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let currentUser = null;
+        let currentBusiness = null;
         let currentStream = null;
         let scanningInterval = null;
 
@@ -336,14 +372,26 @@
             if (session) {
                 currentUser = session.user;
             }
-            updateHeaderAvatar();
-            renderProfileView();
+
+            const savedBusiness = localStorage.getItem('netwish_business');
+            if (savedBusiness) {
+                currentBusiness = JSON.parse(savedBusiness);
+                switchTab('business-dashboard');
+                document.getElementById('businessTitleName').innerText = currentBusiness.name;
+            } else {
+                updateHeaderAvatar();
+                renderProfileView();
+            }
+
             initHoldButtonListeners();
         });
 
         function updateHeaderAvatar() {
             const avatarBtn = document.getElementById('headerAvatar');
-            if (currentUser) {
+            if (currentBusiness) {
+                avatarBtn.innerText = "BIZ";
+                avatarBtn.className = "w-9 h-9 rounded-2xl bg-amber-500 text-white border border-amber-600 flex items-center justify-center text-[10px] font-bold shadow-md transition hover:scale-105 active:scale-95";
+            } else if (currentUser) {
                 const meta = currentUser.user_metadata || {};
                 avatarBtn.innerText = meta.initials || "NW";
                 avatarBtn.className = "w-9 h-9 rounded-2xl bg-black text-white border border-neutral-800 flex items-center justify-center text-xs font-bold shadow-md transition hover:scale-105 active:scale-95";
@@ -354,7 +402,11 @@
         }
 
         function handleHeaderProfileClick() {
-            switchTab('profile');
+            if (currentBusiness) {
+                switchTab('business-dashboard');
+            } else {
+                switchTab('profile');
+            }
         }
 
         function renderProfileView() {
@@ -374,8 +426,15 @@
                     </div>
 
                     <div class="space-y-2 pt-2">
-                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Configuración</span>
+                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Configuración y Negocios</span>
                         <div class="bg-neutral-50/80 border border-neutral-200/60 rounded-[32px] overflow-hidden shadow-sm">
+                            <button onclick="openBusinessLoginModal()" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60 bg-black/5">
+                                <span class="text-xs font-bold text-black flex items-center space-x-2">
+                                    <i data-lucide="store" class="w-4 h-4 text-neutral-700"></i>
+                                    <span>¿Tienes un negocio? Acceso comercios</span>
+                                </span>
+                                <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
+                            </button>
                             <button onclick="openModal('Métodos de Pago')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
                                 <span class="text-xs font-bold text-black">Métodos de pago seguros</span>
                                 <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
@@ -404,10 +463,85 @@
                         <button onclick="openAuthModal('login')" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md">
                             Iniciar Sesión / Registrarse
                         </button>
+                        <div class="pt-2 border-t border-neutral-200/60">
+                            <button onclick="openBusinessLoginModal()" class="w-full py-2.5 bg-neutral-100 hover:bg-neutral-200 text-black font-semibold rounded-2xl text-xs transition flex items-center justify-center space-x-2">
+                                <i data-lucide="store" class="w-4 h-4"></i>
+                                <span>¿Tienes un negocio? Acceso Comercios</span>
+                            </button>
+                        </div>
                     </div>
                 `;
             }
             lucide.createIcons();
+        }
+
+        function openBusinessLoginModal() {
+            const modal = document.getElementById('customModal');
+            const modalContent = document.getElementById('modalContent');
+            const modalBody = document.getElementById('modalBody');
+
+            modalBody.innerHTML = `
+                <div class="space-y-4 text-left">
+                    <div class="text-center space-y-1">
+                        <h3 class="text-base font-bold text-black">Acceso de Comercios</h3>
+                        <p class="text-[11px] text-neutral-500">Introduce las credenciales de tu establecimiento en Palencia.</p>
+                    </div>
+                    
+                    <div class="space-y-3 pt-2">
+                        <div>
+                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Usuario de Comercio</label>
+                            <input type="text" id="bizUser" placeholder="ej. panaderia" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-3 px-3.5 text-xs text-black focus:outline-none focus:border-black">
+                        </div>
+                        <div>
+                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Contraseña</label>
+                            <input type="password" id="bizPass" placeholder="••••••••" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-3 px-3.5 text-xs text-black focus:outline-none focus:border-black">
+                        </div>
+                    </div>
+
+                    <button onclick="authenticateBusiness()" class="w-full py-3.5 bg-black text-white font-semibold rounded-xl text-xs tracking-wide shadow-md">
+                        Entrar al Panel de Negocio
+                    </button>
+                    
+                    <button onclick="closeModal()" class="w-full py-1 text-neutral-400 font-medium text-xs text-center">
+                        Cancelar
+                    </button>
+                </div>
+            `;
+            lucide.createIcons();
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function authenticateBusiness() {
+            const user = document.getElementById('bizUser').value.trim();
+            const pass = document.getElementById('bizPass').value.trim();
+
+            if (user === "panaderia" && pass === "1234") {
+                currentBusiness = { id: "biz_1", name: "Panadería La Milagros", type: "Panadería" };
+            } else if (user === "peluqueria" && pass === "1234") {
+                currentBusiness = { id: "biz_2", name: "Peluquería Estilo Palencia", type: "Peluquería" };
+            } else {
+                alert("Usuario o contraseña de comercio incorrectos.");
+                return;
+            }
+
+            localStorage.setItem('netwish_business', JSON.stringify(currentBusiness));
+            closeModal();
+            switchTab('business-dashboard');
+            document.getElementById('businessTitleName').innerText = currentBusiness.name;
+            updateHeaderAvatar();
+        }
+
+        function logoutBusiness() {
+            localStorage.removeItem('netwish_business');
+            currentBusiness = null;
+            switchTab('home');
+            updateHeaderAvatar();
+            renderProfileView();
         }
 
         function openAuthModal(initialMode = 'login') {
@@ -501,7 +635,7 @@
                     </button>
                     
                     ${isLogin ? `
-                    <!-- BOTÓN "¿Has olvidado tu contraseña?" CENTRADO EXACTAMENTE DEBAJO DEL BOTÓN ENTRAR -->
+                    <!-- BOTÓN "¿Has olvidado tu contraseña?" -->
                     <div class="text-center pt-2">
                         <button onclick="sendPasswordResetEmail()" class="text-[11px] font-medium text-neutral-500 hover:text-black underline">
                             ¿Has olvidado tu contraseña?
@@ -536,30 +670,17 @@
         async function signInWithGoogle() {
             const { error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'google',
-                options: {
-                    redirectTo: window.location.origin
-                }
+                options: { redirectTo: window.location.origin }
             });
-            if (error) {
-                alert("Error al conectar con Google: " + error.message);
-            }
+            if (error) alert("Error al conectar con Google: " + error.message);
         }
 
         async function sendPasswordResetEmail() {
             const email = document.getElementById('authEmail').value.trim();
-            if (!email) {
-                alert("Introduce tu correo electrónico primero.");
-                return;
-            }
-            const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-                redirectTo: 'https://net-wish.vercel.app'
-            });
-            if (error) {
-                alert("Error: " + error.message);
-            } else {
-                alert("Se ha enviado un enlace de recuperación a tu correo.");
-                closeModal();
-            }
+            if (!email) { alert("Introduce tu correo electrónico primero."); return; }
+            const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: 'https://net-wish.vercel.app' });
+            if (error) alert("Error: " + error.message);
+            else { alert("Se ha enviado un enlace de recuperación a tu correo."); closeModal(); }
         }
 
         function openNewPasswordModal() {
@@ -571,74 +692,47 @@
                 <div class="space-y-4 text-center">
                     <h3 class="text-lg font-bold text-black">Nueva Contraseña</h3>
                     <p class="text-xs text-neutral-500">Introduce tu nueva contraseña de acceso seguro para NetWish.</p>
-                    
                     <div class="space-y-2 text-left">
                         <label class="text-[9px] font-mono uppercase text-neutral-400 block">Nueva Contraseña</label>
                         <input type="password" id="newPassInput" placeholder="Mínimo 6 caracteres" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-3 px-4 text-xs text-black focus:outline-none focus:border-black">
                     </div>
-
                     <button onclick="saveNewPassword()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide shadow-md">
                         Actualizar Contraseña
                     </button>
                 </div>
             `;
             lucide.createIcons();
-
             modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                modalContent.classList.remove('scale-95');
-            }, 10);
+            setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
         }
 
         async function saveNewPassword() {
             const newPassword = document.getElementById('newPassInput').value.trim();
-            if (!newPassword || newPassword.length < 6) {
-                alert("La contraseña debe tener al menos 6 caracteres.");
-                return;
-            }
-
+            if (!newPassword || newPassword.length < 6) { alert("La contraseña debe tener al menos 6 caracteres."); return; }
             const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
-            
-            if (error) {
-                let errMsg = error.message;
-                if (errMsg.includes("New password should be different from the old password")) {
-                    errMsg = "La nueva contraseña debe ser diferente a la anterior.";
-                }
-                alert("Error al actualizar: " + errMsg);
-            } else {
-                alert("¡Contraseña actualizada con éxito! Ya puedes iniciar sesión.");
-                window.location.hash = '';
-                closeModal();
-                switchTab('home');
-            }
+            if (error) alert("Error al actualizar: " + error.message);
+            else { alert("¡Contraseña actualizada con éxito!"); window.location.hash = ''; closeModal(); switchTab('home'); }
         }
 
         function checkPasswordStrength() {
             const pass = document.getElementById('authPass').value;
-            const hasLength = pass.length > 6;
-            const hasNumber = /[0-9]/.test(pass);
-            const hasUpper = /[A-Z]/.test(pass);
-            const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(pass);
-
-            updateReqUI('length', hasLength);
-            updateReqUI('number', hasNumber);
-            updateReqUI('upper', hasUpper);
-            updateReqUI('special', hasSpecial);
+            updateReqUI('length', pass.length > 6);
+            updateReqUI('number', /[0-9]/.test(pass));
+            updateReqUI('upper', /[A-Z]/.test(pass));
+            updateReqUI('special', /[!@#$%^&*(),.?":{}|<>]/.test(pass));
         }
 
         function updateReqUI(reqKey, isValid) {
             const item = document.getElementById(`req-${reqKey}`);
             const icon = document.getElementById(`icon-${reqKey}`);
             if (!item || !icon) return;
-
             if (isValid) {
                 item.className = "flex items-center space-x-1.5 text-[10px] text-emerald-600 font-medium";
-                icon.className = "w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center text-[9px] text-white font-bold transition-colors";
+                icon.className = "w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center text-[9px] text-white font-bold";
                 icon.innerText = "✓";
             } else {
                 item.className = "flex items-center space-x-1.5 text-[10px] text-neutral-400";
-                icon.className = "w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center text-[8px] text-white font-bold transition-colors";
+                icon.className = "w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center text-[8px] text-white font-bold";
                 icon.innerText = "○";
             }
         }
@@ -646,79 +740,24 @@
         async function processAuthAction(mode) {
             const email = document.getElementById('authEmail').value.trim();
             const pass = document.getElementById('authPass').value.trim();
-
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!email || !emailRegex.test(email)) {
-                alert("Por favor, introduce un correo electrónico válido.");
-                return;
-            }
+            if (!email) { alert("Introduce un correo válido."); return; }
 
             if (mode === 'register') {
                 const name = document.getElementById('authName').value.trim();
                 const surname = document.getElementById('authSurname').value.trim();
                 const dob = document.getElementById('authDob').value;
-                const emailConfirm = document.getElementById('authEmailConfirm').value.trim();
-                const passConfirm = document.getElementById('authPassConfirm').value.trim();
-
-                if (!name || !surname || !dob) {
-                    alert("Por favor, rellene el nombre, los apellidos y la fecha de nacimiento.");
-                    return;
-                }
-                if (email !== emailConfirm) {
-                    alert("Los correos electrónicos no coinciden.");
-                    return;
-                }
-
-                const hasLength = pass.length > 6;
-                const hasNumber = /[0-9]/.test(pass);
-                const hasUpper = /[A-Z]/.test(pass);
-                const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(pass);
-
-                if (!hasLength || !hasNumber || !hasUpper || !hasSpecial) {
-                    alert("La contraseña no cumple con los requisitos de seguridad obligatorios.");
-                    return;
-                }
-                if (pass !== passConfirm) {
-                    alert("Las contraseñas no coinciden.");
-                    return;
-                }
-
+                if (!name || !surname || !dob) { alert("Rellene todos los campos."); return; }
                 const initials = (name[0] + (surname[0] || '')).toUpperCase();
-
                 const { data, error } = await supabaseClient.auth.signUp({
-                    email: email,
-                    password: pass,
-                    options: {
-                        data: {
-                            name: name,
-                            surname: surname,
-                            dob: dob,
-                            initials: initials
-                        }
-                    }
+                    email, password: pass, options: { data: { name, surname, dob, initials } }
                 });
-
-                if (error) {
-                    alert("Error en el registro: " + error.message);
-                    return;
-                }
-
+                if (error) { alert("Error: " + error.message); return; }
                 currentUser = data.user;
-
             } else {
-                const { data, error } = await supabaseClient.auth.signInWithPassword({
-                    email: email,
-                    password: pass
-                });
-
-                if (error) {
-                    alert("Error al iniciar sesión: Credenciales incorrectas o usuario no registrado.");
-                    return;
-                }
-
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
+                if (error) { alert("Error al iniciar sesión."); return; }
                 currentUser = data.user;
             }
-
             closeModal();
             updateHeaderAvatar();
             renderProfileView();
@@ -734,11 +773,7 @@
         }
 
         function openPersonalQR() {
-            if (!currentUser) {
-                openAuthModal('login');
-                return;
-            }
-
+            if (!currentUser) { openAuthModal('login'); return; }
             const modal = document.getElementById('customModal');
             const modalContent = document.getElementById('modalContent');
             const modalBody = document.getElementById('modalBody');
@@ -746,33 +781,25 @@
 
             modalBody.innerHTML = `
                 <div class="space-y-4 text-center">
-                    <h3 class="text-lg font-bold text-black">Tu Código QR Personal</h3>
-                    <p class="text-xs text-neutral-500">Muestra este código seguro para recibir pagos en Palencia.</p>
+                    <h3 class="text-lg font-bold text-black">Tu Código QR Personal (Bizum)</h3>
+                    <p class="text-xs text-neutral-500">Muestra este código para recibir pagos de amigos en Palencia.</p>
                     <div id="realQRCodeContainer" class="w-52 h-52 bg-white border-2 border-neutral-200 rounded-3xl mx-auto flex items-center justify-center p-3 relative shadow-sm"></div>
                     <div class="p-3 bg-neutral-50 rounded-2xl border border-neutral-200/60">
                         <span class="block text-xs font-bold text-black">${meta.name || ''} ${meta.surname || ''}</span>
                         <span class="block text-[10px] text-neutral-400 font-mono">ID: NW-${meta.initials || 'USER'}-${currentUser.id.substring(0,6)}</span>
                     </div>
-                    <button onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide">Cerrar</button>
+                    <button onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Cerrar</button>
                 </div>
             `;
             lucide.createIcons();
-
             modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                modalContent.classList.remove('scale-95');
-            }, 10);
+            setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
 
             const qrContainer = document.getElementById('realQRCodeContainer');
             qrContainer.innerHTML = "";
             new QRCode(qrContainer, {
-                text: `NETWISH_PAY:${meta.name || 'Usuario'} ${meta.surname || ''}:${currentUser.email}`,
-                width: 180,
-                height: 180,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
+                text: `NETWISH_PAY:${meta.name || 'Usuario'}:${currentUser.email}`,
+                width: 180, height: 180, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H
             });
         }
 
@@ -795,17 +822,10 @@
                 </div>
             `;
             lucide.createIcons();
-
             modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                modalContent.classList.remove('scale-95');
-            }, 10);
+            setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
         }
 
-        // ==========================================
-        // ESCÁNER UNIVERSAL CON LIBRERÍA jsQR (AMPLIADO)
-        // ==========================================
         async function startCameraModal() {
             modalBody.innerHTML = `
                 <div class="space-y-4 text-center">
@@ -817,31 +837,20 @@
                             <div class="w-32 h-32 border-2 border-white rounded-2xl animate-pulse"></div>
                         </div>
                     </div>
-                    <p class="text-xs text-neutral-400">Apunta la cámara al código QR de la otra persona.</p>
+                    <p class="text-xs text-neutral-400">Apunta al QR personal (Bizum) o QR de Comercio.</p>
                     <button onclick="closeModal()" class="w-full py-3.5 bg-neutral-100 text-black font-semibold rounded-2xl text-xs">Cerrar Cámara</button>
                 </div>
             `;
             lucide.createIcons();
-
             modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                modalContent.classList.remove('scale-95');
-            }, 10);
+            setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
 
             try {
-                currentStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment' } 
-                });
+                currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
                 const videoElement = document.getElementById('cameraPreview');
-                if (videoElement) {
-                    videoElement.srcObject = currentStream;
-                    videoElement.play();
-                    startUniversalScanningLoop();
-                }
+                if (videoElement) { videoElement.srcObject = currentStream; videoElement.play(); startUniversalScanningLoop(); }
             } catch (error) {
-                console.error("Error al acceder a la cámara:", error);
-                alert("No se pudo acceder a la cámara. Asegúrate de dar permisos en el navegador.");
+                alert("No se pudo acceder a la cámara.");
                 closeModal();
             }
         }
@@ -858,10 +867,7 @@
                     canvas.width = video.videoWidth;
                     context.drawImage(video, 0, 0, canvas.width, canvas.height);
                     const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                    
-                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                        inversionAttempts: "dontInvert",
-                    });
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
 
                     if (code) {
                         clearInterval(scanningInterval);
@@ -877,39 +883,29 @@
             if (qrText.startsWith('NETWISH_PAY:')) {
                 const parts = qrText.replace('NETWISH_PAY:', '').split(':');
                 activePayee = parts[0] || 'Usuario NetWish';
-                
                 rawAmountString = "000";
                 updateAmountDisplay();
-                
                 document.getElementById('payeeNameDisplay').innerText = activePayee;
                 document.getElementById('payeeInitialsBubble').innerText = activePayee.substring(0, 2).toUpperCase();
                 switchTab('payment');
             } else {
-                alert("El código QR escaneado no pertenece a una cuenta válida de NetWish.");
+                alert("Código QR no reconocido en NetWish.");
             }
         }
 
-        // ==========================================
-        // TECLADO ESTILO CAJERO (ENTRADA EXACTA DE DÍGITOS)
-        // ==========================================
         function appendNum(num) {
             if (rawAmountString === "000") {
                 if (num === "00") return;
                 rawAmountString = num;
             } else {
-                if (rawAmountString.length < 8) {
-                    rawAmountString += num;
-                }
+                if (rawAmountString.length < 8) rawAmountString += num;
             }
             updateAmountDisplay();
         }
 
         function clearNum() {
-            if (rawAmountString.length <= 3) {
-                rawAmountString = "000";
-            } else {
-                rawAmountString = rawAmountString.slice(0, -1);
-            }
+            if (rawAmountString.length <= 3) rawAmountString = "000";
+            else rawAmountString = rawAmountString.slice(0, -1);
             updateAmountDisplay();
         }
 
@@ -918,9 +914,6 @@
             document.getElementById('payAmountDisplay').innerText = numericValue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
-        // ==========================================
-        // LÓGICA DE MANTENER PULSADO PARA CONFIRMAR
-        // ==========================================
         function initHoldButtonListeners() {
             const btn = document.getElementById('holdButtonContainer');
             if (!btn) return;
@@ -928,14 +921,12 @@
             const startHold = (e) => {
                 e.preventDefault();
                 if (holdTimer) return;
-
                 holdProgress = 0;
                 const progressBar = document.getElementById('progressBar');
                 
                 progressInterval = setInterval(() => {
                     holdProgress += 1.5; 
                     if (progressBar) progressBar.style.width = holdProgress + '%';
-
                     if (holdProgress >= 100) {
                         clearInterval(progressInterval);
                         clearInterval(holdTimer);
@@ -947,14 +938,8 @@
             };
 
             const cancelHold = () => {
-                if (holdTimer) {
-                    clearInterval(holdTimer);
-                    holdTimer = null;
-                }
-                if (progressInterval) {
-                    clearInterval(progressInterval);
-                    progressInterval = null;
-                }
+                if (holdTimer) { clearInterval(holdTimer); holdTimer = null; }
+                if (progressInterval) { clearInterval(progressInterval); progressInterval = null; }
                 holdProgress = 0;
                 const progressBar = document.getElementById('progressBar');
                 if (progressBar) progressBar.style.width = '0%';
@@ -963,7 +948,6 @@
             btn.addEventListener('mousedown', startHold);
             btn.addEventListener('mouseup', cancelHold);
             btn.addEventListener('mouseleave', cancelHold);
-
             btn.addEventListener('touchstart', startHold, { passive: false });
             btn.addEventListener('touchend', cancelHold);
             btn.addEventListener('touchcancel', cancelHold);
@@ -971,10 +955,7 @@
 
         function executeFullPayment() {
             const numericValue = parseInt(rawAmountString, 10) / 100;
-            if (numericValue <= 0) {
-                alert("Introduce una cantidad válida mayor a 0 €.");
-                return;
-            }
+            if (numericValue <= 0) { alert("Introduce una cantidad válida."); return; }
 
             const modal = document.getElementById('customModal');
             const modalContent = document.getElementById('modalContent');
@@ -986,39 +967,27 @@
                         <i data-lucide="check" class="w-7 h-7"></i>
                     </div>
                     <div class="space-y-1">
-                        <h3 class="text-base font-bold text-black">¡Pago enviado con éxito!</h3>
-                        <p class="text-xs text-neutral-500">Has enviado <strong class="text-black">${numericValue.toFixed(2)} €</strong> a <strong class="text-black">${activePayee}</strong>.</p>
+                        <h3 class="text-base font-bold text-black">¡Preparando Bizum!</h3>
+                        <p class="text-xs text-neutral-500">Vas a enviar <strong class="text-black">${numericValue.toFixed(2)} €</strong> a <strong class="text-black">${activePayee}</strong> sin comisiones.</p>
                     </div>
-                    <button onclick="closeModal(); switchTab('home');" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Volver al Inicio</button>
+                    <button onclick="closeModal(); switchTab('home');" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Continuar a Banco / Bizum</button>
                 </div>
             `;
             lucide.createIcons();
-
             modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                modalContent.classList.remove('scale-95');
-            }, 10);
+            setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
         }
 
         function stopCamera() {
-            if (scanningInterval) {
-                clearInterval(scanningInterval);
-                scanningInterval = null;
-            }
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
-                currentStream = null;
-            }
+            if (scanningInterval) { clearInterval(scanningInterval); scanningInterval = null; }
+            if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); currentStream = null; }
         }
 
         function closeModal() {
             stopCamera();
             modal.classList.add('opacity-0');
             modalContent.classList.add('scale-95');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 300);
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
         }
 
         function switchTab(tabId) {
@@ -1027,30 +996,16 @@
             document.getElementById('view-scan').classList.add('hidden');
             document.getElementById('view-profile').classList.add('hidden');
             document.getElementById('view-payment').classList.add('hidden');
+            document.getElementById('view-business-dashboard').classList.add('hidden');
 
             document.getElementById('view-' + tabId).classList.remove('hidden');
 
-            if (tabId === 'profile') {
-                renderProfileView();
-            }
-
-            if (tabId === 'payment') {
-                holdProgress = 0;
-                const pb = document.getElementById('progressBar');
-                if (pb) pb.style.width = '0%';
-            }
-
-            document.getElementById('nav-home').className = "flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group";
-            document.getElementById('nav-explore').className = "flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group";
-            document.getElementById('nav-scan').className = "flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group";
-            document.getElementById('nav-profile').className = "flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group";
+            if (tabId === 'profile') renderProfileView();
+            if (tabId === 'payment') { holdProgress = 0; const pb = document.getElementById('progressBar'); if (pb) pb.style.width = '0%'; }
 
             const navBar = document.querySelector('nav');
-            if (tabId === 'payment') {
-                navBar.classList.add('hidden');
-            } else {
-                navBar.classList.remove('hidden');
-            }
+            if (tabId === 'payment') navBar.classList.add('hidden');
+            else navBar.classList.remove('hidden');
         }
     </script>
 </body>
