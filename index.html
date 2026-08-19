@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>NetWish — Palencia</title>
 
+    <!-- PWA / Pantalla completa móvil -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#f8f9fa">
 
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -21,17 +23,24 @@
             }
         }
     </script>
+    <!-- Lucide Icons CDN -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Librería QRCode.js para generar -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Librería jsQR universal para lectura -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <!-- Supabase JS SDK Real -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+    <!-- AQUÍ LLAMAMOS A NUESTRO ARCHIVO CSS -->
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
+    <!-- Contenedor Principal App Shell -->
     <div class="w-full h-[100dvh] sm:h-[844px] sm:max-w-[390px] sm:rounded-[48px] bg-white flex flex-col relative shadow-[0_30px_90px_rgba(0,0,0,0.12)] overflow-hidden sm:border-[8px] sm:border-neutral-900 mx-auto my-auto">
         
+        <!-- HEADER SUPERIOR FIJO (Ocultable) -->
         <header id="mainAppHeader" class="absolute top-0 left-0 right-0 px-6 pt-8 pb-3 border-b border-neutral-100/80 flex justify-between items-center glass-panel z-30 transition-opacity">
             <h1 class="text-2xl font-bold tracking-tight text-black font-serif italic">NetWish</h1>
             <button onclick="handleHeaderProfileClick()" id="headerAvatar" class="w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner transition hover:scale-105 active:scale-95">
@@ -39,12 +48,15 @@
             </button>
         </header>
 
+        <!-- CONTENIDO PRINCIPAL DINÁMICO -->
         <main id="mainContentArea" class="flex-1 allow-scroll px-6 pt-20 pb-28 flex flex-col">
             
             <!-- VISTA 1: INICIO -->
             <div id="view-home" class="space-y-5 w-full pt-2">
+                <!-- Tarjeta Principal: Recibe tu pago -->
                 <section class="glass-dark p-6 rounded-[32px] text-white flex flex-col justify-between space-y-5 relative overflow-hidden shadow-xl">
                     <div class="absolute -right-10 -top-10 w-36 h-36 bg-gradient-to-br from-neutral-700/30 to-transparent rounded-full blur-2xl pointer-events-none"></div>
+                    
                     <div class="flex justify-between items-start relative z-10">
                         <div>
                             <span class="text-[9px] text-neutral-400 font-mono tracking-widest uppercase bg-white/10 px-2.5 py-1 rounded-full border border-white/5">IDENTIFICACIÓN PERSONAL</span>
@@ -54,12 +66,14 @@
                             <i data-lucide="qr-code" class="w-5 h-5 text-white"></i>
                         </div>
                     </div>
+
                     <button onclick="openPersonalQR()" class="w-full py-3.5 bg-white text-black font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-100 active:scale-[0.98] relative z-10 shadow-lg flex items-center justify-center space-x-2">
                         <i data-lucide="qr-code" class="w-4 h-4"></i>
                         <span>Mostrar código QR</span>
                     </button>
                 </section>
 
+                <!-- Sección de Servicios -->
                 <div class="space-y-3">
                     <div class="flex justify-between items-center px-1">
                         <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Servicios Activos</h3>
@@ -69,14 +83,17 @@
                         </span>
                     </div>
 
+                    <!-- Grid de Categorías -->
                     <div class="grid grid-cols-2 gap-3">
-                        <button onclick="goToDirectory('comercio')" class="group p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/70 hover:border-black/30 hover:bg-white transition-all duration-200 text-left active:scale-[0.97] shadow-sm flex flex-col justify-between h-24">
+                        
+                        <!-- BOTÓN MODIFICADO PARA PANADERÍAS -->
+                        <button onclick="goToDirectory('pan')" class="group p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/70 hover:border-black/30 hover:bg-white transition-all duration-200 text-left active:scale-[0.97] shadow-sm flex flex-col justify-between h-24">
                             <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
-                                <i data-lucide="store" class="w-4 h-4 text-amber-600"></i>
+                                <i data-lucide="croissant" class="w-4 h-4 text-amber-600"></i>
                             </div>
                             <div>
-                                <span class="block text-xs font-bold text-black tracking-tight">Comercios</span>
-                                <span class="block text-[10px] text-neutral-400 mt-0.5">Tiendas locales</span>
+                                <span class="block text-xs font-bold text-black tracking-tight">Panaderías</span>
+                                <span class="block text-[10px] text-neutral-400 mt-0.5">Click & Collect</span>
                             </div>
                         </button>
 
@@ -140,10 +157,10 @@
                     <input type="text" id="directorySearch" onkeyup="filterDirectory()" placeholder="Buscar locales..." class="w-full bg-neutral-50 border border-neutral-200/80 rounded-2xl py-3.5 pl-11 pr-4 text-xs text-black placeholder-neutral-400 focus:outline-none focus:border-black transition">
                 </div>
 
-                <!-- FILTROS REDISEÑADOS Y CON ID PARA OCULTARLOS DINÁMICAMENTE -->
+                <!-- FILTROS ACTUALIZADOS A PANADERÍAS -->
                 <div id="directoryFilters" class="flex space-x-2 overflow-x-auto no-scrollbar pb-1">
                     <button onclick="filterCategory('todos')" class="px-4 py-2 bg-white text-black text-[10px] font-bold rounded-xl whitespace-nowrap border border-neutral-200 shadow-sm transition hover:bg-neutral-50 active:scale-95">Todos</button>
-                    <button onclick="filterCategory('comercio')" class="px-4 py-2 bg-white text-neutral-600 text-[10px] font-bold rounded-xl whitespace-nowrap border border-neutral-200/60 shadow-sm transition hover:bg-neutral-50 active:scale-95">Comercios</button>
+                    <button onclick="filterCategory('pan')" class="px-4 py-2 bg-white text-neutral-600 text-[10px] font-bold rounded-xl whitespace-nowrap border border-neutral-200/60 shadow-sm transition hover:bg-neutral-50 active:scale-95">Panaderías</button>
                     <button onclick="filterCategory('rest')" class="px-4 py-2 bg-white text-neutral-600 text-[10px] font-bold rounded-xl whitespace-nowrap border border-neutral-200/60 shadow-sm transition hover:bg-neutral-50 active:scale-95">Restaurantes</button>
                     <button onclick="filterCategory('pel')" class="px-4 py-2 bg-white text-neutral-600 text-[10px] font-bold rounded-xl whitespace-nowrap border border-neutral-200/60 shadow-sm transition hover:bg-neutral-50 active:scale-95">Peluquerías</button>
                 </div>
@@ -175,6 +192,7 @@
                         <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">PANEL DE COMERCIO</span>
                         <h2 id="businessTitleName" class="text-xl font-bold text-black tracking-tight">Mi Negocio</h2>
                     </div>
+                    <button onclick="logoutBusiness()" class="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition">Salir</button>
                 </div>
 
                 <div class="glass-dark p-6 rounded-[32px] text-white flex flex-col items-center space-y-4 relative overflow-hidden shadow-xl">
@@ -208,7 +226,7 @@
                 </div>
             </div>
 
-            <!-- VISTA 5: PASARELA DE PAGO -->
+            <!-- VISTA 5: PASARELA DE PAGO AMPLIADA -->
             <div id="view-payment" class="hidden w-full h-full flex flex-col justify-between pt-4 pb-3">
                 <div class="flex items-center justify-between px-1 pt-2">
                     <button onclick="switchTab('explore')" class="w-10 h-10 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-black hover:bg-neutral-200 transition">
@@ -344,10 +362,7 @@
         <!-- BARRAS DE NAVEGACIÓN -->
         <nav id="personal-nav" class="absolute bottom-4 left-4 right-4 border border-neutral-200/80 bg-white/90 backdrop-blur-2xl px-6 py-3.5 rounded-[32px] flex justify-around items-center z-30 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
             <button onclick="switchTab('home')" class="flex flex-col items-center text-black space-y-1 transition group"><i data-lucide="home" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Inicio</span></button>
-            
-            <!-- EL BOTÓN EXPLORAR AHORA RESETEA EL FILTRO Y LO MUESTRA TODO -->
             <button onclick="resetAndExplore()" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group"><i data-lucide="compass" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Explorar</span></button>
-            
             <button onclick="switchTab('scan')" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group"><i data-lucide="scan" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">QR</span></button>
             <button onclick="switchTab('profile')" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group"><i data-lucide="user" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Perfil</span></button>
         </nav>
