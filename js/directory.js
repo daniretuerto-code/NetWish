@@ -14,7 +14,6 @@ async function loadPublicBusinesses() {
 function renderBusinessDirectory(businesses) {
     const listContainer = document.getElementById('dynamicBusinessList');
     
-    // Interfaz amigable por si la categoría no tiene comercios todavía
     if (!businesses || businesses.length === 0) {
         listContainer.innerHTML = `
             <div class="py-12 text-center space-y-3">
@@ -22,7 +21,7 @@ function renderBusinessDirectory(businesses) {
                     <i data-lucide="clock" class="w-7 h-7"></i>
                 </div>
                 <h3 class="text-base font-bold text-black">Próximamente</h3>
-                <p class="text-xs text-neutral-500 px-4">Aún no hay locales de esta categoría dados de alta. ¡Estamos trabajando en ello!</p>
+                <p class="text-xs text-neutral-500 px-4">Aún no hay locales de esta categoría. ¡Estamos trabajando en ello!</p>
             </div>
         `;
         lucide.createIcons();
@@ -36,7 +35,6 @@ function renderBusinessDirectory(businesses) {
         
         let icon = 'store'; let colorClass = 'text-neutral-600'; let bgClass = 'bg-neutral-500/10 border-neutral-500/20';
         
-        // Asignación de colores
         if (cat.includes('pan') || cat.includes('comercio') || cat.includes('bakery')) { 
             icon = 'shopping-bag'; colorClass = 'text-amber-600'; bgClass = 'bg-amber-500/10 border-amber-500/20'; 
         } else if (cat.includes('pel')) { 
@@ -84,16 +82,24 @@ function filterDirectory() {
 
 function goToDirectory(filter) {
     const filterBar = document.getElementById('directoryFilters');
+    const titleText = document.getElementById('exploreTitle');
     
-    // Si la categoría es específica (entró desde inicio), ocultamos la barra de botones superior
-    if (filterBar) {
-        if (filter === 'todos') {
-            filterBar.classList.remove('hidden');
-        } else {
-            filterBar.classList.add('hidden');
+    if (filter === 'todos') {
+        if(filterBar) filterBar.classList.remove('hidden');
+        if(titleText) titleText.innerText = "Directorio Urbano";
+    } else {
+        if(filterBar) filterBar.classList.add('hidden');
+        if(titleText) {
+            if(filter === 'pan') titleText.innerText = "Panaderías";
+            if(filter === 'rest') titleText.innerText = "Restaurantes";
+            if(filter === 'pel') titleText.innerText = "Peluquerías";
+            if(filter === 'movil') titleText.innerText = "Movilidad Urbana";
+            if(filter === 'ocio') titleText.innerText = "Ocio y Cultura";
+            if(filter === 'comercio') titleText.innerText = "Comercios Locales";
         }
     }
-
+    
+    if (typeof swipeAnim !== 'undefined') swipeAnim = 'slide-in-right';
     switchTab('explore');
     filterCategory(filter);
 }
@@ -129,14 +135,6 @@ function openPublicBusiness(name, type) {
                 </div>
                 <button onclick="addToCart(2.50, 'Hogaza de Pueblo')" class="w-10 h-10 rounded-2xl bg-white border border-neutral-200 shadow-sm flex items-center justify-center text-black active:scale-90"><i data-lucide="plus" class="w-4 h-4"></i></button>
             </div>
-            <div class="p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/60 flex justify-between items-center shadow-sm">
-                <div class="flex-1 pr-4">
-                    <h4 class="text-sm font-bold text-black">Croissant de Mantequilla</h4>
-                    <p class="text-[10px] text-neutral-500 mt-0.5">Clásico francés.</p>
-                    <p class="text-xs font-extrabold text-black mt-2">1,50 €</p>
-                </div>
-                <button onclick="addToCart(1.50, 'Croissant de Mantequilla')" class="w-10 h-10 rounded-2xl bg-white border border-neutral-200 shadow-sm flex items-center justify-center text-black active:scale-90"><i data-lucide="plus" class="w-4 h-4"></i></button>
-            </div>
         `;
     } else if (type.includes('pel')) {
         imgEl.src = "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=800&q=80";
@@ -153,7 +151,7 @@ function openPublicBusiness(name, type) {
         `;
     } else {
         imgEl.src = "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&w=800&q=80";
-        document.getElementById('publicBizTag').innerText = "Comercio Local";
+        document.getElementById('publicBizTag').innerText = "Local Comercial";
         catalogEl.innerHTML = `
             <div class="p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/60 flex justify-between items-center shadow-sm">
                 <div class="flex-1 pr-4">
@@ -166,6 +164,8 @@ function openPublicBusiness(name, type) {
         `;
     }
     lucide.createIcons();
+    
+    if (typeof swipeAnim !== 'undefined') swipeAnim = 'slide-in-right';
     switchTab('public-business');
 }
 
@@ -208,6 +208,8 @@ function openCartSummary() {
     document.getElementById('orderDate').min = today;
     
     document.getElementById('publicBusinessCartBar').classList.add('translate-y-32');
+    
+    if (typeof swipeAnim !== 'undefined') swipeAnim = 'slide-in-right';
     switchTab('cart');
 }
 
@@ -224,6 +226,8 @@ function processCartChoice(action) {
         updateAmountDisplay();
         document.getElementById('payeeNameDisplay').innerText = activePayee;
         document.getElementById('payeeInitialsBubble').innerText = activePayee.substring(0, 2).toUpperCase();
+        
+        if (typeof swipeAnim !== 'undefined') swipeAnim = 'slide-in-right';
         switchTab('payment');
     } else {
         executeFullPayment(true);

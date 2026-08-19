@@ -1,17 +1,27 @@
-// Control de Pestañas
-function switchTab(tabId) {
-    document.getElementById('view-home').classList.add('hidden');
-    document.getElementById('view-explore').classList.add('hidden');
-    document.getElementById('view-scan').classList.add('hidden');
-    document.getElementById('view-profile').classList.add('hidden');
-    document.getElementById('view-payment').classList.add('hidden');
-    document.getElementById('view-business-dashboard').classList.add('hidden');
-    document.getElementById('view-public-business').classList.add('hidden');
-    
-    const cartView = document.getElementById('view-cart');
-    if (cartView) cartView.classList.add('hidden');
+let lastMainTab = 'home';
+let swipeAnim = 'fade-in';
 
-    document.getElementById('view-' + tabId).classList.remove('hidden');
+function switchTab(tabId) {
+    if (['home', 'explore', 'scan', 'profile', 'business-dashboard'].includes(tabId)) {
+        lastMainTab = tabId;
+    }
+
+    const views = ['home', 'explore', 'scan', 'profile', 'payment', 'business-dashboard', 'public-business', 'cart'];
+    
+    views.forEach(v => {
+        const el = document.getElementById('view-' + v);
+        if (el) {
+            el.classList.add('hidden');
+            el.classList.remove('slide-in-right', 'slide-in-left', 'fade-in');
+        }
+    });
+
+    const targetView = document.getElementById('view-' + tabId);
+    if (targetView) {
+        targetView.classList.remove('hidden');
+        targetView.classList.add(swipeAnim);
+    }
+    swipeAnim = 'fade-in'; // Reset para los clicks normales
 
     if (tabId === 'profile') renderProfileView();
     if (tabId === 'business-dashboard') renderBusinessOrders();
@@ -25,14 +35,12 @@ function switchTab(tabId) {
     const bNav = document.getElementById('business-nav');
     const mainHeader = document.getElementById('mainAppHeader');
     
-    // Ocultar header en vistas inmersivas
     if (tabId === 'public-business' || tabId === 'cart') {
         mainHeader.classList.add('hidden');
     } else {
         mainHeader.classList.remove('hidden');
     }
 
-    // Lógica de menús inferiores
     if (tabId === 'payment' || tabId === 'public-business' || tabId === 'cart') {
         pNav.classList.add('hidden');
         bNav.classList.add('hidden');
@@ -45,9 +53,47 @@ function switchTab(tabId) {
             bNav.classList.add('hidden');
         }
     }
+
+    updateNavHighlight(tabId);
 }
 
-// Resetea el filtro y va al directorio completo
+function updateNavHighlight(activeTabId) {
+    const tabs = ['home', 'explore', 'scan', 'profile'];
+    const bizTabs = ['dashboard', 'scan', 'profile'];
+    
+    tabs.forEach(tab => {
+        const btn = document.getElementById('nav-btn-' + tab);
+        if(!btn) return;
+        const icon = btn.querySelector('i');
+        
+        // Si entramos a un negocio, mantenemos "explore" o "home" encendido
+        if (tab === activeTabId || (activeTabId === 'public-business' && tab === lastMainTab) || (activeTabId === 'cart' && tab === lastMainTab)) {
+            btn.classList.remove('text-neutral-400');
+            btn.classList.add('text-black');
+            if (icon) icon.classList.add('scale-110');
+        } else {
+            btn.classList.remove('text-black');
+            btn.classList.add('text-neutral-400');
+            if (icon) icon.classList.remove('scale-110');
+        }
+    });
+
+    bizTabs.forEach(tab => {
+        const btn = document.getElementById('biz-nav-btn-' + tab);
+        if(!btn) return;
+        const icon = btn.querySelector('i');
+        if (tab === activeTabId || (activeTabId === 'business-dashboard' && tab === 'dashboard')) {
+            btn.classList.remove('text-neutral-400');
+            btn.classList.add('text-white');
+            if (icon) icon.classList.add('scale-110');
+        } else {
+            btn.classList.remove('text-white');
+            btn.classList.add('text-neutral-400');
+            if (icon) icon.classList.remove('scale-110');
+        }
+    });
+}
+
 function resetAndExplore() {
     const searchInput = document.getElementById('directorySearch');
     if (searchInput) searchInput.value = '';
@@ -55,11 +101,19 @@ function resetAndExplore() {
     const filterBar = document.getElementById('directoryFilters');
     if (filterBar) filterBar.classList.remove('hidden');
 
+    const titleText = document.getElementById('exploreTitle');
+    if (titleText) titleText.innerText = "Directorio Urbano";
+
     if (typeof filterCategory === 'function') filterCategory('todos');
+    swipeAnim = 'fade-in';
     switchTab('explore');
 }
 
-// Avatar Superior
+function goBackFromBusiness() {
+    swipeAnim = 'slide-in-left';
+    switchTab(lastMainTab || 'home');
+}
+
 function updateHeaderAvatar() {
     const avatarBtn = document.getElementById('headerAvatar');
     if (currentBusiness) {
@@ -78,7 +132,6 @@ function updateHeaderAvatar() {
 function handleHeaderProfileClick() {
     switchTab('profile');
 }
-
 
 // ==========================================
 // --- MOTOR DE NAVEGACIÓN POR DESLIZAMIENTO ---
@@ -103,13 +156,9 @@ function handleSwipeGesture() {
     const xDiff = touchstartX - touchendX;
     const yDiff = touchstartY - touchendY;
     
-    // Si desliza hacia arriba o abajo (scroll normal), no hacemos nada
     if (Math.abs(yDiff) > Math.abs(xDiff)) return;
+    if (Math.abs(xDiff) < 50) return;
 
-    // Distancia mínima para considerarlo un "swipe" intencionado y no un roce
-    if (Math.abs(xDiff) < 60) return;
-
-    // Orden de las pestañas principales
     const tabs = ['home', 'explore', 'scan', 'profile'];
     let activeTabIndex = -1;
     
@@ -124,20 +173,19 @@ function handleSwipeGesture() {
     const isCart = !document.getElementById('view-cart').classList.contains('hidden');
 
     if (xDiff > 0) {
-        // Deslizar IZQUIERDA (Avanzar pestaña ->)
         if (activeTabIndex >= 0 && activeTabIndex < tabs.length - 1) {
+            swipeAnim = 'slide-in-right';
             switchTab(tabs[activeTabIndex + 1]);
         }
     } else {
-        // Deslizar DERECHA (Retroceder pestaña <- o Volver atrás)
         if (activeTabIndex > 0) {
+            swipeAnim = 'slide-in-left';
             switchTab(tabs[activeTabIndex - 1]);
         } else if (isCart) {
-            // Si estás en la cesta, volver a la tienda
+            swipeAnim = 'slide-in-left';
             switchTab('public-business'); 
         } else if (isPublicBusiness) {
-            // Si estás en la tienda, volver al directorio general
-            goToDirectory('todos'); 
+            goBackFromBusiness();
         }
     }
 }

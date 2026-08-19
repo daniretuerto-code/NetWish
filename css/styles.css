@@ -42,3 +42,31 @@ html, body {
     background: linear-gradient(135deg, #111111 0%, #1c1c1e 100%);
     box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
+
+/* --- ANIMACIONES APPLE-LIKE --- */
+.slide-in-right {
+    animation: slideInRight 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.slide-in-left {
+    animation: slideInLeft 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.fade-in {
+    animation: fadeIn 0.25s ease-out forwards;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(30px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInLeft {
+    from { transform: translateX(-30px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
