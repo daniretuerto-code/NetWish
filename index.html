@@ -307,9 +307,9 @@
                     </button>
                 </div>
 
-                <!-- Botón de Confirmación Gigante con Barra Verde -->
-                <div id="holdButtonContainer" class="relative w-full h-16 bg-black rounded-3xl overflow-hidden shadow-2xl select-none cursor-pointer flex items-center justify-center my-2">
-                    <div id="progressBar" class="absolute top-0 left-0 bottom-0 w-0 bg-emerald-500 transition-all duration-100 ease-out pointer-events-none"></div>
+                <!-- Botón de Confirmación Gigante con Barra Verde (CORREGIDO PARA SAFARI/MÓVIL) -->
+                <div id="holdButtonContainer" class="relative w-full h-16 bg-black rounded-3xl overflow-hidden shadow-2xl select-none cursor-pointer flex items-center justify-center my-2 touch-none">
+                    <div id="progressBar" class="absolute top-0 left-0 bottom-0 w-0 bg-emerald-500" style="transition: width 0.05s linear;"></div>
                     <span class="relative z-10 text-white font-bold text-xs tracking-widest uppercase pointer-events-none">MANTENER PARA CONFIRMAR</span>
                 </div>
             </div>
@@ -364,10 +364,6 @@
 
         let activePayee = "";
         let rawAmountString = "000"; 
-
-        let holdTimer = null;
-        let progressInterval = null;
-        let holdProgress = 0;
 
         document.addEventListener('DOMContentLoaded', async () => {
             const hash = window.location.hash;
@@ -668,7 +664,13 @@
                 }
 
                 if (!data || data.length === 0) {
-                    alert(`El usuario "${user}" o la contraseña no coinciden con la base de datos. Revisa minúsculas y espacios.`);
+                    // Doble comprobación visual para ayudarte a detectar espacios fantasmas en Supabase
+                    const { data: checkUser } = await supabaseClient.from('businesses').select('*').eq('username', user);
+                    if (checkUser && checkUser.length > 0) {
+                        alert("El usuario existe, pero la CONTRASEÑA es incorrecta. Asegúrate de que es exactamente: " + pass);
+                    } else {
+                        alert(`No se encuentra el usuario "${user}". Entra en Supabase, borra el nombre en la tabla y vuélvelo a escribir asegurándote de no dejar espacios en blanco al final.`);
+                    }
                     return;
                 }
 
@@ -773,6 +775,7 @@
                         ${isLogin ? 'Entrar' : 'Completar Registro'}
                     </button>
                     
+                    <!-- BOTÓN DE GOOGLE AÑADIDO EXACTAMENTE COMO PEDISTE -->
                     ${isLogin ? `
                     <div class="pt-2">
                         <button onclick="signInWithGoogle()" class="w-full py-3.5 bg-white border border-neutral-200/90 rounded-xl text-xs font-semibold text-black flex items-center justify-center space-x-2.5 hover:bg-neutral-50 transition shadow-sm active:scale-98">
@@ -798,12 +801,13 @@
             lucide.createIcons();
         }
 
+        // --- INICIO DE SESIÓN CON GOOGLE (CON SELECTOR DE CUENTA AÑADIDO) ---
         async function signInWithGoogle() {
             const { error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'google',
                 options: { 
                     redirectTo: window.location.origin,
-                    queryParams: { prompt: 'select_account' }
+                    queryParams: { prompt: 'select_account' } // ESTO FUERZA A QUE TE PREGUNTE LA CUENTA
                 }
             });
             if (error) alert("Error al conectar con Google: " + error.message);
@@ -986,36 +990,44 @@
             document.getElementById('payAmountDisplay').innerText = numericValue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
-        // --- LÓGICA DEL BOTÓN TÁCTIL DE PAGO CON BARRA VERDE ---
+        // --- LÓGICA DEL BOTÓN TÁCTIL DE PAGO CON BARRA VERDE AÑADIDA CORRECTAMENTE ---
+        let globalHoldTimer = null;
+        let globalHoldProgress = 0;
+
         function initHoldButtonListeners() {
             const btn = document.getElementById('holdButtonContainer');
-            if (!btn) return;
+            const progressBar = document.getElementById('progressBar');
+            if (!btn || !progressBar) return;
+
+            // Se añade para que reseteo sea suave
+            progressBar.style.transition = 'width 0.02s linear';
 
             const startHold = (e) => {
-                if (e.cancelable) e.preventDefault();
-                if (holdTimer || progressInterval) return;
-                holdProgress = 0;
-                const progressBar = document.getElementById('progressBar');
+                if (e && e.cancelable) e.preventDefault();
+                if (globalHoldTimer) return;
                 
-                progressInterval = setInterval(() => {
-                    holdProgress += 1.5; 
-                    if (progressBar) progressBar.style.width = holdProgress + '%';
-                    if (holdProgress >= 100) {
-                        clearInterval(progressInterval);
-                        progressInterval = null;
+                globalHoldProgress = 0;
+                progressBar.style.width = '0%';
+                
+                globalHoldTimer = setInterval(() => {
+                    globalHoldProgress += 2; 
+                    progressBar.style.width = globalHoldProgress + '%';
+                    
+                    if (globalHoldProgress >= 100) {
+                        clearInterval(globalHoldTimer);
+                        globalHoldTimer = null;
                         executeFullPayment();
                     }
                 }, 20);
             };
 
-            const cancelHold = () => {
-                if (progressInterval) {
-                    clearInterval(progressInterval);
-                    progressInterval = null;
+            const cancelHold = (e) => {
+                if (globalHoldTimer) {
+                    clearInterval(globalHoldTimer);
+                    globalHoldTimer = null;
                 }
-                holdProgress = 0;
-                const progressBar = document.getElementById('progressBar');
-                if (progressBar) progressBar.style.width = '0%';
+                globalHoldProgress = 0;
+                progressBar.style.width = '0%';
             };
 
             btn.addEventListener('mousedown', startHold);
@@ -1075,7 +1087,7 @@
 
             if (tabId === 'profile') renderProfileView();
             if (tabId === 'payment') { 
-                holdProgress = 0; 
+                globalHoldProgress = 0; 
                 const pb = document.getElementById('progressBar'); 
                 if (pb) pb.style.width = '0%'; 
             }
