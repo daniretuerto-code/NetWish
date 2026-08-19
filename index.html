@@ -524,24 +524,33 @@
             }, 10);
         }
 
+        // CUESTIONARIO DE SOLICITUD DE ALTA COMERCIAL
         function openBusinessSignupRequest() {
             const modalBody = document.getElementById('modalBody');
             modalBody.innerHTML = `
-                <div class="space-y-4 text-left">
-                    <div class="text-center space-y-1">
+                <div class="space-y-3 text-left">
+                    <div class="text-center space-y-0.5">
                         <h3 class="text-base font-bold text-black">Solicitud de Alta Comercial</h3>
-                        <p class="text-[11px] text-neutral-500">Únete a la red urbana exclusiva de NetWish en Palencia.</p>
+                        <p class="text-[11px] text-neutral-500">Únete a la red urbana exclusiva de NetWish.</p>
                     </div>
                     
-                    <div class="space-y-2.5 pt-1">
+                    <div class="space-y-2 pt-1">
+                        <div>
+                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Ciudad</label>
+                            <input type="text" id="reqBizCity" value="Palencia" readonly class="w-full bg-neutral-100 border border-neutral-200 rounded-xl py-2 px-3 text-xs text-neutral-600 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Calle / Ubicación</label>
+                            <input type="text" id="reqBizAddress" placeholder="ej. C/ Mayor, 12" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2 px-3 text-xs text-black focus:outline-none focus:border-black">
+                        </div>
                         <div>
                             <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Nombre del Negocio</label>
-                            <input type="text" id="reqBizName" placeholder="ej. Panadería La Milagros" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                            <input type="text" id="reqBizName" placeholder="ej. Panadería La Milagros" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2 px-3 text-xs text-black focus:outline-none focus:border-black">
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
                                 <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Categoría</label>
-                                <select id="reqBizCategory" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                                <select id="reqBizCategory" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2 px-2 text-xs text-black focus:outline-none focus:border-black">
                                     <option value="Panadería">Panadería</option>
                                     <option value="Peluquería">Peluquería</option>
                                     <option value="Restaurante">Restaurante</option>
@@ -550,23 +559,25 @@
                             </div>
                             <div>
                                 <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Modalidad</label>
-                                <select id="reqBizType" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                                <select id="reqBizType" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2 px-2 text-xs text-black focus:outline-none focus:border-black">
                                     <option value="Local físico">Local físico</option>
                                     <option value="Online / Reparto">Online / Reparto</option>
                                 </select>
                             </div>
                         </div>
-                        <div>
-                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Ubicación en Palencia</label>
-                            <input type="text" id="reqBizAddress" placeholder="ej. C/ Mayor, 12" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
-                        </div>
-                        <div>
-                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Contacto Directo</label>
-                            <input type="text" id="reqBizContact" placeholder="Teléfono o Email" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Correo Electrónico (Email)</label>
+                                <input type="email" id="reqBizEmail" placeholder="correo@negocio.com" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2 px-3 text-xs text-black focus:outline-none focus:border-black">
+                            </div>
+                            <div>
+                                <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Número de Teléfono</label>
+                                <input type="tel" id="reqBizPhone" placeholder="600 000 000" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2 px-3 text-xs text-black focus:outline-none focus:border-black">
+                            </div>
                         </div>
                     </div>
 
-                    <button onclick="submitBusinessRequest()" class="w-full py-3.5 bg-black text-white font-semibold rounded-xl text-xs tracking-wide shadow-md mt-2">
+                    <button onclick="submitBusinessRequest()" class="w-full py-3 bg-black text-white font-semibold rounded-xl text-xs tracking-wide shadow-md mt-1">
                         Enviar Solicitud al Equipo
                     </button>
                     
@@ -579,12 +590,14 @@
         }
 
         function submitBusinessRequest() {
-            const name = document.getElementById('reqBizName').value.trim();
+            const city = document.getElementById('reqBizCity').value.trim();
             const address = document.getElementById('reqBizAddress').value.trim();
-            const contact = document.getElementById('reqBizContact').value.trim();
+            const name = document.getElementById('reqBizName').value.trim();
+            const email = document.getElementById('reqBizEmail').value.trim();
+            const phone = document.getElementById('reqBizPhone').value.trim();
 
-            if (!name || !address || !contact) {
-                alert("Por favor, rellena los campos para poder contactar contigo.");
+            if (!address || !name || !email || !phone) {
+                alert("Por favor, rellena todos los campos de ubicación, nombre y contacto.");
                 return;
             }
 
@@ -596,7 +609,7 @@
                     </div>
                     <div class="space-y-1">
                         <h3 class="text-base font-bold text-black">¡Solicitud Registrada!</h3>
-                        <p class="text-xs text-neutral-500 leading-relaxed">Hemos recibido los datos de <strong class="text-black">${name}</strong>. Revisaremos tu establecimiento y nos pondremos en contacto contigo para entregarte tus accesos y tu código QR de comercio.</p>
+                        <p class="text-xs text-neutral-500 leading-relaxed">Hemos registrado tu establecimiento <strong class="text-black">${name}</strong> en <strong class="text-black">${city}</strong> (${address}). Nos pondremos en contacto contigo a través de ${email} o ${phone} para entregarte tus accesos.</p>
                     </div>
                     <button onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Entendido</button>
                 </div>
