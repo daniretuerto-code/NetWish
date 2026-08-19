@@ -13,8 +13,19 @@ async function loadPublicBusinesses() {
 
 function renderBusinessDirectory(businesses) {
     const listContainer = document.getElementById('dynamicBusinessList');
+    
+    // Si la categoría no tiene comercios, mostramos "Próximamente" integrado en la lista
     if (!businesses || businesses.length === 0) {
-        listContainer.innerHTML = `<p class="text-xs text-center text-neutral-500 py-4">No hay comercios disponibles.</p>`;
+        listContainer.innerHTML = `
+            <div class="py-12 text-center space-y-3">
+                <div class="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto text-neutral-400 shadow-inner">
+                    <i data-lucide="clock" class="w-7 h-7"></i>
+                </div>
+                <h3 class="text-base font-bold text-black">Próximamente</h3>
+                <p class="text-xs text-neutral-500 px-4">Aún no hay locales de esta categoría. ¡Estamos trabajando en ello!</p>
+            </div>
+        `;
+        lucide.createIcons();
         return;
     }
 
@@ -24,9 +35,19 @@ function renderBusinessDirectory(businesses) {
         const cat = (biz.category || biz.Categoria || '').toLowerCase();
         
         let icon = 'store'; let colorClass = 'text-neutral-600'; let bgClass = 'bg-neutral-500/10 border-neutral-500/20';
-        if (cat.includes('pan') || cat.includes('bakery')) { icon = 'croissant'; colorClass = 'text-amber-600'; bgClass = 'bg-amber-500/10 border-amber-500/20'; } 
-        else if (cat.includes('pel')) { icon = 'scissors'; colorClass = 'text-blue-600'; bgClass = 'bg-blue-500/10 border-blue-500/20'; } 
-        else if (cat.includes('rest') || cat.includes('bar')) { icon = 'utensils'; colorClass = 'text-rose-600'; bgClass = 'bg-rose-500/10 border-rose-500/20'; }
+        
+        // Asignación inteligente de iconos según base de datos
+        if (cat.includes('pan') || cat.includes('comercio') || cat.includes('bakery')) { 
+            icon = 'shopping-bag'; colorClass = 'text-amber-600'; bgClass = 'bg-amber-500/10 border-amber-500/20'; 
+        } else if (cat.includes('pel')) { 
+            icon = 'scissors'; colorClass = 'text-blue-600'; bgClass = 'bg-blue-500/10 border-blue-500/20'; 
+        } else if (cat.includes('rest') || cat.includes('bar')) { 
+            icon = 'utensils'; colorClass = 'text-rose-600'; bgClass = 'bg-rose-500/10 border-rose-500/20'; 
+        } else if (cat.includes('movil') || cat.includes('taxi')) {
+            icon = 'car'; colorClass = 'text-emerald-600'; bgClass = 'bg-emerald-500/10 border-emerald-500/20';
+        } else if (cat.includes('ocio') || cat.includes('evento')) {
+            icon = 'sparkles'; colorClass = 'text-purple-600'; bgClass = 'bg-purple-500/10 border-purple-500/20';
+        }
 
         html += `
             <button onclick="openPublicBusiness('${name}', '${cat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
@@ -77,9 +98,9 @@ function openPublicBusiness(name, type) {
     const catalogEl = document.getElementById('publicBizCatalog');
     type = type || '';
 
-    if (type.includes('pan')) {
+    if (type.includes('pan') || type.includes('comercio')) {
         imgEl.src = "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80";
-        document.getElementById('publicBizTag').innerText = "Panadería";
+        document.getElementById('publicBizTag').innerText = "Comercio";
         catalogEl.innerHTML = `
             <div class="p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/60 flex justify-between items-center shadow-sm">
                 <div class="flex-1 pr-4">
@@ -121,7 +142,7 @@ function openPublicBusiness(name, type) {
         `;
     } else {
         imgEl.src = "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&w=800&q=80";
-        document.getElementById('publicBizTag').innerText = "Comercio Local";
+        document.getElementById('publicBizTag').innerText = "Local Comercial";
         catalogEl.innerHTML = `
             <div class="p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/60 flex justify-between items-center shadow-sm">
                 <div class="flex-1 pr-4">

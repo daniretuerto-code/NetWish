@@ -7,7 +7,9 @@ function switchTab(tabId) {
     document.getElementById('view-payment').classList.add('hidden');
     document.getElementById('view-business-dashboard').classList.add('hidden');
     document.getElementById('view-public-business').classList.add('hidden');
-    document.getElementById('view-cart').classList.add('hidden');
+    
+    const cartView = document.getElementById('view-cart');
+    if (cartView) cartView.classList.add('hidden');
 
     document.getElementById('view-' + tabId).classList.remove('hidden');
 
@@ -43,6 +45,14 @@ function switchTab(tabId) {
             bNav.classList.add('hidden');
         }
     }
+}
+
+// Nueva función: Resetea el filtro y va al directorio completo
+function resetAndExplore() {
+    const searchInput = document.getElementById('directorySearch');
+    if (searchInput) searchInput.value = '';
+    if (typeof filterCategory === 'function') filterCategory('todos');
+    switchTab('explore');
 }
 
 // Avatar Superior
