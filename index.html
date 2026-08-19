@@ -645,7 +645,7 @@
             lucide.createIcons();
         }
 
-        // --- AUTENTICACIÓN CONECTADA A LA TABLA "businesses" DE SUPABASE ---
+        // --- AUTENTICACIÓN ROBUSTA CON SUPABASE (.limit(1)) ---
         async function authenticateBusiness() {
             const user = document.getElementById('bizUser').value.trim();
             const pass = document.getElementById('bizPass').value.trim();
@@ -656,23 +656,29 @@
             }
 
             try {
-                // Consulta adaptada exactamente a los campos reales de tu tabla "businesses"
                 const { data, error } = await supabaseClient
                     .from('businesses')
                     .select('*')
                     .eq('username', user)
-                    .eq('password', pass)
-                    .single();
+                    .eq('password', pass);
 
-                if (error || !data) {
-                    alert("Usuario o contraseña de comercio incorrectos.");
+                if (error) {
+                    console.error("Error de Supabase:", error);
+                    alert("Error en la base de datos: " + error.message);
                     return;
                 }
 
+                if (!data || data.length === 0) {
+                    alert("Usuario o contraseña incorrectos, o la tabla tiene restricciones RLS activas.");
+                    return;
+                }
+
+                const biz = data[0];
+
                 currentBusiness = {
-                    id: data.id || 'biz_db',
-                    name: data.name,
-                    category: data.category
+                    id: biz.id || 'biz_db',
+                    name: biz.name,
+                    category: biz.category
                 };
 
                 localStorage.setItem('netwish_business', JSON.stringify(currentBusiness));
@@ -683,8 +689,8 @@
                 generateBusinessQR(currentBusiness);
 
             } catch (err) {
-                console.error("Error al conectar con Supabase:", err);
-                alert("Error de conexión al verificar las credenciales.");
+                console.error("Excepción técnica:", err);
+                alert("Error técnico al conectar con la base de datos.");
             }
         }
 
