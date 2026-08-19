@@ -1,27 +1,40 @@
 let lastMainTab = 'home';
-let swipeAnim = 'fade-in';
 
 function switchTab(tabId) {
-    if (['home', 'explore', 'scan', 'profile', 'business-dashboard'].includes(tabId)) {
+    if (['home', 'explore', 'scan', 'profile'].includes(tabId)) {
         lastMainTab = tabId;
     }
 
-    const views = ['home', 'explore', 'scan', 'profile', 'payment', 'business-dashboard', 'public-business', 'cart'];
-    
-    views.forEach(v => {
-        const el = document.getElementById('view-' + v);
-        if (el) {
-            el.classList.add('hidden');
-            el.classList.remove('slide-in-right', 'slide-in-left', 'fade-in');
-        }
-    });
+    const carousel = document.getElementById('iosCarouselContainer');
+    const secondaryContainer = document.getElementById('secondaryViewsContainer');
+    const publicBizView = document.getElementById('view-public-business');
 
-    const targetView = document.getElementById('view-' + tabId);
-    if (targetView) {
-        targetView.classList.remove('hidden');
-        targetView.classList.add(swipeAnim);
+    // Ocultar vistas secundarias y públicas por defecto
+    if (secondaryContainer) secondaryContainer.classList.add('hidden');
+    if (publicBizView) publicBizView.classList.add('hidden');
+
+    // Mapeo de pestañas principales del carrusel horizontal tipo iOS
+    const tabIndices = { 'home': 0, 'explore': 1, 'scan': 2, 'profile': 3 };
+
+    if (tabIndices[tabId] !== undefined) {
+        if (carousel) {
+            carousel.style.transform = `translateX(-${tabIndices[tabId] * 25}%)`;
+        }
+    } else {
+        // Si es una vista secundaria (como pasarela de pago, carrito, panel de negocio)
+        if (secondaryContainer) {
+            secondaryContainer.classList.remove('hidden');
+            const secViews = ['view-business-dashboard', 'view-payment', 'view-cart'];
+            secViews.forEach(v => {
+                const el = document.getElementById(v);
+                if (el) el.classList.add('hidden');
+            });
+            const targetSec = document.getElementById('view-' + tabId);
+            if (targetSec) targetSec.classList.remove('hidden');
+        } else if (tabId === 'public-business') {
+            if (publicBizView) publicBizView.classList.remove('hidden');
+        }
     }
-    swipeAnim = 'fade-in'; 
 
     if (tabId === 'profile') renderProfileView();
     if (tabId === 'business-dashboard') renderBusinessOrders();
@@ -36,21 +49,21 @@ function switchTab(tabId) {
     const mainHeader = document.getElementById('mainAppHeader');
     
     if (tabId === 'public-business' || tabId === 'cart') {
-        mainHeader.classList.add('hidden');
+        if(mainHeader) mainHeader.classList.add('hidden');
     } else {
-        mainHeader.classList.remove('hidden');
+        if(mainHeader) mainHeader.classList.remove('hidden');
     }
 
-    if (tabId === 'payment' || tabId === 'public-business' || tabId === 'cart') {
-        pNav.classList.add('hidden');
-        bNav.classList.add('hidden');
+    if (['payment', 'public-business', 'cart'].includes(tabId)) {
+        if(pNav) pNav.classList.add('hidden');
+        if(bNav) bNav.classList.add('hidden');
     } else {
         if (currentBusiness) {
-            pNav.classList.add('hidden');
-            bNav.classList.remove('hidden');
+            if(pNav) pNav.classList.add('hidden');
+            if(bNav) bNav.classList.remove('hidden');
         } else {
-            pNav.classList.remove('hidden');
-            bNav.classList.add('hidden');
+            if(pNav) pNav.classList.remove('hidden');
+            if(bNav) bNav.classList.add('hidden');
         }
     }
 
@@ -66,7 +79,7 @@ function updateNavHighlight(activeTabId) {
         if(!btn) return;
         const icon = btn.querySelector('i');
         
-        if (tab === activeTabId || (activeTabId === 'public-business' && tab === lastMainTab) || (activeTabId === 'cart' && tab === lastMainTab)) {
+        if (tab === activeTabId || (activeTabId === 'public-business' && tab === lastMainTab) || (activeTabId === 'cart' && tab === lastMainTab) || (activeTabId === 'payment' && tab === lastMainTab)) {
             btn.classList.remove('text-neutral-400');
             btn.classList.add('text-black');
             if (icon) icon.classList.add('scale-110');
@@ -104,17 +117,16 @@ function resetAndExplore() {
     if (titleText) titleText.innerText = "Directorio Urbano";
 
     if (typeof filterCategory === 'function') filterCategory('todos');
-    swipeAnim = 'fade-in';
     switchTab('explore');
 }
 
 function goBackFromBusiness() {
-    swipeAnim = 'slide-in-left';
     switchTab(lastMainTab || 'home');
 }
 
 function updateHeaderAvatar() {
     const avatarBtn = document.getElementById('headerAvatar');
+    if (!avatarBtn) return;
     if (currentBusiness) {
         avatarBtn.innerText = "BIZ";
         avatarBtn.className = "w-9 h-9 rounded-2xl bg-amber-500 text-white border border-amber-600 flex items-center justify-center text-[10px] font-bold shadow-md transition hover:scale-105 active:scale-95";
@@ -130,61 +142,4 @@ function updateHeaderAvatar() {
 
 function handleHeaderProfileClick() {
     switchTab('profile');
-}
-
-// ==========================================
-// --- MOTOR DE NAVEGACIÓN POR DESLIZAMIENTO ---
-// ==========================================
-let touchstartX = 0;
-let touchendX = 0;
-let touchstartY = 0;
-let touchendY = 0;
-
-document.addEventListener('touchstart', e => {
-    touchstartX = e.changedTouches[0].screenX;
-    touchstartY = e.changedTouches[0].screenY;
-}, { passive: true });
-
-document.addEventListener('touchend', e => {
-    touchendX = e.changedTouches[0].screenX;
-    touchendY = e.changedTouches[0].screenY;
-    handleSwipeGesture();
-}, { passive: true });
-
-function handleSwipeGesture() {
-    const xDiff = touchstartX - touchendX;
-    const yDiff = touchstartY - touchendY;
-    
-    if (Math.abs(yDiff) > Math.abs(xDiff)) return;
-    if (Math.abs(xDiff) < 50) return;
-
-    const tabs = ['home', 'explore', 'scan', 'profile'];
-    let activeTabIndex = -1;
-    
-    for (let i = 0; i < tabs.length; i++) {
-        if (!document.getElementById('view-' + tabs[i]).classList.contains('hidden')) {
-            activeTabIndex = i;
-            break;
-        }
-    }
-
-    const isPublicBusiness = !document.getElementById('view-public-business').classList.contains('hidden');
-    const isCart = !document.getElementById('view-cart').classList.contains('hidden');
-
-    if (xDiff > 0) {
-        if (activeTabIndex >= 0 && activeTabIndex < tabs.length - 1) {
-            swipeAnim = 'slide-in-right';
-            switchTab(tabs[activeTabIndex + 1]);
-        }
-    } else {
-        if (activeTabIndex > 0) {
-            swipeAnim = 'slide-in-left';
-            switchTab(tabs[activeTabIndex - 1]);
-        } else if (isCart) {
-            swipeAnim = 'slide-in-left';
-            switchTab('public-business'); 
-        } else if (isPublicBusiness) {
-            goBackFromBusiness();
-        }
-    }
 }
