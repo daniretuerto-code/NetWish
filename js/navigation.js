@@ -47,10 +47,15 @@ function switchTab(tabId) {
     }
 }
 
-// Nueva función: Resetea el filtro y va al directorio completo
+// Nueva función: Resetea el filtro y va al directorio completo desde el NavBar
 function resetAndExplore() {
     const searchInput = document.getElementById('directorySearch');
     if (searchInput) searchInput.value = '';
+    
+    // Al venir desde explorar, nos aseguramos de que la barra se muestre
+    const filterBar = document.getElementById('directoryFilters');
+    if (filterBar) filterBar.classList.remove('hidden');
+
     if (typeof filterCategory === 'function') filterCategory('todos');
     switchTab('explore');
 }

@@ -14,7 +14,7 @@ async function loadPublicBusinesses() {
 function renderBusinessDirectory(businesses) {
     const listContainer = document.getElementById('dynamicBusinessList');
     
-    // Si la categoría no tiene comercios, mostramos "Próximamente" integrado en la lista
+    // Interfaz amigable por si la categoría no tiene comercios todavía
     if (!businesses || businesses.length === 0) {
         listContainer.innerHTML = `
             <div class="py-12 text-center space-y-3">
@@ -22,7 +22,7 @@ function renderBusinessDirectory(businesses) {
                     <i data-lucide="clock" class="w-7 h-7"></i>
                 </div>
                 <h3 class="text-base font-bold text-black">Próximamente</h3>
-                <p class="text-xs text-neutral-500 px-4">Aún no hay locales de esta categoría. ¡Estamos trabajando en ello!</p>
+                <p class="text-xs text-neutral-500 px-4">Aún no hay locales de esta categoría dados de alta. ¡Estamos trabajando en ello!</p>
             </div>
         `;
         lucide.createIcons();
@@ -36,7 +36,7 @@ function renderBusinessDirectory(businesses) {
         
         let icon = 'store'; let colorClass = 'text-neutral-600'; let bgClass = 'bg-neutral-500/10 border-neutral-500/20';
         
-        // Asignación inteligente de iconos según base de datos
+        // Asignación de colores
         if (cat.includes('pan') || cat.includes('comercio') || cat.includes('bakery')) { 
             icon = 'shopping-bag'; colorClass = 'text-amber-600'; bgClass = 'bg-amber-500/10 border-amber-500/20'; 
         } else if (cat.includes('pel')) { 
@@ -83,6 +83,17 @@ function filterDirectory() {
 }
 
 function goToDirectory(filter) {
+    const filterBar = document.getElementById('directoryFilters');
+    
+    // Si la categoría es específica (entró desde inicio), ocultamos la barra de botones superior
+    if (filterBar) {
+        if (filter === 'todos') {
+            filterBar.classList.remove('hidden');
+        } else {
+            filterBar.classList.add('hidden');
+        }
+    }
+
     switchTab('explore');
     filterCategory(filter);
 }
@@ -142,7 +153,7 @@ function openPublicBusiness(name, type) {
         `;
     } else {
         imgEl.src = "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&w=800&q=80";
-        document.getElementById('publicBizTag').innerText = "Local Comercial";
+        document.getElementById('publicBizTag').innerText = "Comercio Local";
         catalogEl.innerHTML = `
             <div class="p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/60 flex justify-between items-center shadow-sm">
                 <div class="flex-1 pr-4">

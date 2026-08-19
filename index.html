@@ -69,7 +69,6 @@
                         </span>
                     </div>
 
-                    <!-- AQUÍ ESTÁN TUS BOTONES DE CATEGORÍAS FILTRADAS PERFECTAMENTE -->
                     <div class="grid grid-cols-2 gap-3">
                         <button onclick="goToDirectory('comercio')" class="group p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/70 hover:border-black/30 hover:bg-white transition-all duration-200 text-left active:scale-[0.97] shadow-sm flex flex-col justify-between h-24">
                             <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
@@ -141,11 +140,12 @@
                     <input type="text" id="directorySearch" onkeyup="filterDirectory()" placeholder="Buscar locales..." class="w-full bg-neutral-50 border border-neutral-200/80 rounded-2xl py-3.5 pl-11 pr-4 text-xs text-black placeholder-neutral-400 focus:outline-none focus:border-black transition">
                 </div>
 
-                <div class="flex space-x-2 overflow-x-auto no-scrollbar pb-1">
-                    <button onclick="filterCategory('todos')" class="px-4 py-2 bg-black text-white text-[10px] font-bold rounded-xl whitespace-nowrap shadow-md">Todos</button>
-                    <button onclick="filterCategory('comercio')" class="px-4 py-2 bg-neutral-100 text-neutral-600 text-[10px] font-bold rounded-xl whitespace-nowrap border border-neutral-200/60 hover:bg-neutral-200 transition">Comercios</button>
-                    <button onclick="filterCategory('rest')" class="px-4 py-2 bg-neutral-100 text-neutral-600 text-[10px] font-bold rounded-xl whitespace-nowrap border border-neutral-200/60 hover:bg-neutral-200 transition">Restaurantes</button>
-                    <button onclick="filterCategory('pel')" class="px-4 py-2 bg-neutral-100 text-neutral-600 text-[10px] font-bold rounded-xl whitespace-nowrap border border-neutral-200/60 hover:bg-neutral-200 transition">Peluquerías</button>
+                <!-- FILTROS REDISEÑADOS Y CON ID PARA OCULTARLOS DINÁMICAMENTE -->
+                <div id="directoryFilters" class="flex space-x-2 overflow-x-auto no-scrollbar pb-1">
+                    <button onclick="filterCategory('todos')" class="px-4 py-2 bg-white text-black text-[10px] font-bold rounded-xl whitespace-nowrap border border-neutral-200 shadow-sm transition hover:bg-neutral-50 active:scale-95">Todos</button>
+                    <button onclick="filterCategory('comercio')" class="px-4 py-2 bg-white text-neutral-600 text-[10px] font-bold rounded-xl whitespace-nowrap border border-neutral-200/60 shadow-sm transition hover:bg-neutral-50 active:scale-95">Comercios</button>
+                    <button onclick="filterCategory('rest')" class="px-4 py-2 bg-white text-neutral-600 text-[10px] font-bold rounded-xl whitespace-nowrap border border-neutral-200/60 shadow-sm transition hover:bg-neutral-50 active:scale-95">Restaurantes</button>
+                    <button onclick="filterCategory('pel')" class="px-4 py-2 bg-white text-neutral-600 text-[10px] font-bold rounded-xl whitespace-nowrap border border-neutral-200/60 shadow-sm transition hover:bg-neutral-50 active:scale-95">Peluquerías</button>
                 </div>
 
                 <div id="dynamicBusinessList" class="space-y-3 pt-2 pb-6">
@@ -344,7 +344,10 @@
         <!-- BARRAS DE NAVEGACIÓN -->
         <nav id="personal-nav" class="absolute bottom-4 left-4 right-4 border border-neutral-200/80 bg-white/90 backdrop-blur-2xl px-6 py-3.5 rounded-[32px] flex justify-around items-center z-30 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
             <button onclick="switchTab('home')" class="flex flex-col items-center text-black space-y-1 transition group"><i data-lucide="home" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Inicio</span></button>
+            
+            <!-- EL BOTÓN EXPLORAR AHORA RESETEA EL FILTRO Y LO MUESTRA TODO -->
             <button onclick="resetAndExplore()" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group"><i data-lucide="compass" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Explorar</span></button>
+            
             <button onclick="switchTab('scan')" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group"><i data-lucide="scan" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">QR</span></button>
             <button onclick="switchTab('profile')" class="flex flex-col items-center text-neutral-400 hover:text-black transition space-y-1 group"><i data-lucide="user" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Perfil</span></button>
         </nav>
