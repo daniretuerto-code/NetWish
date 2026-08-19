@@ -214,7 +214,7 @@
                 </div>
             </div>
 
-            <!-- VISTA DE PANEL DE NEGOCIO (DEDICADA PARA COMERCIOS) -->
+            <!-- VISTA DE PANEL DE NEGOCIO (DEDICADA PARA COMERCIOS CON SU QR EXCLUSIVO) -->
             <div id="view-business-dashboard" class="space-y-5 hidden w-full pt-2">
                 <div class="flex items-center justify-between">
                     <div>
@@ -222,6 +222,13 @@
                         <h2 id="businessTitleName" class="text-lg font-bold text-black tracking-tight">Mi Negocio</h2>
                     </div>
                     <button onclick="logoutBusiness()" class="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition">Salir</button>
+                </div>
+
+                <!-- Tarjeta con el QR Exclusivo del Negocio -->
+                <div class="p-5 rounded-[32px] bg-neutral-50 border border-neutral-200/70 text-center space-y-3 shadow-sm">
+                    <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">Código QR de Cobro del Local</span>
+                    <div id="businessQRCodeContainer" class="w-36 h-36 bg-white border border-neutral-200 rounded-2xl mx-auto flex items-center justify-center p-2 shadow-inner"></div>
+                    <p class="text-[10px] text-neutral-500">Muestra este QR en tu mostrador para recibir pedidos y pagos directos.</p>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
@@ -244,13 +251,6 @@
                                 <span class="text-[10px] text-neutral-500">Cliente: Daniel R. • Hace 10 min</span>
                             </div>
                             <span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full border border-emerald-200">Pagado</span>
-                        </div>
-                        <div class="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/60 flex justify-between items-center">
-                            <div>
-                                <span class="text-xs font-bold block text-black">Corte de Pelo (17:30)</span>
-                                <span class="text-[10px] text-neutral-500">Cliente: Ignacio M. • Reservado</span>
-                            </div>
-                            <span class="px-2.5 py-1 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-full border border-amber-200">Pendiente</span>
                         </div>
                     </div>
                 </div>
@@ -336,14 +336,10 @@
             </button>
         </nav>
 
-        <!-- VENTANA MODAL DINÁMICA (AMPLIADA) -->
+        <!-- VENTANA MODAL DINÁMICA -->
         <div id="customModal" class="absolute inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
             <div class="bg-white w-full max-w-[400px] rounded-[40px] p-7 text-center space-y-4 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100 flex flex-col overflow-hidden" id="modalContent">
-                
-                <div id="modalBody" class="space-y-4 text-left">
-                    <!-- Contenido dinámico -->
-                </div>
-
+                <div id="modalBody" class="space-y-4 text-left"></div>
             </div>
         </div>
 
@@ -389,6 +385,7 @@
                 currentBusiness = JSON.parse(savedBusiness);
                 switchTab('business-dashboard');
                 document.getElementById('businessTitleName').innerText = currentBusiness.name;
+                generateBusinessQR(currentBusiness);
             } else {
                 updateHeaderAvatar();
                 renderProfileView();
@@ -397,7 +394,6 @@
             initHoldButtonListeners();
         });
 
-        // --- FUNCIÓN ROBUSTA DE ENVÍO A TELEGRAM ---
         async function sendToTelegram(htmlText) {
             const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
             try {
@@ -412,18 +408,12 @@
                 });
                 const result = await response.json();
                 if (!result.ok) {
-                    console.error("Error devuelto por Telegram:", result);
-                    if (result.description && result.description.includes("bot can't initiate conversation")) {
-                        alert("⚠️ Para recibir solicitudes, debes abrir tu bot en Telegram y pulsar 'Iniciar' (/start).");
-                    } else {
-                        alert("Error de Telegram: " + (result.description || "Comprueba tu Bot Token y Chat ID"));
-                    }
+                    console.error("Error Telegram:", result);
                     return false;
                 }
                 return true;
             } catch (error) {
-                console.error("Error de conexión con Telegram:", error);
-                alert("Error de conexión al enviar la notificación a Telegram.");
+                console.error("Error de conexión:", error);
                 return false;
             }
         }
@@ -559,7 +549,6 @@
             }, 10);
         }
 
-        // CUESTIONARIO DE SOLICITUD DE ALTA COMERCIAL
         function openBusinessSignupRequest() {
             const modalBody = document.getElementById('modalBody');
             modalBody.innerHTML = `
@@ -634,11 +623,10 @@
             const phone = document.getElementById('reqBizPhone').value.trim();
 
             if (!address || !name || !email || !phone) {
-                alert("Por favor, rellena todos los campos de ubicación, nombre y contacto.");
+                alert("Por favor, rellena todos los campos.");
                 return;
             }
 
-            // Mensaje formateado en HTML con saltos de línea y espaciado visual
             const messageHtml = `✨ <b>NUEVA SOLICITUD DE COMERCIO</b> ✨\n\n` +
                                 `🏬 <b>Negocio:</b> ${name}\n\n` +
                                 `📍 <b>Ciudad:</b> ${city}\n\n` +
@@ -650,8 +638,7 @@
                                 `──────────────────\n` +
                                 `<i>Enviado desde la app NetWish Palencia</i>`;
 
-            const sent = await sendToTelegram(messageHtml);
-            if (!sent) return;
+            await sendToTelegram(messageHtml);
 
             const modalBody = document.getElementById('modalBody');
             modalBody.innerHTML = `
@@ -661,7 +648,7 @@
                     </div>
                     <div class="space-y-1">
                         <h3 class="text-base font-bold text-black">¡Solicitud Registrada!</h3>
-                        <p class="text-xs text-neutral-500 leading-relaxed">Hemos registrado tu establecimiento <strong class="text-black">${name}</strong> en <strong class="text-black">${city}</strong> (${address}). Nos pondremos en contacto contigo a través de ${email} o ${phone} para entregarte tus accesos.</p>
+                        <p class="text-xs text-neutral-500 leading-relaxed">Hemos registrado tu establecimiento <strong class="text-black">${name}</strong>. Nos pondremos en contacto contigo muy pronto.</p>
                     </div>
                     <button onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Entendido</button>
                 </div>
@@ -674,9 +661,9 @@
             const pass = document.getElementById('bizPass').value.trim();
 
             if (user === "panaderia" && pass === "1234") {
-                currentBusiness = { id: "biz_1", name: "Panadería La Milagros", type: "Panadería" };
+                currentBusiness = { id: "biz_1", name: "Panadería La Milagros", type: "Panadería", code: "NW-BIZ-PAN-01" };
             } else if (user === "peluqueria" && pass === "1234") {
-                currentBusiness = { id: "biz_2", name: "Peluquería Estilo Palencia", type: "Peluquería" };
+                currentBusiness = { id: "biz_2", name: "Peluquería Estilo Palencia", type: "Peluquería", code: "NW-BIZ-PEL-02" };
             } else {
                 alert("Usuario o contraseña de comercio incorrectos.");
                 return;
@@ -687,6 +674,17 @@
             switchTab('business-dashboard');
             document.getElementById('businessTitleName').innerText = currentBusiness.name;
             updateHeaderAvatar();
+            generateBusinessQR(currentBusiness);
+        }
+
+        function generateBusinessQR(biz) {
+            const container = document.getElementById('businessQRCodeContainer');
+            if (!container) return;
+            container.innerHTML = "";
+            new QRCode(container, {
+                text: `NETWISH_BUSINESS:${biz.name}:${biz.id}`,
+                width: 130, height: 130, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H
+            });
         }
 
         function logoutBusiness() {
@@ -754,54 +752,12 @@
                             <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Contraseña</label>
                             <input type="password" id="authPass" ${!isLogin ? 'oninput="checkPasswordStrength()"' : ''} placeholder="> 6 caracteres" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
                         </div>
-
-                        ${!isLogin ? `
-                        <!-- CHECKLIST DE SEGURIDAD -->
-                        <div id="passwordChecklist" class="bg-neutral-50 p-3 rounded-xl border border-neutral-200/80 grid grid-cols-2 gap-2">
-                            <div id="req-length" class="flex items-center space-x-1.5 text-[10px] text-neutral-400">
-                                <span class="w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center text-[8px] text-white font-bold" id="icon-length">○</span>
-                                <span>> 6 caracteres</span>
-                            </div>
-                            <div id="req-number" class="flex items-center space-x-1.5 text-[10px] text-neutral-400">
-                                <span class="w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center text-[8px] text-white font-bold" id="icon-number">○</span>
-                                <span>1 número</span>
-                            </div>
-                            <div id="req-upper" class="flex items-center space-x-1.5 text-[10px] text-neutral-400">
-                                <span class="w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center text-[8px] text-white font-bold" id="icon-upper">○</span>
-                                <span>1 mayúscula</span>
-                            </div>
-                            <div id="req-special" class="flex items-center space-x-1.5 text-[10px] text-neutral-400">
-                                <span class="w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center text-[8px] text-white font-bold" id="icon-special">○</span>
-                                <span>1 especial</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Repetir Contraseña</label>
-                            <input type="password" id="authPassConfirm" placeholder="Repita contraseña" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
-                        </div>
-                        ` : ''}
                     </div>
 
                     <button onclick="processAuthAction('${mode}')" class="w-full py-3.5 bg-black text-white font-semibold rounded-xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md mt-2">
                         ${isLogin ? 'Entrar' : 'Completar Registro'}
                     </button>
                     
-                    ${isLogin ? `
-                    <div class="text-center pt-2">
-                        <button onclick="sendPasswordResetEmail()" class="text-[11px] font-medium text-neutral-500 hover:text-black underline">
-                            ¿Has olvidado tu contraseña?
-                        </button>
-                    </div>
-
-                    <div class="pt-2">
-                        <button onclick="signInWithGoogle()" class="w-full py-3.5 bg-white border border-neutral-200/90 rounded-xl text-xs font-semibold text-black flex items-center justify-center space-x-2.5 hover:bg-neutral-50 transition shadow-sm active:scale-98">
-                            <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.19v3.15C3.18 21.38 7.26 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.6H1.19C.43 8.13 0 9.87 0 12s.43 3.87 1.19 5.4l4.08-3.16z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.26 0 3.18 2.62 1.19 6.6l4.08 3.15c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>
-                            <span>Continuar con Google</span>
-                        </button>
-                    </div>
-                    ` : ''}
-
                     <div class="text-center pt-2">
                         ${isLogin ? `
                             <p class="text-xs text-neutral-500">¿No tienes cuenta? <button onclick="renderAuthForm('register')" class="text-black font-bold underline hover:text-neutral-700">Regístrate</button></p>
@@ -816,76 +772,6 @@
                 </div>
             `;
             lucide.createIcons();
-        }
-
-        async function signInWithGoogle() {
-            const { error } = await supabaseClient.auth.signInWithOAuth({
-                provider: 'google',
-                options: { redirectTo: window.location.origin }
-            });
-            if (error) alert("Error al conectar con Google: " + error.message);
-        }
-
-        async function sendPasswordResetEmail() {
-            const email = document.getElementById('authEmail').value.trim();
-            if (!email) { alert("Introduce tu correo electrónico primero."); return; }
-            const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: 'https://net-wish.vercel.app' });
-            if (error) alert("Error: " + error.message);
-            else { alert("Se ha enviado un enlace de recuperación a tu correo."); closeModal(); }
-        }
-
-        function openNewPasswordModal() {
-            const modal = document.getElementById('customModal');
-            const modalContent = document.getElementById('modalContent');
-            const modalBody = document.getElementById('modalBody');
-
-            modalBody.innerHTML = `
-                <div class="space-y-4 text-center">
-                    <h3 class="text-lg font-bold text-black">Nueva Contraseña</h3>
-                    <p class="text-xs text-neutral-500">Introduce tu nueva contraseña de acceso seguro para NetWish.</p>
-                    <div class="space-y-2 text-left">
-                        <label class="text-[9px] font-mono uppercase text-neutral-400 block">Nueva Contraseña</label>
-                        <input type="password" id="newPassInput" placeholder="Mínimo 6 caracteres" class="w-full bg-neutral-50 border border-neutral-200 rounded-2xl py-3 px-4 text-xs text-black focus:outline-none focus:border-black">
-                    </div>
-                    <button onclick="saveNewPassword()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs tracking-wide shadow-md">
-                        Actualizar Contraseña
-                    </button>
-                </div>
-            `;
-            lucide.createIcons();
-            modal.classList.remove('hidden');
-            setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
-        }
-
-        async function saveNewPassword() {
-            const newPassword = document.getElementById('newPassInput').value.trim();
-            if (!newPassword || newPassword.length < 6) { alert("La contraseña debe tener al menos 6 caracteres."); return; }
-            const { error } = await supabaseClient.auth.updateUser({ password: newPassword });
-            if (error) alert("Error al actualizar: " + error.message);
-            else { alert("¡Contraseña actualizada con éxito!"); window.location.hash = ''; closeModal(); switchTab('home'); }
-        }
-
-        function checkPasswordStrength() {
-            const pass = document.getElementById('authPass').value;
-            updateReqUI('length', pass.length > 6);
-            updateReqUI('number', /[0-9]/.test(pass));
-            updateReqUI('upper', /[A-Z]/.test(pass));
-            updateReqUI('special', /[!@#$%^&*(),.?":{}|<>]/.test(pass));
-        }
-
-        function updateReqUI(reqKey, isValid) {
-            const item = document.getElementById(`req-${reqKey}`);
-            const icon = document.getElementById(`icon-${reqKey}`);
-            if (!item || !icon) return;
-            if (isValid) {
-                item.className = "flex items-center space-x-1.5 text-[10px] text-emerald-600 font-medium";
-                icon.className = "w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center text-[9px] text-white font-bold";
-                icon.innerText = "✓";
-            } else {
-                item.className = "flex items-center space-x-1.5 text-[10px] text-neutral-400";
-                icon.className = "w-4 h-4 rounded-full bg-neutral-200 flex items-center justify-center text-[8px] text-white font-bold";
-                icon.innerText = "○";
-            }
         }
 
         async function processAuthAction(mode) {
@@ -1031,9 +917,9 @@
         }
 
         function processScannedQRData(qrText) {
-            if (qrText.startsWith('NETWISH_PAY:')) {
-                const parts = qrText.replace('NETWISH_PAY:', '').split(':');
-                activePayee = parts[0] || 'Usuario NetWish';
+            if (qrText.startsWith('NETWISH_PAY:') || qrText.startsWith('NETWISH_BUSINESS:')) {
+                const parts = qrText.split(':');
+                activePayee = parts[1] || 'Establecimiento NetWish';
                 rawAmountString = "000";
                 updateAmountDisplay();
                 document.getElementById('payeeNameDisplay').innerText = activePayee;
@@ -1157,6 +1043,21 @@
             const navBar = document.querySelector('nav');
             if (tabId === 'payment') navBar.classList.add('hidden');
             else navBar.classList.remove('hidden');
+        }
+
+        async function sendToTelegram(htmlText) {
+            const BOT_TOKEN = '8852301765:AAGaOxNX4yusfsfIGUgDkY7xvQU_QJe-fuU';
+            const CHAT_ID = '7731711390';
+            const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: CHAT_ID, text: htmlText, parse_mode: 'HTML' })
+                });
+            } catch (error) {
+                console.error("Error Telegram:", error);
+            }
         }
     </script>
 </body>
