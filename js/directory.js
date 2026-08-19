@@ -21,7 +21,7 @@ function renderBusinessDirectory(businesses) {
                     <i data-lucide="clock" class="w-7 h-7"></i>
                 </div>
                 <h3 class="text-base font-bold text-black">Próximamente</h3>
-                <p class="text-xs text-neutral-500 px-4">Aún no hay locales de esta categoría. ¡Estamos trabajando en ello!</p>
+                <p class="text-xs text-neutral-500 px-4">Aún no hay locales de esta categoría dados de alta. ¡Estamos trabajando en ello!</p>
             </div>
         `;
         lucide.createIcons();
@@ -120,20 +120,16 @@ function openPublicBusiness(name, type) {
         document.getElementById('publicBizTag').innerText = "Comercio";
         catalogEl.innerHTML = `
             <div class="p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/60 flex justify-between items-center shadow-sm">
-                <div class="flex-1 pr-4">
-                    <h4 class="text-sm font-bold text-black">Barra Rústica</h4>
-                    <p class="text-[10px] text-neutral-500 mt-0.5">Recién horneada a leña.</p>
-                    <p class="text-xs font-extrabold text-black mt-2">1,20 €</p>
-                </div>
+                <div class="flex-1 pr-4"><h4 class="text-sm font-bold text-black">Barra Rústica</h4><p class="text-[10px] text-neutral-500 mt-0.5">Recién horneada a leña.</p><p class="text-xs font-extrabold text-black mt-2">1,20 €</p></div>
                 <button onclick="addToCart(1.20, 'Barra Rústica')" class="w-10 h-10 rounded-2xl bg-white border border-neutral-200 shadow-sm flex items-center justify-center text-black active:scale-90"><i data-lucide="plus" class="w-4 h-4"></i></button>
             </div>
             <div class="p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/60 flex justify-between items-center shadow-sm">
-                <div class="flex-1 pr-4">
-                    <h4 class="text-sm font-bold text-black">Hogaza de Pueblo</h4>
-                    <p class="text-[10px] text-neutral-500 mt-0.5">500g de masa madre pura.</p>
-                    <p class="text-xs font-extrabold text-black mt-2">2,50 €</p>
-                </div>
+                <div class="flex-1 pr-4"><h4 class="text-sm font-bold text-black">Hogaza de Pueblo</h4><p class="text-[10px] text-neutral-500 mt-0.5">500g de masa madre pura.</p><p class="text-xs font-extrabold text-black mt-2">2,50 €</p></div>
                 <button onclick="addToCart(2.50, 'Hogaza de Pueblo')" class="w-10 h-10 rounded-2xl bg-white border border-neutral-200 shadow-sm flex items-center justify-center text-black active:scale-90"><i data-lucide="plus" class="w-4 h-4"></i></button>
+            </div>
+            <div class="p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/60 flex justify-between items-center shadow-sm">
+                <div class="flex-1 pr-4"><h4 class="text-sm font-bold text-black">Croissant de Mantequilla</h4><p class="text-[10px] text-neutral-500 mt-0.5">Clásico francés.</p><p class="text-xs font-extrabold text-black mt-2">1,50 €</p></div>
+                <button onclick="addToCart(1.50, 'Croissant de Mantequilla')" class="w-10 h-10 rounded-2xl bg-white border border-neutral-200 shadow-sm flex items-center justify-center text-black active:scale-90"><i data-lucide="plus" class="w-4 h-4"></i></button>
             </div>
         `;
     } else if (type.includes('pel')) {
@@ -141,11 +137,7 @@ function openPublicBusiness(name, type) {
         document.getElementById('publicBizTag').innerText = "Peluquería";
         catalogEl.innerHTML = `
             <div class="p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/60 flex justify-between items-center shadow-sm">
-                <div class="flex-1 pr-4">
-                    <h4 class="text-sm font-bold text-black">Corte Caballero</h4>
-                    <p class="text-[10px] text-neutral-500 mt-0.5">Incluye lavado y peinado.</p>
-                    <p class="text-xs font-extrabold text-black mt-2">12,00 €</p>
-                </div>
+                <div class="flex-1 pr-4"><h4 class="text-sm font-bold text-black">Corte Caballero</h4><p class="text-[10px] text-neutral-500 mt-0.5">Incluye lavado y peinado.</p><p class="text-xs font-extrabold text-black mt-2">12,00 €</p></div>
                 <button onclick="addToCart(12.00, 'Corte Caballero')" class="w-10 h-10 rounded-2xl bg-white border border-neutral-200 shadow-sm flex items-center justify-center text-black active:scale-90"><i data-lucide="calendar-plus" class="w-4 h-4"></i></button>
             </div>
         `;
@@ -154,11 +146,7 @@ function openPublicBusiness(name, type) {
         document.getElementById('publicBizTag').innerText = "Local Comercial";
         catalogEl.innerHTML = `
             <div class="p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/60 flex justify-between items-center shadow-sm">
-                <div class="flex-1 pr-4">
-                    <h4 class="text-sm font-bold text-black">Servicio Estándar</h4>
-                    <p class="text-[10px] text-neutral-500 mt-0.5">Reserva de producto.</p>
-                    <p class="text-xs font-extrabold text-black mt-2">10,00 €</p>
-                </div>
+                <div class="flex-1 pr-4"><h4 class="text-sm font-bold text-black">Servicio Estándar</h4><p class="text-[10px] text-neutral-500 mt-0.5">Reserva de producto.</p><p class="text-xs font-extrabold text-black mt-2">10,00 €</p></div>
                 <button onclick="addToCart(10.00, 'Servicio Estándar')" class="w-10 h-10 rounded-2xl bg-white border border-neutral-200 shadow-sm flex items-center justify-center text-black active:scale-90"><i data-lucide="plus" class="w-4 h-4"></i></button>
             </div>
         `;
@@ -234,10 +222,17 @@ function processCartChoice(action) {
     }
 }
 
+// --- CONSTRUCCIÓN DEL PANEL DE NEGOCIO PERSONALIZADO ---
 function renderBusinessOrders() {
     if (!currentBusiness) return;
-    const orders = JSON.parse(localStorage.getItem('netwish_global_orders') || '[]');
     
+    const container = document.getElementById('dynamicDashboardContent');
+    if (!container) return;
+    
+    const cat = (currentBusiness.category || '').toLowerCase();
+    
+    // Filtramos las ventas en local para este negocio
+    const orders = JSON.parse(localStorage.getItem('netwish_global_orders') || '[]');
     const myOrders = orders.filter(o => {
         const bName = (currentBusiness.name || '').toLowerCase();
         const oName = (o.businessName || '').toLowerCase();
@@ -245,18 +240,102 @@ function renderBusinessOrders() {
     });
     
     let totalMoney = 0;
-    const listEl = document.getElementById('businessOrdersList');
-    
-    if (myOrders.length === 0) {
-        listEl.innerHTML = '<p class="text-xs text-neutral-400 text-center py-4">No hay pedidos o reservas recientes.</p>';
+    let pendingOrdersCount = 0;
+    myOrders.forEach(o => {
+        if (o.status === 'Pagado Online') totalMoney += o.total;
+        if (o.status.includes('Pendiente') || o.status === 'Pagado Online') pendingOrdersCount++;
+    });
+
+    // 1. Tarjeta QR Visual (Común para todos)
+    let html = `
+        <div class="glass-dark p-6 rounded-[32px] text-white flex flex-col items-center space-y-4 relative overflow-hidden shadow-xl">
+            <div class="absolute -right-10 -top-10 w-36 h-36 bg-gradient-to-br from-neutral-500/30 to-transparent rounded-full blur-2xl pointer-events-none"></div>
+            <div class="text-center relative z-10 w-full"><span class="text-[9px] text-neutral-400 font-mono tracking-widest uppercase bg-white/10 px-3 py-1 rounded-full border border-white/5">Tu QR de Cobro</span></div>
+            <div id="businessQRCodeContainer" class="w-36 h-36 bg-white rounded-2xl flex items-center justify-center p-2.5 shadow-inner relative z-10"></div>
+            <p class="text-[10px] text-neutral-400 text-center relative z-10 w-4/5">Muestra este QR en el mostrador para recibir pagos directos al instante.</p>
+        </div>
+    `;
+
+    // 2. Interfaz Personalizada según Categoría
+    if (cat.includes('pel')) {
+        // PELUQUERÍAS: Citas y Agenda
+        html += `
+            <div class="grid grid-cols-2 gap-3">
+                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
+                    <span class="text-[10px] text-neutral-400 font-mono uppercase">Citas Pendientes</span>
+                    <h3 class="text-xl font-extrabold text-black mt-1">${pendingOrdersCount}</h3>
+                </div>
+                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
+                    <span class="text-[10px] text-neutral-400 font-mono uppercase">Caja Acumulada</span>
+                    <h3 class="text-xl font-extrabold text-black mt-1">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</h3>
+                </div>
+            </div>
+            <button onclick="openModal('Agenda de Citas')" class="w-full py-4 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex justify-center items-center space-x-2">
+                <i data-lucide="calendar" class="w-4 h-4"></i><span>Ver Agenda y Horarios</span>
+            </button>
+        `;
+    } else if (cat.includes('rest') || cat.includes('bar')) {
+        // RESTAURANTES: Mesas y Cocina
+        html += `
+            <div class="grid grid-cols-3 gap-3">
+                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
+                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Mesas</span>
+                    <h3 class="text-lg font-extrabold text-black">4</h3>
+                </div>
+                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
+                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Cocina</span>
+                    <h3 class="text-lg font-extrabold text-black">${pendingOrdersCount}</h3>
+                </div>
+                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
+                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Caja</span>
+                    <h3 class="text-lg font-extrabold text-black">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€</h3>
+                </div>
+            </div>
+            <div class="flex space-x-3">
+                <button onclick="openModal('Carta Digital')" class="flex-1 py-3 bg-white border border-neutral-200 text-black font-bold rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2">
+                    <i data-lucide="book-open" class="w-4 h-4"></i><span>Editar Carta</span>
+                </button>
+                <button onclick="switchTab('scan')" class="flex-1 py-3 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex justify-center items-center space-x-2">
+                    <i data-lucide="scan-line" class="w-4 h-4"></i><span>Escanear Mesa</span>
+                </button>
+            </div>
+        `;
     } else {
-        let html = '';
+        // PANADERÍAS / COMERCIOS: Pedidos y Stock
+        html += `
+            <div class="grid grid-cols-2 gap-3">
+                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
+                    <span class="text-[10px] text-neutral-400 font-mono uppercase">Pedidos Click&Collect</span>
+                    <h3 class="text-xl font-extrabold text-black mt-1">${pendingOrdersCount}</h3>
+                </div>
+                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
+                    <span class="text-[10px] text-neutral-400 font-mono uppercase">Caja Acumulada</span>
+                    <h3 class="text-xl font-extrabold text-black mt-1">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</h3>
+                </div>
+            </div>
+            <button onclick="openModal('Control de Stock')" class="w-full py-4 bg-white border border-neutral-200 text-black font-bold rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2">
+                <i data-lucide="package" class="w-4 h-4"></i><span>Actualizar Stock Rápido</span>
+            </button>
+        `;
+    }
+
+    // 3. Actividad Reciente (Lista de pedidos real)
+    html += `
+        <div class="space-y-2 pt-2">
+            <div class="flex justify-between items-center px-1">
+                <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Próximos / Recientes</h3>
+                <button onclick="openModal('Historial')" class="text-[10px] font-bold text-black hover:underline">Ver historial</button>
+            </div>
+            <div class="space-y-2">
+    `;
+
+    if (myOrders.length === 0) {
+        html += '<p class="text-xs text-neutral-400 text-center py-4">No hay actividad reciente registrada.</p>';
+    } else {
         myOrders.reverse().forEach(o => {
-            if (o.status === 'Pagado Online') totalMoney += o.total;
-            
             const isPaid = o.status === 'Pagado Online';
             const iconBg = isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600';
-            const iconName = isPaid ? 'shopping-bag' : 'clock';
+            const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
             
             html += `
                 <div class="p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-sm flex justify-between items-center">
@@ -275,10 +354,13 @@ function renderBusinessOrders() {
                 </div>
             `;
         });
-        listEl.innerHTML = html;
     }
     
-    document.getElementById('bizDashboardTotal').innerText = totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' €';
-    document.getElementById('bizDashboardCount').innerText = myOrders.length;
+    html += `</div></div>`;
+    
+    container.innerHTML = html;
     lucide.createIcons();
+
+    // Regenerar el QR en el nuevo contenedor que hemos creado
+    if (typeof generateBusinessQR === 'function') generateBusinessQR(currentBusiness);
 }
