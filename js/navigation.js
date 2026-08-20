@@ -115,16 +115,28 @@ function goBackFromBusiness() {
 
 function updateHeaderAvatar() {
     const avatarBtn = document.getElementById('headerAvatar');
+    
     if (currentBusiness) {
-        avatarBtn.innerText = "BIZ";
-        avatarBtn.className = "w-9 h-9 rounded-2xl bg-amber-500 text-white border border-amber-600 flex items-center justify-center text-[10px] font-bold shadow-md transition hover:scale-105 active:scale-95";
+        avatarBtn.innerHTML = "BIZ";
+        // Añadimos overflow-hidden y p-0 para evitar desbordes
+        avatarBtn.className = "w-9 h-9 rounded-2xl bg-amber-500 text-white border border-amber-600 flex items-center justify-center text-[10px] font-bold shadow-md transition hover:scale-105 active:scale-95 overflow-hidden p-0";
     } else if (currentUser) {
         const meta = currentUser.user_metadata || {};
-        avatarBtn.innerText = meta.initials || "NW";
-        avatarBtn.className = "w-9 h-9 rounded-2xl bg-black text-white border border-neutral-800 flex items-center justify-center text-xs font-bold shadow-md transition hover:scale-105 active:scale-95";
+        // Detectamos si Google nos ha pasado una foto de perfil
+        const avatarUrl = meta.avatar_url || meta.picture;
+        
+        avatarBtn.className = "w-9 h-9 rounded-2xl bg-black text-white border border-neutral-800 flex items-center justify-center text-xs font-bold shadow-md transition hover:scale-105 active:scale-95 overflow-hidden p-0";
+        
+        if (avatarUrl) {
+            // Si hay URL, inyectamos la imagen directamente
+            avatarBtn.innerHTML = `<img src="${avatarUrl}" class="w-full h-full object-cover" alt="Perfil">`;
+        } else {
+            // Si no hay foto, mantenemos tu lógica original con las iniciales
+            avatarBtn.innerHTML = meta.initials || "NW";
+        }
     } else {
-        avatarBtn.innerText = "IN";
-        avatarBtn.className = "w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner transition hover:scale-105 active:scale-95";
+        avatarBtn.innerHTML = "IN";
+        avatarBtn.className = "w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner transition hover:scale-105 active:scale-95 overflow-hidden p-0";
     }
 }
 
