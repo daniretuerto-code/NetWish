@@ -26,7 +26,8 @@
     <div class="w-full h-[100dvh] sm:h-[844px] sm:max-w-[390px] sm:rounded-[48px] bg-white flex flex-col relative shadow-[0_30px_90px_rgba(0,0,0,0.12)] overflow-hidden sm:border-[8px] sm:border-neutral-900 mx-auto my-auto">
         
         <header id="mainAppHeader" class="absolute top-0 left-0 right-0 px-6 pt-8 pb-3 border-b border-neutral-100/80 flex justify-between items-center glass-panel z-30 transition-opacity">
-            <h1 class="text-2xl font-bold tracking-tight text-black font-serif italic">NetWish</h1>
+            <!-- AÑADIDO: onclick="switchTab('home')" y estilos para que sea clickable -->
+            <h1 onclick="switchTab('home')" class="text-2xl font-bold tracking-tight text-black font-serif italic cursor-pointer active:scale-95 transition-transform">NetWish</h1>
             <button onclick="handleHeaderProfileClick()" id="headerAvatar" class="w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner transition hover:scale-105 active:scale-95">
                 IN
             </button>
@@ -35,7 +36,6 @@
         <main id="mainContentArea" class="flex-1 allow-scroll px-6 pt-20 pb-28 flex flex-col">
             
             <div id="view-home" class="space-y-5 w-full pt-2">
-                <!-- SECCIÓN DEL QR CON LA ESQUINA GRIS ARREGLADA (transform-gpu y webkit-mask-image) -->
                 <section class="glass-dark p-6 rounded-[32px] text-white flex flex-col justify-between space-y-5 relative overflow-hidden shadow-xl transform-gpu" style="-webkit-mask-image: -webkit-radial-gradient(white, black);">
                     <div class="absolute -right-10 -top-10 w-36 h-36 bg-gradient-to-br from-neutral-700/30 to-transparent rounded-full blur-2xl pointer-events-none"></div>
                     <div class="flex justify-between items-start relative z-10">
