@@ -57,7 +57,7 @@ function switchTab(tabId) {
         });
     }
 
-    // Gestionamos la visibilidad de vistas secundarias / modales por capas (incluyendo 'category')
+    // Gestionamos la visibilidad de vistas secundarias / modales por capas
     const secondaryViews = ['payment', 'business-dashboard', 'public-business', 'cart', 'category'];
     secondaryViews.forEach(v => {
         const el = document.getElementById('view-' + v);
@@ -123,6 +123,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }, { passive: true });
     }
 });
+
+// --- GESTIÓN DE GESTOS TÁCTILES Y SWIPE-TO-GO-BACK ---
+let touchstartX = 0;
+let touchendX = 0;
+let touchstartY = 0;
+let touchendY = 0;
+
+document.addEventListener('touchstart', e => {
+    touchstartX = e.changedTouches[0].screenX;
+    touchstartY = e.changedTouches[0].screenY;
+}, { passive: true });
+
+document.addEventListener('touchend', e => {
+    touchendX = e.changedTouches[0].screenX;
+    touchendY = e.changedTouches[0].screenY;
+    handleSwipeGesture();
+}, { passive: true });
+
+function handleSwipeGesture() {
+    const xDiff = touchstartX - touchendX;
+    const yDiff = touchstartY - touchendY;
+    
+    if (Math.abs(yDiff) > Math.abs(xDiff)) return;
+    if (Math.abs(xDiff) < 50) return;
+
+    const isCategory = !document.getElementById('view-category').classList.contains('hidden');
+    const isPublicBusiness = !document.getElementById('view-public-business').classList.contains('hidden');
+    const isCart = !document.getElementById('view-cart').classList.contains('hidden');
+    const isPayment = !document.getElementById('view-payment').classList.contains('hidden');
+
+    // Deslizar hacia la derecha para volver atrás desde pantallas secundarias
+    if (xDiff < -50) {
+        if (isCategory) {
+            switchTab('home');
+            return;
+        } else if (isCart) {
+            switchTab('public-business');
+            return;
+        } else if (isPublicBusiness || isPayment) {
+            goBackFromBusiness();
+            return;
+        }
+    }
+}
 
 function updateNavHighlight(activeTabId) {
     const tabs = ['home', 'explore', 'scan', 'profile'];
