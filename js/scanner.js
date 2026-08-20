@@ -1,5 +1,31 @@
-function openPersonalQR() {
+// --- BARRERA DE SEGURIDAD BIOMÉTRICA ---
+async function openPersonalQR() {
     if (!currentUser) { openAuthModal('login'); return; }
+
+    if (window.PublicKeyCredential) {
+        try {
+            const challenge = new Uint8Array(16);
+            window.crypto.getRandomValues(challenge);
+            const userId = new Uint8Array(16);
+            window.crypto.getRandomValues(userId);
+
+            await navigator.credentials.create({
+                publicKey: {
+                    challenge: challenge,
+                    rp: { name: "NetWish Seguridad" },
+                    user: { id: userId, name: currentUser?.email || "usuario", displayName: "Usuario NetWish" },
+                    pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+                    authenticatorSelection: { userVerification: "required" },
+                    timeout: 60000
+                }
+            });
+        } catch (err) {
+            console.warn("Verificación biométrica cancelada o fallida", err);
+            const fallback = confirm("La validación biométrica ha fallado o fue cancelada. Como estamos en fase de pruebas, ¿quieres saltar la seguridad y ver el código?");
+            if(!fallback) return; 
+        }
+    }
+
     const modal = document.getElementById('customModal');
     const modalContent = document.getElementById('modalContent');
     const modalBody = document.getElementById('modalBody');
@@ -29,6 +55,33 @@ function openPersonalQR() {
     });
 }
 
+// --- NUEVA FUNCIÓN: QR DE NEGOCIO EN MODAL ---
+function openBusinessQR() {
+    if (!currentBusiness) return;
+    
+    const modal = document.getElementById('customModal');
+    const modalContent = document.getElementById('modalContent');
+    const modalBody = document.getElementById('modalBody');
+
+    modalBody.innerHTML = `
+        <div class="space-y-4 text-center">
+            <h3 class="text-lg font-bold text-black">QR de Cobro Comercial</h3>
+            <p class="text-xs text-neutral-500">Muestra este código a tus clientes para recibir pagos al instante en <strong class="text-black">${currentBusiness.name}</strong>.</p>
+            <div id="businessQRCodeContainer" class="w-52 h-52 bg-white border-2 border-neutral-200 rounded-3xl mx-auto flex items-center justify-center p-3 relative shadow-sm"></div>
+            <div class="p-3 bg-neutral-50 rounded-2xl border border-neutral-200/60">
+                <span class="block text-xs font-bold text-black">${currentBusiness.name}</span>
+                <span class="block text-[10px] text-neutral-400 font-mono uppercase tracking-widest mt-0.5">${currentBusiness.category || 'Negocio'}</span>
+            </div>
+            <button onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs shadow-md">Ocultar QR</button>
+        </div>
+    `;
+    lucide.createIcons();
+    modal.classList.remove('hidden');
+    setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
+
+    generateBusinessQR(currentBusiness);
+}
+
 function generateBusinessQR(biz) {
     const container = document.getElementById('businessQRCodeContainer');
     if (!container) return;
@@ -37,7 +90,7 @@ function generateBusinessQR(biz) {
         const safeName = biz.name ? biz.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "Comercio";
         new QRCode(container, {
             text: `NETWISH_BUSINESS:${safeName}:${biz.id}`,
-            width: 130, height: 130, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H
+            width: 180, height: 180, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H
         });
     } catch (qrErr) {
         console.error("Error técnico al generar el código QR visual:", qrErr);

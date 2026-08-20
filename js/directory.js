@@ -1,3 +1,8 @@
+let activeBusinessCategory = "";
+let activeBusinessName = "";
+let currentCategoryFilter = '';
+let currentCategoryBusinesses = [];
+
 async function loadPublicBusinesses() {
     const listContainer = document.getElementById('dynamicBusinessList');
     if (!listContainer) return;
@@ -60,6 +65,8 @@ function renderBusinessDirectory(businesses) {
             icon = 'car'; colorClass = 'text-emerald-600'; bgClass = 'bg-emerald-500/10 border-emerald-500/20';
         } else if (cat.includes('ocio') || cat.includes('evento')) {
             icon = 'sparkles'; colorClass = 'text-purple-600'; bgClass = 'bg-purple-500/10 border-purple-500/20';
+        } else if (cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio')) {
+            icon = 'headphones'; colorClass = 'text-indigo-500'; bgClass = 'bg-indigo-500/10 border-indigo-500/20';
         }
 
         html += `
@@ -89,9 +96,6 @@ function filterDirectory() {
     renderBusinessDirectory(filtered);
 }
 
-let currentCategoryFilter = '';
-let currentCategoryBusinesses = [];
-
 function goToDirectory(filter) {
     const titleText = document.getElementById('categoryViewTitle');
     
@@ -101,7 +105,8 @@ function goToDirectory(filter) {
         'pel': 'Peluquerías',
         'movil': 'Movilidad Urbana',
         'ocio': 'Ocio y Cultura',
-        'comercio': 'Comercios Locales'
+        'comercio': 'Comercios Locales',
+        'disco': 'Discográficas y Estudios'
     };
 
     if (titleText) titleText.innerText = titleMap[filter] || 'Categoría';
@@ -151,10 +156,8 @@ function renderCategoryDirectory(businesses) {
             icon = 'scissors'; colorClass = 'text-blue-600'; bgClass = 'bg-blue-500/10 border-blue-500/20'; 
         } else if (cat.includes('rest') || cat.includes('bar')) { 
             icon = 'utensils'; colorClass = 'text-rose-600'; bgClass = 'bg-rose-500/10 border-rose-500/20'; 
-        } else if (cat.includes('movil') || cat.includes('taxi')) {
-            icon = 'car'; colorClass = 'text-emerald-600'; bgClass = 'bg-emerald-500/10 border-emerald-500/20';
-        } else if (cat.includes('ocio') || cat.includes('evento')) {
-            icon = 'sparkles'; colorClass = 'text-purple-600'; bgClass = 'bg-purple-500/10 border-purple-500/20';
+        } else if (cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio')) {
+            icon = 'headphones'; colorClass = 'text-indigo-500'; bgClass = 'bg-indigo-500/10 border-indigo-500/20';
         }
 
         html += `
@@ -184,27 +187,29 @@ function filterCategoryView() {
     renderCategoryDirectory(filtered);
 }
 
-let activeBusinessName = "";
-
 function openPublicBusiness(name, type) {
     activeBusinessName = name;
+    activeBusinessCategory = type || '';
     activePayee = name; 
     document.getElementById('publicBizName').innerText = name;
     
     const imgEl = document.getElementById('publicBizImage');
-    type = type || '';
 
-    if (type.includes('pan') || type.includes('comercio')) {
+    if (activeBusinessCategory.includes('pan') || activeBusinessCategory.includes('comercio')) {
         imgEl.src = "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80";
-        document.getElementById('publicBizTag').innerText = "Panadería / Comercio";
-    } else if (type.includes('pel')) {
+        document.getElementById('publicBizTag').innerText = "Comercio Local";
+    } else if (activeBusinessCategory.includes('pel')) {
         imgEl.src = "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=800&q=80";
         document.getElementById('publicBizTag').innerText = "Peluquería";
+    } else if (activeBusinessCategory.includes('disco') || activeBusinessCategory.includes('music') || activeBusinessCategory.includes('estudio')) {
+        imgEl.src = "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=800&q=80";
+        document.getElementById('publicBizTag').innerText = "Record Label";
     } else {
         imgEl.src = "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&w=800&q=80";
-        document.getElementById('publicBizTag').innerText = "Local Comercial";
+        document.getElementById('publicBizTag').innerText = "Establecimiento";
     }
 
+    cartTotalValue = 0; cartItemCount = 0; cartItemsList = []; isCartCheckout = false;
     renderPublicCatalogItems();
     updateCartDisplay();
     
@@ -218,6 +223,23 @@ function getBusinessCatalog(bizName) {
     if (saved) {
         try { return JSON.parse(saved); } catch(e) {}
     }
+    
+    // Plantillas predeterminadas según categoría si está vacío
+    const cat = activeBusinessCategory || (currentBusiness ? currentBusiness.category.toLowerCase() : '');
+    
+    if (cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio')) {
+        return [
+            { name: "Licencia Exclusiva (.WAV + Stems)", desc: "Derechos completos. Pista sin tags.", price: 150.00 },
+            { name: "Licencia Estándar (.MP3)", desc: "Uso comercial limitado en plataformas.", price: 29.99 },
+            { name: "Reserva de Estudio (1 Hora)", desc: "Grabación vocal y asistencia de mezcla.", price: 40.00 }
+        ];
+    } else if (cat.includes('pel')) {
+        return [
+             { name: "Corte de Pelo Estándar", desc: "Lavado, corte y peinado.", price: 12.00 },
+             { name: "Arreglo de Barba", desc: "Perfilado y tratamiento.", price: 8.00 }
+         ]
+    }
+    
     return [
         { name: "Barra Rústica", desc: "Recién horneada a leña.", price: 1.20 },
         { name: "Hogaza de Pueblo", desc: "500g de masa madre pura.", price: 2.50 }
@@ -357,6 +379,16 @@ function openStockControlModal() {
     const modalBody = document.getElementById('modalBody');
 
     const catalog = getBusinessCatalog(currentBusiness.name);
+    
+    // Adaptación de textos para Discográfica / Estudio vs Normal
+    const cat = currentBusiness.category.toLowerCase();
+    const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
+
+    const title = isMusic ? "Catálogo de Beats y Sesiones" : "Control de Stock y Catálogo";
+    const subtitle = isMusic ? "Sube tus licencias y servicios de estudio a la app." : "Añade o elimina productos de tu escaparate digital.";
+    const phName = isMusic ? "Nombre (ej. Beat Trap Exclusivo)" : "Nombre (ej. Croissant de Mantequilla)";
+    const phDesc = isMusic ? "Descripción (ej. WAV + Stems, Sin tags)" : "Descripción corta (ej. Elaborado cada mañana)";
+    const btnText = isMusic ? "Subir y Publicar Track" : "Guardar y Publicar Artículo";
 
     let productsHtml = '';
     catalog.forEach((p, idx) => {
@@ -376,24 +408,24 @@ function openStockControlModal() {
     modalBody.innerHTML = `
         <div class="space-y-4 text-left">
             <div class="text-center space-y-1">
-                <h3 class="text-base font-bold text-black">Control de Stock y Catálogo</h3>
-                <p class="text-[11px] text-neutral-500">Añade o elimina productos de tu escaparate digital en NetWish.</p>
+                <h3 class="text-base font-bold text-black">${title}</h3>
+                <p class="text-[11px] text-neutral-500">${subtitle}</p>
             </div>
 
             <div class="space-y-2.5 pt-1 border-t border-neutral-100">
-                <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">Añadir Nuevo Artículo</span>
-                <input type="text" id="newProdName" placeholder="Nombre (ej. Croissant de Mantequilla)" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
-                <input type="text" id="newProdDesc" placeholder="Descripción corta (ej. Elaborado cada mañana)" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
-                <input type="number" step="0.01" id="newProdPrice" placeholder="Precio en € (ej. 1.50)" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">Añadir Nuevo</span>
+                <input type="text" id="newProdName" placeholder="${phName}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                <input type="text" id="newProdDesc" placeholder="${phDesc}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                <input type="number" step="0.01" id="newProdPrice" placeholder="Precio en € (ej. 15.00)" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
                 <button onclick="saveNewStockProduct()" class="w-full py-3 bg-black text-white font-semibold rounded-xl text-xs shadow-md mt-1">
-                    Guardar y Publicar Artículo
+                    ${btnText}
                 </button>
             </div>
 
             <div class="space-y-2 pt-2 border-t border-neutral-100">
-                <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">Artículos en Stock (${catalog.length})</span>
+                <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">Publicados (${catalog.length})</span>
                 <div class="max-h-40 overflow-y-auto space-y-2 pr-1">
-                    ${catalog.length > 0 ? productsHtml : '<p class="text-xs text-neutral-400 text-center py-3">No hay artículos dados de alta.</p>'}
+                    ${catalog.length > 0 ? productsHtml : '<p class="text-xs text-neutral-400 text-center py-3">No hay nada publicado.</p>'}
                 </div>
             </div>
 
@@ -439,6 +471,7 @@ function renderBusinessOrders() {
     if (!container) return;
     
     const cat = (currentBusiness.category || '').toLowerCase();
+    const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
     
     const orders = JSON.parse(localStorage.getItem('netwish_global_orders') || '[]');
     const myOrders = orders.filter(o => {
@@ -454,16 +487,49 @@ function renderBusinessOrders() {
         if (o.status.includes('Pendiente') || o.status === 'Pagado Online') pendingOrdersCount++;
     });
 
+    // 1. EL BOTÓN DEL QR DE NEGOCIO (Sustituye al QR al aire)
     let html = `
-        <div class="glass-dark p-6 rounded-[32px] text-white flex flex-col items-center space-y-4 relative overflow-hidden shadow-xl">
+        <section class="glass-dark p-6 rounded-[32px] text-white flex flex-col justify-between space-y-5 relative overflow-hidden shadow-xl transform-gpu" style="-webkit-mask-image: radial-gradient(white, black); mask-image: radial-gradient(white, black);">
             <div class="absolute -right-10 -top-10 w-36 h-36 bg-gradient-to-br from-neutral-500/30 to-transparent rounded-full blur-2xl pointer-events-none"></div>
-            <div class="text-center relative z-10 w-full"><span class="text-[9px] text-neutral-400 font-mono tracking-widest uppercase bg-white/10 px-3 py-1 rounded-full border border-white/5">Tu QR de Cobro</span></div>
-            <div id="businessQRCodeContainer" class="w-36 h-36 bg-white rounded-2xl flex items-center justify-center p-2.5 shadow-inner relative z-10"></div>
-            <p class="text-[10px] text-neutral-400 text-center relative z-10 w-4/5">Muestra este QR en el mostrador para recibir pagos directos al instante.</p>
-        </div>
+            <div class="flex justify-between items-start relative z-10">
+                <div>
+                    <span class="text-[9px] text-neutral-400 font-mono tracking-widest uppercase bg-white/10 px-2.5 py-1 rounded-full border border-white/5">TERMINAL VIRTUAL</span>
+                    <h2 class="text-lg font-medium tracking-tight mt-2 text-white">Cobro Rápido</h2>
+                </div>
+                <div class="w-10 h-10 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center backdrop-blur-md">
+                    <i data-lucide="qr-code" class="w-5 h-5 text-white"></i>
+                </div>
+            </div>
+            <button onclick="openBusinessQR()" class="w-full py-3.5 bg-white text-black font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-100 active:scale-[0.98] relative z-10 shadow-lg flex items-center justify-center space-x-2">
+                <i data-lucide="qr-code" class="w-4 h-4"></i>
+                <span>Mostrar QR de Negocio</span>
+            </button>
+        </section>
     `;
 
-    if (cat.includes('pel')) {
+    // 2. LA INTERFAZ PREMIUM SEGÚN CATEGORÍA (Discográfica vs Resto)
+    if (isMusic) {
+        html += `
+            <div class="grid grid-cols-2 gap-3">
+                <div class="p-4 rounded-3xl bg-neutral-900 border border-neutral-800 text-left shadow-lg">
+                    <span class="text-[10px] text-neutral-400 font-mono uppercase tracking-widest">Licencias / Beats</span>
+                    <h3 class="text-2xl font-black text-white mt-1">${pendingOrdersCount}</h3>
+                </div>
+                <div class="p-4 rounded-3xl bg-neutral-900 border border-neutral-800 text-left shadow-lg">
+                    <span class="text-[10px] text-neutral-400 font-mono uppercase tracking-widest">Royalties (Caja)</span>
+                    <h3 class="text-2xl font-black text-emerald-400 mt-1">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</h3>
+                </div>
+            </div>
+            <div class="flex space-x-3">
+                <button onclick="openStockControlModal()" class="flex-1 py-4 bg-black text-white border border-neutral-800 font-bold rounded-2xl shadow-xl active:scale-95 transition flex justify-center items-center space-x-2">
+                    <i data-lucide="music" class="w-4 h-4"></i><span>Subir Beats</span>
+                </button>
+                <button onclick="openModal('Agenda de Sesiones')" class="flex-1 py-4 bg-white text-black font-bold border border-neutral-200 rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2">
+                    <i data-lucide="mic" class="w-4 h-4"></i><span>Sesiones</span>
+                </button>
+            </div>
+        `;
+    } else if (cat.includes('pel')) {
         html += `
             <div class="grid grid-cols-2 gap-3">
                 <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
@@ -475,9 +541,14 @@ function renderBusinessOrders() {
                     <h3 class="text-xl font-extrabold text-black mt-1">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</h3>
                 </div>
             </div>
-            <button onclick="openModal('Agenda de Citas')" class="w-full py-4 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex justify-center items-center space-x-2">
-                <i data-lucide="calendar" class="w-4 h-4"></i><span>Ver Agenda y Horarios</span>
-            </button>
+            <div class="flex space-x-3">
+                <button onclick="openStockControlModal()" class="flex-1 py-4 bg-white border border-neutral-200 text-black font-bold rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2">
+                    <i data-lucide="scissors" class="w-4 h-4"></i><span>Servicios</span>
+                </button>
+                <button onclick="openModal('Agenda de Citas')" class="flex-1 py-4 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex justify-center items-center space-x-2">
+                    <i data-lucide="calendar" class="w-4 h-4"></i><span>Agenda</span>
+                </button>
+            </div>
         `;
     } else if (cat.includes('rest') || cat.includes('bar')) {
         html += `
@@ -496,10 +567,10 @@ function renderBusinessOrders() {
                 </div>
             </div>
             <div class="flex space-x-3">
-                <button onclick="openModal('Carta Digital')" class="flex-1 py-3 bg-white border border-neutral-200 text-black font-bold rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2">
-                    <i data-lucide="book-open" class="w-4 h-4"></i><span>Editar Carta</span>
+                <button onclick="openStockControlModal()" class="flex-1 py-3 bg-white border border-neutral-200 text-black font-bold rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2">
+                    <i data-lucide="book-open" class="w-4 h-4"></i><span>Carta</span>
                 </button>
-                <button onclick="switchTab('scan')" class="flex-1 py-3 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex justify-center items-center space-x-2">
+                <button onclick="switchTab('business-scan')" class="flex-1 py-3 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex justify-center items-center space-x-2">
                     <i data-lucide="scan-line" class="w-4 h-4"></i><span>Escanear Mesa</span>
                 </button>
             </div>
@@ -522,6 +593,7 @@ function renderBusinessOrders() {
         `;
     }
 
+    // 3. EL HISTORIAL COMÚN
     html += `
         <div class="space-y-2 pt-2">
             <div class="flex justify-between items-center px-1">
@@ -562,6 +634,4 @@ function renderBusinessOrders() {
     
     container.innerHTML = html;
     lucide.createIcons();
-
-    if (typeof generateBusinessQR === 'function') generateBusinessQR(currentBusiness);
 }
