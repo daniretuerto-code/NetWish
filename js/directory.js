@@ -184,9 +184,6 @@ function filterCategoryView() {
     renderCategoryDirectory(filtered);
 }
 
-// ==========================================
-// --- CATÁLOGO DINÁMICO & SELECTOR +/- ---
-// ==========================================
 let activeBusinessName = "";
 
 function openPublicBusiness(name, type) {
@@ -221,7 +218,6 @@ function getBusinessCatalog(bizName) {
     if (saved) {
         try { return JSON.parse(saved); } catch(e) {}
     }
-    // Catálogo por defecto si el comerciante no ha añadido nada todavía
     return [
         { name: "Barra Rústica", desc: "Recién horneada a leña.", price: 1.20 },
         { name: "Hogaza de Pueblo", desc: "500g de masa madre pura.", price: 2.50 }
@@ -236,7 +232,6 @@ function renderPublicCatalogItems() {
     let html = '';
 
     items.forEach(item => {
-        // Comprobamos cuántas unidades hay de este artículo en la cesta actual
         const existingInCart = cartItemsList.find(i => i.name === item.name);
         const qty = existingInCart ? existingInCart.qty : 0;
 
@@ -287,12 +282,11 @@ function changeItemQuantity(name, price, delta) {
         cartItemsList.push({ name: name, price: price, qty: 1 });
     }
 
-    // Recalcular total y contador global
     cartTotalValue = cartItemsList.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
     cartItemCount = cartItemsList.reduce((acc, curr) => acc + curr.qty, 0);
 
     updateCartDisplay();
-    renderPublicCatalogItems(); // Refresca las tarjetas para mostrar el selector numérico
+    renderPublicCatalogItems();
 }
 
 function updateCartDisplay() {
@@ -356,9 +350,6 @@ function processCartChoice(action) {
     }
 }
 
-// ==========================================
-// --- PANEL DE CONTROL DE STOCK (COMERCIOS) ---
-// ==========================================
 function openStockControlModal() {
     if (!currentBusiness) return;
     const modal = document.getElementById('customModal');
@@ -430,7 +421,7 @@ function saveNewStockProduct() {
     catalog.push({ name, desc, price });
     localStorage.setItem('netwish_catalog_' + currentBusiness.name, JSON.stringify(catalog));
 
-    openStockControlModal(); // Recarga el modal para mostrar el nuevo producto
+    openStockControlModal();
 }
 
 function deleteStockProduct(index) {
@@ -438,12 +429,9 @@ function deleteStockProduct(index) {
     catalog.splice(index, 1);
     localStorage.setItem('netwish_catalog_' + currentBusiness.name, JSON.stringify(catalog));
 
-    openStockControlModal(); // Recarga el modal
+    openStockControlModal();
 }
 
-// ==========================================
-// --- CONSTRUCCIÓN DEL PANEL DE NEGOCIO ---
-// ==========================================
 function renderBusinessOrders() {
     if (!currentBusiness) return;
     

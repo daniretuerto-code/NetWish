@@ -18,8 +18,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <!-- ARCHIVO CSS CON VERSIÓN V7 -->
-    <link rel="stylesheet" href="css/styles.css?v=7">
+    <link rel="stylesheet" href="css/styles.css?v=8">
 </head>
 <body>
 
@@ -34,7 +33,6 @@
 
         <main id="mainContentArea" class="flex-1 relative overflow-hidden flex flex-col pt-20">
             
-            <!-- CONTENEDOR DE DESLIZAMIENTO EN VIVO (ESTILO IOS) -->
             <div id="swipeScrollWrapper" class="horizontal-scroll-container">
                 
                 <!-- VISTA 1: INICIO -->
@@ -168,9 +166,7 @@
                     <input type="text" id="categorySearch" onkeyup="filterCategoryView()" placeholder="Buscar en esta categoría..." class="w-full bg-neutral-50 border border-neutral-200/80 rounded-2xl py-3.5 pl-11 pr-4 text-xs text-black placeholder-neutral-400 focus:outline-none focus:border-black transition">
                 </div>
 
-                <div id="dynamicCategoryList" class="space-y-3 pt-2 pb-6">
-                    <!-- Se rellena vía JS -->
-                </div>
+                <div id="dynamicCategoryList" class="space-y-3 pt-2 pb-6"></div>
             </div>
 
             <!-- VISTAS FLOTANTES / SECUNDARIAS -->
@@ -272,6 +268,7 @@
                 </div>
             </div>
 
+            <!-- VISTA PÚBLICA DEL COMERCIO CON ABSOLUTE PARA QUE EN PC NO SALGA DEL MARCO -->
             <div id="view-public-business" class="absolute inset-0 bg-white z-30 hidden flex-col allow-scroll pb-24">
                 <div class="relative w-full h-[240px] bg-neutral-200 shrink-0">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent z-10"></div>
@@ -301,7 +298,8 @@
                     <div class="space-y-4" id="publicBizCatalog"></div>
                 </div>
 
-                <div id="publicBusinessCartBar" class="fixed bottom-6 left-6 right-6 z-50 transition-transform translate-y-32">
+                <!-- CORREGIDO A ABSOLUTE PARA RESPETAR EL MARCO SIMULADO EN PC -->
+                <div id="publicBusinessCartBar" class="absolute bottom-6 left-6 right-6 z-50 transition-transform translate-y-32">
                     <button onclick="openCartSummary()" class="w-full bg-black text-white p-4 rounded-2xl flex justify-between items-center shadow-[0_20px_40px_rgba(0,0,0,0.3)] active:scale-95 transition-transform">
                         <div class="flex items-center space-x-3">
                             <div class="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center text-xs font-bold" id="cartCountDisplay">0</div>
@@ -335,13 +333,13 @@
 
     </div>
 
-    <!-- SCRIPTS CON VERSIÓN V7 -->
-    <script src="js/config.js?v=7"></script>
-    <script src="js/navigation.js?v=7"></script>
-    <script src="js/auth.js?v=7"></script>
-    <script src="js/directory.js?v=7"></script>
-    <script src="js/scanner.js?v=7"></script>
-    <script src="js/payment.js?v=7"></script>
+    <!-- SCRIPTS CON VERSIÓN V8 -->
+    <script src="js/config.js?v=8"></script>
+    <script src="js/navigation.js?v=8"></script>
+    <script src="js/auth.js?v=8"></script>
+    <script src="js/directory.js?v=8"></script>
+    <script src="js/scanner.js?v=8"></script>
+    <script src="js/payment.js?v=8"></script>
 
 </body>
 </html>
