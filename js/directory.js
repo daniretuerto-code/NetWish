@@ -1,7 +1,14 @@
 let activeBusinessName = "";
+let activeBusinessUsername = "";
 let activeBusinessCategory = "";
 let currentCategoryFilter = '';
 let currentCategoryBusinesses = [];
+let activePayee = "";
+let cartTotalValue = 0;
+let cartItemCount = 0;
+let cartItemsList = [];
+let isCartCheckout = false;
+let pendingOrderDetails = null;
 
 async function loadPublicBusinesses() {
     const listContainer = document.getElementById('dynamicBusinessList');
@@ -51,6 +58,7 @@ function renderBusinessDirectory(businesses) {
     let html = '';
     businesses.forEach(biz => {
         const name = biz.name || biz.Nombre || biz.username || 'Comercio';
+        const username = biz.username || '';
         const cat = (biz.category || biz.Categoria || '').toLowerCase();
         
         let icon = 'store'; 
@@ -63,23 +71,22 @@ function renderBusinessDirectory(businesses) {
             icon = 'scissors'; colorClass = 'text-blue-600'; bgClass = 'bg-blue-500/10 border-blue-500/20'; 
         } else if (cat.includes('rest') || cat.includes('bar')) { 
             icon = 'utensils'; colorClass = 'text-rose-600'; bgClass = 'bg-rose-500/10 border-rose-500/20'; 
-        } else if (cat.includes('movil') || cat.includes('taxi')) {
-            icon = 'car'; colorClass = 'text-emerald-600'; bgClass = 'bg-emerald-500/10 border-emerald-500/20';
         } else if (cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio')) {
             icon = 'disc'; colorClass = 'text-yellow-500'; bgClass = 'bg-amber-500/20 border-amber-500/40';
         }
 
         const safeName = encodeURIComponent(name);
+        const safeUser = encodeURIComponent(username);
         const safeCat = encodeURIComponent(cat);
 
         html += `
-            <button onclick="openPublicBusiness('${safeName}', '${safeCat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
+            <button onclick="openPublicBusiness('${safeName}', '${safeUser}', '${safeCat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
                 <div class="w-12 h-12 rounded-xl ${bgClass} flex items-center justify-center shrink-0">
                     <i data-lucide="${icon}" class="w-5 h-5 ${colorClass}"></i>
                 </div>
                 <div class="flex-1 overflow-hidden">
                     <h3 class="text-sm font-bold text-black truncate">${name}</h3>
-                    <p class="text-[10px] text-neutral-500 truncate mt-0.5">${biz.category || 'Comercio Local'} • NetWish</p>
+                    <p class="text-[10px] text-neutral-500 truncate mt-0.5">${biz.category || 'Comercio Local'} • Click & Collect</p>
                 </div>
                 <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-300"></i>
             </button>
@@ -148,6 +155,7 @@ function renderCategoryDirectory(businesses) {
     let html = '';
     businesses.forEach(biz => {
         const name = biz.name || biz.Nombre || biz.username || 'Comercio';
+        const username = biz.username || '';
         const cat = (biz.category || biz.Categoria || '').toLowerCase();
         
         let icon = 'store'; 
@@ -165,10 +173,11 @@ function renderCategoryDirectory(businesses) {
         }
 
         const safeName = encodeURIComponent(name);
+        const safeUser = encodeURIComponent(username);
         const safeCat = encodeURIComponent(cat);
 
         html += `
-            <button onclick="openPublicBusiness('${safeName}', '${safeCat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
+            <button onclick="openPublicBusiness('${safeName}', '${safeUser}', '${safeCat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
                 <div class="w-12 h-12 rounded-xl ${bgClass} flex items-center justify-center shrink-0">
                     <i data-lucide="${icon}" class="w-5 h-5 ${colorClass}"></i>
                 </div>
@@ -194,8 +203,9 @@ function filterCategoryView() {
     renderCategoryDirectory(filtered);
 }
 
-function openPublicBusiness(safeName, safeType) {
+function openPublicBusiness(safeName, safeUser, safeType) {
     activeBusinessName = decodeURIComponent(safeName || '');
+    activeBusinessUsername = decodeURIComponent(safeUser || '');
     activeBusinessCategory = decodeURIComponent(safeType || '').toLowerCase();
     activePayee = activeBusinessName;
     
@@ -242,10 +252,16 @@ async function renderPublicCatalogItems() {
 
     let items = [];
     try {
+        const identifierFilters = [
+            activeBusinessUsername ? `business_id.eq.${activeBusinessUsername}` : null,
+            activeBusinessName ? `business_id.eq.${activeBusinessName}` : null,
+            `business_id.eq.biz_db`
+        ].filter(Boolean).join(',');
+
         const { data, error } = await supabaseClient
             .from('products')
             .select('*')
-            .or(`business_id.eq.${activeBusinessName},business_id.ilike.%${activeBusinessName.split(' ')[0]}%,business_id.eq.biz_db`);
+            .or(identifierFilters);
             
         if (error) throw error;
         items = data || [];
@@ -374,33 +390,44 @@ function openCartSummary() {
 }
 
 function processCartChoice(action) {
-    const date = document.getElementById('orderDate').value;
-    const time = document.getElementById('orderTime').value;
-    if (!date || !time) { 
-        alert("Por favor, elige un día y hora de recogida/cita."); 
+    const dateInput = document.getElementById('orderDate');
+    const timeInput = document.getElementById('orderTime');
+
+    if (!dateInput || !timeInput || !dateInput.value || !timeInput.value) { 
+        alert("Por favor, selecciona un día y hora para tu recogida."); 
         return; 
     }
 
-    pendingOrderDetails = { date, time, action };
+    pendingOrderDetails = { date: dateInput.value, time: timeInput.value, action: action };
     isCartCheckout = true;
     
     if (action === 'pay') {
-        rawAmountString = Math.round(cartTotalValue * 100).toString(); 
-        updateAmountDisplay();
-        document.getElementById('payeeNameDisplay').innerText = activePayee;
-        document.getElementById('payeeInitialsBubble').innerText = activePayee.substring(0, 2).toUpperCase();
+        if (typeof rawAmountString !== 'undefined') {
+            rawAmountString = Math.round(cartTotalValue * 100).toString(); 
+            if (typeof updateAmountDisplay === 'function') updateAmountDisplay();
+        }
+        
+        const payeeNameDisplay = document.getElementById('payeeNameDisplay');
+        if (payeeNameDisplay) payeeNameDisplay.innerText = activePayee;
+        
+        const payeeInitials = document.getElementById('payeeInitialsBubble');
+        if (payeeInitials) payeeInitials.innerText = activePayee.substring(0, 2).toUpperCase();
         
         if (typeof swipeAnim !== 'undefined') swipeAnim = 'slide-in-right';
         switchTab('payment');
     } else {
-        if (typeof executeFullPayment === 'function') executeFullPayment(true);
+        if (typeof executeFullPayment === 'function') {
+            executeFullPayment(true);
+        } else {
+            console.error("No se ha definido la función executeFullPayment.");
+        }
     }
 }
 
 async function openStockControlModal() {
     if (!currentBusiness) return;
     const modal = document.getElementById('customModal');
-    const modalContent = document.getElementById('modalContent');
+    const modalContent = document.getElementById('customModalContent') || document.getElementById('modalContent');
     const modalBody = document.getElementById('modalBody');
 
     const cat = (currentBusiness.category || '').toLowerCase();
@@ -420,14 +447,19 @@ async function openStockControlModal() {
     `;
     if (typeof lucide !== 'undefined') lucide.createIcons();
     modal.classList.remove('hidden');
-    setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
+    setTimeout(() => { modal.classList.remove('opacity-0'); if(modalContent) modalContent.classList.remove('scale-95'); }, 10);
 
     let catalog = [];
     try {
+        const identifierFilters = [
+            currentBusiness.username ? `business_id.eq.${currentBusiness.username}` : null,
+            currentBusiness.name ? `business_id.eq.${currentBusiness.name}` : null
+        ].filter(Boolean).join(',');
+
         const { data, error } = await supabaseClient
             .from('products')
             .select('*')
-            .or(`business_id.eq.${currentBusiness.name},business_id.ilike.%${currentBusiness.name.split(' ')[0]}%,business_id.eq.biz_db`);
+            .or(identifierFilters);
         if (error) throw error;
         catalog = data || [];
     } catch (err) {
@@ -495,11 +527,13 @@ async function saveNewStockProduct() {
         return;
     }
 
+    const targetBizId = currentBusiness.username || currentBusiness.name;
+
     try {
         const { error } = await supabaseClient
             .from('products')
             .insert([{ 
-                business_id: currentBusiness.name, 
+                business_id: targetBizId, 
                 name: name, 
                 description: desc, 
                 price: price 
@@ -534,14 +568,20 @@ async function renderBusinessOrders() {
     
     const cat = (currentBusiness.category || '').toLowerCase();
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
-    const bName = currentBusiness.name || '';
 
     let myOrders = [];
     try {
+        const targetBizUser = currentBusiness.username || '';
+        const targetBizName = currentBusiness.name || '';
+        const identifierFilters = [
+            targetBizUser ? `business_name.eq.${targetBizUser}` : null,
+            targetBizName ? `business_name.eq.${targetBizName}` : null
+        ].filter(Boolean).join(',');
+
         const { data, error } = await supabaseClient
             .from('orders')
             .select('*')
-            .or(`business_name.eq.${bName},business_name.ilike.%${bName.split(' ')[0]}%`)
+            .or(identifierFilters)
             .order('created_at', { ascending: false });
         if (error) throw error;
         myOrders = data || [];

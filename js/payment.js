@@ -1,12 +1,6 @@
 let rawAmountString = "000";
-let activePayee = "";
 let holdProgress = 0;
 let holdInterval = null;
-let isCartCheckout = false;
-let pendingOrderDetails = null;
-let cartTotalValue = 0;
-let cartItemCount = 0;
-let cartItemsList = [];
 
 function appendNum(num) {
     if (rawAmountString === "000" || rawAmountString === "0") {
@@ -41,7 +35,7 @@ function initHoldButtonListeners() {
     const startHold = (e) => {
         e.preventDefault();
         const numVal = parseInt(rawAmountString || "0", 10);
-        if (numVal <= 0) {
+        if (numVal <= 0 && (!typeof isCartCheckout || !isCartCheckout)) {
             alert("Introduce un importe válido mayor a 0,00 €");
             return;
         }
@@ -82,31 +76,33 @@ async function executeFullPayment(isReservationOnly = false) {
     const amount = isReservationOnly ? cartTotalValue : (parseInt(rawAmountString || "0", 10) / 100);
     const meta = currentUser?.user_metadata || {};
     const customerName = `${meta.name || ''} ${meta.surname || ''}`.trim() || currentUser?.email || 'Usuario';
-    const bName = activePayee || 'Comercio';
+    const bName = activeBusinessUsername || activeBusinessName || activePayee || 'Comercio';
+
+    const itemsString = isCartCheckout ? cartItemsList.map(i => `${i.qty}x ${i.name}`).join(', ') : 'Pago Directo QR';
+    const orderDate = pendingOrderDetails?.date || new Date().toISOString().split('T')[0];
+    const orderTime = pendingOrderDetails?.time || new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
     const orderPayload = {
         business_name: bName,
         customer: customerName,
-        items: isCartCheckout ? cartItemsList.map(i => `${i.qty}x ${i.name}`).join(', ') : 'Pago Directo QR',
+        items: itemsString,
         total: amount,
-        date: pendingOrderDetails?.date || new Date().toISOString().split('T')[0],
-        time: pendingOrderDetails?.time || new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+        date: orderDate,
+        time: orderTime,
         status: isReservationOnly ? 'Pendiente Pago Local' : 'Pagado Online'
     };
 
-    // Inserción directa en Supabase
     try {
         const { error } = await supabaseClient
             .from('orders')
             .insert([orderPayload]);
         if (error) throw error;
     } catch (err) {
-        console.error("Error guardando pedido en Supabase:", err);
+        console.error("Error al registrar el pedido en Supabase:", err);
     }
 
-    // Modal de confirmación
     const modal = document.getElementById('customModal');
-    const modalContent = document.getElementById('modalContent');
+    const modalContent = document.getElementById('customModalContent') || document.getElementById('modalContent');
     const modalBody = document.getElementById('modalBody');
 
     if (modal && modalBody) {
@@ -117,14 +113,14 @@ async function executeFullPayment(isReservationOnly = false) {
                 </div>
                 <div class="space-y-1">
                     <h3 class="text-lg font-bold text-black">${isReservationOnly ? '¡Reserva Confirmada!' : '¡Pago Completado!'}</h3>
-                    <p class="text-xs text-neutral-500">Operación registrada en la red urbana de Palencia.</p>
+                    <p class="text-xs text-neutral-500">Operación registrada en la red urbana.</p>
                 </div>
                 <div class="bg-neutral-50 p-4 rounded-2xl border border-neutral-200/60 text-left text-xs space-y-1.5">
-                    <div class="flex justify-between"><span class="text-neutral-400">Establecimiento:</span><strong class="text-black">${bName}</strong></div>
+                    <div class="flex justify-between"><span class="text-neutral-400">Establecimiento:</span><strong class="text-black">${activeBusinessName || bName}</strong></div>
                     <div class="flex justify-between"><span class="text-neutral-400">Importe:</span><strong class="text-black">${amount.toFixed(2)} €</strong></div>
                     <div class="flex justify-between"><span class="text-neutral-400">Estado:</span><strong class="${isReservationOnly ? 'text-amber-600' : 'text-emerald-600'}">${orderPayload.status}</strong></div>
                 </div>
-                <button onclick="closeModal(); switchTab('home');" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Aceptar</button>
+                <button onclick="if(typeof closeModal === 'function') closeModal(); if(typeof switchTab === 'function') switchTab('home');" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Aceptar</button>
             </div>
         `;
         if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -135,15 +131,16 @@ async function executeFullPayment(isReservationOnly = false) {
         }, 10);
     }
 
-    // Resetear cesta y campos
-    cartTotalValue = 0;
-    cartItemCount = 0;
-    cartItemsList = [];
+    if (typeof cartTotalValue !== 'undefined') {
+        cartTotalValue = 0;
+        cartItemCount = 0;
+        cartItemsList = [];
+        isCartCheckout = false;
+        pendingOrderDetails = null;
+        if (typeof updateCartDisplay === 'function') updateCartDisplay();
+    }
+    
     rawAmountString = "000";
-    isCartCheckout = false;
-    pendingOrderDetails = null;
-
-    if (typeof updateCartDisplay === 'function') updateCartDisplay();
     const pb = document.getElementById('progressBar');
     if (pb) pb.style.width = '0%';
 }

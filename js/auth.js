@@ -1,24 +1,20 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Recuperación de contraseña vía enlace
     const hash = window.location.hash;
     if (hash && hash.includes('type=recovery')) {
         if (typeof openNewPasswordModal === 'function') openNewPasswordModal();
     }
 
-    // 2. Sesión personal en Supabase
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
         currentUser = session.user;
     }
 
-    // 3. Sesión de comercio en localStorage
     const savedBusiness = localStorage.getItem('netwish_business');
     if (savedBusiness) {
         try {
             currentBusiness = JSON.parse(savedBusiness);
-            // Saneamiento de id antiguo
             if (currentBusiness && currentBusiness.id === 'biz_db') {
-                currentBusiness.id = currentBusiness.name;
+                currentBusiness.id = currentBusiness.username || currentBusiness.name;
                 localStorage.setItem('netwish_business', JSON.stringify(currentBusiness));
             }
         } catch (e) {
@@ -333,21 +329,14 @@ async function authenticateBusiness() {
     }
 
     if (error || !data || data.length === 0) {
-        const { data: checkUser } = await supabaseClient.from('businesses').select('*').eq('username', user);
-        if (checkUser && checkUser.length > 0) {
-            alert("Contraseña incorrecta.");
-        } else {
-            alert("No se encuentra el usuario de comercio.");
-        }
+        alert("Usuario o contraseña incorrectos.");
         return;
     }
 
     const biz = data[0];
-    const bizRealName = biz.name || biz.Nombre || biz.username;
-
     currentBusiness = {
-        id: bizRealName,
-        name: bizRealName,
+        id: biz.username || biz.name || biz.Nombre,
+        name: biz.name || biz.Nombre || biz.username,
         category: biz.category || biz.Categoria || 'Comercio',
         username: biz.username
     };
@@ -374,20 +363,6 @@ function logoutBusiness() {
     switchTab('home'); 
 }
 
-function openAuthModal(initialMode = 'login') {
-    renderAuthForm(initialMode);
-    const modal = document.getElementById('customModal');
-    const modalContent = document.getElementById('modalContent');
-    
-    if (!modal || !modalContent) return;
-    
-    modal.classList.remove('hidden');
-    setTimeout(() => {
-        modal.classList.remove('opacity-0');
-        modalContent.classList.remove('scale-95');
-    }, 10);
-}
-
 function checkPasswordStrength() {
     const pass = document.getElementById('authPass')?.value || '';
     const strengthEl = document.getElementById('passwordStrengthBar');
@@ -408,6 +383,20 @@ function checkPasswordStrength() {
         strengthEl.className = `h-1 transition-all duration-300 rounded-full ${colors[strength - 1] || 'bg-rose-500'}`;
         strengthEl.style.width = widths[strength - 1] || '25%';
     }
+}
+
+function openAuthModal(initialMode = 'login') {
+    renderAuthForm(initialMode);
+    const modal = document.getElementById('customModal');
+    const modalContent = document.getElementById('modalContent');
+    
+    if (!modal || !modalContent) return;
+    
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        modalContent.classList.remove('scale-95');
+    }, 10);
 }
 
 function renderAuthForm(mode) {
