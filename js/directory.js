@@ -5,14 +5,17 @@ async function loadPublicBusinesses() {
         const { data, error } = await supabaseClient.from('businesses').select('*');
         if (error) throw error;
         
-        // --- MEJORA: Filtro anti-duplicados por nombre ---
+        // --- MEJORA: Filtro anti-duplicados extremo (ignora acentos, mayúsculas y espacios) ---
         const uniqueBusinesses = [];
         const seenNames = new Set();
         
         (data || []).forEach(biz => {
-            const name = (biz.name || biz.Nombre || biz.username || '').trim().toLowerCase();
-            if (!seenNames.has(name)) {
-                seenNames.add(name);
+            let rawName = biz.name || biz.Nombre || biz.username || '';
+            // Limpiamos el nombre: minúsculas, sin espacios extra y quitamos acentos (NFD)
+            let cleanName = rawName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            
+            if (!seenNames.has(cleanName)) {
+                seenNames.add(cleanName);
                 uniqueBusinesses.push(biz);
             }
         });
@@ -84,10 +87,10 @@ function filterCategory(catFilter) {
 }
 
 function filterDirectory() {
-    const query = document.getElementById('directorySearch').value.toLowerCase();
+    const query = document.getElementById('directorySearch').value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const filtered = allPublicBusinesses.filter(biz => {
-        const name = (biz.name || biz.Nombre || biz.username || '').toLowerCase();
-        const cat = (biz.category || biz.Categoria || '').toLowerCase();
+        const name = (biz.name || biz.Nombre || biz.username || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const cat = (biz.category || biz.Categoria || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         return name.includes(query) || cat.includes(query);
     });
     renderBusinessDirectory(filtered);
