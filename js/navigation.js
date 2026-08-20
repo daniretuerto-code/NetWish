@@ -1,6 +1,30 @@
 let lastMainTab = 'home';
 let swipeAnim = 'fade-in';
 
+// --- FUNCIÓN UNIFICADA PARA ACTUALIZAR LA CABECERA (LOGO Y AVATAR) ---
+function applyHeaderState(tabId) {
+    const mainHeader = document.getElementById('mainAppHeader');
+    const avatarBtn = document.getElementById('headerAvatar');
+    if (!mainHeader) return;
+
+    if (tabId === 'public-business' || tabId === 'cart') {
+        mainHeader.classList.add('hidden');
+        return;
+    } else {
+        mainHeader.classList.remove('hidden');
+    }
+
+    if (tabId === 'profile') {
+        mainHeader.classList.remove('justify-between');
+        mainHeader.classList.add('justify-center');
+        if (avatarBtn) avatarBtn.classList.add('hidden');
+    } else {
+        mainHeader.classList.remove('justify-center');
+        mainHeader.classList.add('justify-between');
+        if (avatarBtn) avatarBtn.classList.remove('hidden');
+    }
+}
+
 function switchTab(tabId) {
     if (['home', 'explore', 'scan', 'profile', 'business-dashboard'].includes(tabId)) {
         lastMainTab = tabId;
@@ -9,7 +33,7 @@ function switchTab(tabId) {
     const mainTabs = ['home', 'explore', 'scan', 'profile'];
     const scrollWrapper = document.getElementById('swipeScrollWrapper');
 
-    // Si es una pestaña principal del carrusel, hacemos scroll horizontal fluido nativo de Apple
+    // Si es una pestaña principal del carrusel, hacemos scroll horizontal fluido nativo
     if (mainTabs.includes(tabId) && scrollWrapper) {
         const index = mainTabs.indexOf(tabId);
         scrollWrapper.scrollTo({
@@ -41,28 +65,8 @@ function switchTab(tabId) {
         if (pb) pb.style.width = '0%'; 
     }
 
-    // --- GESTIÓN DINÁMICA DE LA CABECERA (LOGO CENTRADO Y OCULTAR AVATAR EN PERFIL) ---
-    const mainHeader = document.getElementById('mainAppHeader');
-    const avatarBtn = document.getElementById('headerAvatar');
-
-    if (tabId === 'public-business' || tabId === 'cart') {
-        if (mainHeader) mainHeader.classList.add('hidden');
-    } else {
-        if (mainHeader) mainHeader.classList.remove('hidden');
-        if (tabId === 'profile') {
-            if (mainHeader) {
-                mainHeader.classList.remove('justify-between');
-                mainHeader.classList.add('justify-center');
-            }
-            if (avatarBtn) avatarBtn.classList.add('hidden');
-        } else {
-            if (mainHeader) {
-                mainHeader.classList.remove('justify-center');
-                mainHeader.classList.add('justify-between');
-            }
-            if (avatarBtn) avatarBtn.classList.remove('hidden');
-        }
-    }
+    // Aplicar estado de cabecera
+    applyHeaderState(tabId);
 
     const pNav = document.getElementById('personal-nav');
     const bNav = document.getElementById('business-nav');
@@ -83,7 +87,7 @@ function switchTab(tabId) {
     updateNavHighlight(tabId);
 }
 
-// Sincronizar botones inferiores cuando el usuario desliza con el dedo de forma manual en vivo
+// Sincronizar botones y cabecera en tiempo real al deslizar con el dedo
 document.addEventListener('DOMContentLoaded', () => {
     const scrollWrapper = document.getElementById('swipeScrollWrapper');
     if (scrollWrapper) {
@@ -93,8 +97,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const index = Math.round(scrollLeft / width);
             const mainTabs = ['home', 'explore', 'scan', 'profile'];
             if (mainTabs[index]) {
-                lastMainTab = mainTabs[index];
-                updateNavHighlight(mainTabs[index]);
+                const activeTab = mainTabs[index];
+                lastMainTab = activeTab;
+                updateNavHighlight(activeTab);
+                applyHeaderState(activeTab); // Actualiza la cabecera en vivo al deslizar
             }
         }, { passive: true });
     }

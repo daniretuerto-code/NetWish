@@ -19,27 +19,28 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <!-- ARCHIVO CSS CON VERSIÓN ANTI-CACHÉ -->
-    <link rel="stylesheet" href="css/styles.css?v=3">
+    <link rel="stylesheet" href="css/styles.css?v=4">
 </head>
 <body>
 
     <div class="w-full h-[100dvh] sm:h-[844px] sm:max-w-[390px] sm:rounded-[48px] bg-white flex flex-col relative shadow-[0_30px_90px_rgba(0,0,0,0.12)] overflow-hidden sm:border-[8px] sm:border-neutral-900 mx-auto my-auto">
         
-        <header id="mainAppHeader" class="absolute top-0 left-0 right-0 px-6 pt-8 pb-3 border-b border-neutral-100/80 flex justify-between items-center glass-panel z-30 transition-opacity">
+        <header id="mainAppHeader" class="absolute top-0 left-0 right-0 px-6 pt-8 pb-3 border-b border-neutral-100/80 flex justify-between items-center glass-panel z-30 transition-all">
             <h1 onclick="switchTab('home')" class="text-2xl font-bold tracking-tight text-black font-serif italic cursor-pointer active:scale-95 transition-transform">NetWish</h1>
             <button onclick="handleHeaderProfileClick()" id="headerAvatar" class="w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner transition hover:scale-105 active:scale-95">
                 IN
             </button>
         </header>
 
-        <main id="mainContentArea" class="flex-1 relative overflow-hidden flex flex-col pt-16">
+        <main id="mainContentArea" class="flex-1 relative overflow-hidden flex flex-col pt-20">
             
             <!-- CONTENEDOR DE DESLIZAMIENTO EN VIVO (ESTILO IOS) -->
             <div id="swipeScrollWrapper" class="horizontal-scroll-container">
                 
                 <!-- VISTA 1: INICIO -->
-                <div id="view-home" class="view-pane px-6 pt-4 pb-28 space-y-5">
-                    <section class="glass-dark p-6 rounded-[32px] text-white flex flex-col justify-between space-y-5 relative overflow-hidden shadow-xl transform-gpu" style="-webkit-mask-image: -webkit-radial-gradient(white, black);">
+                <div id="view-home" class="view-pane px-6 pt-2 pb-28 space-y-5">
+                    <!-- CORREGIDO: Añadido mask-image estándar para evitar el aviso del linter -->
+                    <section class="glass-dark p-6 rounded-[32px] text-white flex flex-col justify-between space-y-5 relative overflow-hidden shadow-xl transform-gpu" style="-webkit-mask-image: radial-gradient(white, black); mask-image: radial-gradient(white, black);">
                         <div class="absolute -right-10 -top-10 w-36 h-36 bg-gradient-to-br from-neutral-700/30 to-transparent rounded-full blur-2xl pointer-events-none"></div>
                         <div class="flex justify-between items-start relative z-10">
                             <div>
@@ -118,7 +119,7 @@
                 </div>
 
                 <!-- VISTA 2: EXPLORAR DIRECTORIO -->
-                <div id="view-explore" class="view-pane px-6 pt-4 pb-28 space-y-4">
+                <div id="view-explore" class="view-pane px-6 pt-2 pb-28 space-y-4">
                     <div class="space-y-1 px-1">
                         <h2 id="exploreTitle" class="text-xl font-bold text-black tracking-tight">Directorio Urbano</h2>
                         <p class="text-[11px] text-neutral-500">Descubre comercios en Palencia y haz tus pedidos.</p>
@@ -142,7 +143,7 @@
                 </div>
 
                 <!-- VISTA 3: SCANNER QR -->
-                <div id="view-scan" class="view-pane px-6 pt-16 pb-28 space-y-6 text-center my-auto">
+                <div id="view-scan" class="view-pane px-6 pb-28 flex flex-col items-center justify-center text-center my-auto space-y-6">
                     <div class="w-16 h-16 rounded-[28px] bg-black text-white flex items-center justify-center mx-auto shadow-xl"><i data-lucide="scan" class="w-8 h-8"></i></div>
                     <div class="space-y-1.5">
                         <h2 class="text-sm font-bold text-black">Cámara de Escaneo QR</h2>
@@ -152,13 +153,13 @@
                 </div>
 
                 <!-- VISTA 4: PERFIL -->
-                <div id="view-profile" class="view-pane px-6 pt-6 pb-28 space-y-5">
+                <div id="view-profile" class="view-pane px-6 pt-2 pb-28 space-y-5">
                     <div id="profileContentContainer" class="w-full"></div>
                 </div>
 
             </div>
 
-            <!-- VISTAS FLOTANTES / SECUNDARIAS (Se mantienen superpuestas igual que antes) -->
+            <!-- VISTAS FLOTANTES / SECUNDARIAS -->
             <div id="view-business-dashboard" class="absolute inset-0 bg-white z-20 hidden flex-col allow-scroll px-6 pt-20 pb-28 space-y-5">
                 <div class="flex items-center justify-between px-1">
                     <div>
@@ -320,13 +321,13 @@
 
     </div>
 
-    <!-- SCRIPTS EN ORDEN CORRECTO Y CON ANTI-CACHÉ V3 -->
-    <script src="js/config.js?v=3"></script>
-    <script src="js/navigation.js?v=3"></script>
-    <script src="js/auth.js?v=3"></script>
-    <script src="js/directory.js?v=3"></script>
-    <script src="js/scanner.js?v=3"></script>
-    <script src="js/payment.js?v=3"></script>
+    <!-- SCRIPTS EN ORDEN CORRECTO Y CON ANTI-CACHÉ V4 -->
+    <script src="js/config.js?v=4"></script>
+    <script src="js/navigation.js?v=4"></script>
+    <script src="js/auth.js?v=4"></script>
+    <script src="js/directory.js?v=4"></script>
+    <script src="js/scanner.js?v=4"></script>
+    <script src="js/payment.js?v=4"></script>
 
 </body>
 </html>
