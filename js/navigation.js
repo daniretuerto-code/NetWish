@@ -1,29 +1,21 @@
 let lastMainTab = 'home';
-let swipeAnim = 'fade-in';
 let isProgrammaticScroll = false;
 let scrollTimeout = null;
 
-// --- FUNCIÓN UNIFICADA PARA ACTUALIZAR LA CABECERA (LOGO Y AVATAR) ---
+// --- FUNCIÓN UNIFICADA PARA ACTUALIZAR LA CABECERA ---
 function applyHeaderState(tabId) {
     const mainHeader = document.getElementById('mainAppHeader');
     const avatarBtn = document.getElementById('headerAvatar');
     if (!mainHeader) return;
 
-    if (tabId === 'public-business' || tabId === 'cart' || tabId === 'category') {
-        if (tabId === 'category') {
-            mainHeader.classList.remove('hidden');
-            mainHeader.classList.remove('justify-center');
-            mainHeader.classList.add('justify-between');
-            if (avatarBtn) avatarBtn.classList.remove('hidden');
-            return;
-        }
+    if (tabId === 'public-business' || tabId === 'cart') {
         mainHeader.classList.add('hidden');
         return;
     } else {
         mainHeader.classList.remove('hidden');
     }
 
-    if (tabId === 'profile') {
+    if (tabId === 'profile' || tabId === 'business-profile') {
         mainHeader.classList.remove('justify-between');
         mainHeader.classList.add('justify-center');
         if (avatarBtn) avatarBtn.classList.add('hidden');
@@ -35,30 +27,48 @@ function applyHeaderState(tabId) {
 }
 
 function switchTab(tabId) {
-    if (['home', 'explore', 'scan', 'profile', 'business-dashboard'].includes(tabId)) {
-        lastMainTab = tabId;
-    }
+    const userTabs = ['home', 'explore', 'scan', 'profile'];
+    const bizTabs = ['business-dashboard', 'business-scan', 'business-profile'];
+    const userWrapper = document.getElementById('userScrollWrapper');
+    const bizWrapper = document.getElementById('bizScrollWrapper');
 
-    const mainTabs = ['home', 'explore', 'scan', 'profile'];
-    const scrollWrapper = document.getElementById('swipeScrollWrapper');
+    // Gestión del modo comercio vs modo usuario
+    if (currentBusiness) {
+        if (userWrapper) userWrapper.classList.add('hidden');
+        if (bizWrapper) bizWrapper.classList.remove('hidden');
 
-    if (mainTabs.includes(tabId) && scrollWrapper) {
-        isProgrammaticScroll = true;
-        if (scrollTimeout) clearTimeout(scrollTimeout);
-        
-        scrollTimeout = setTimeout(() => {
-            isProgrammaticScroll = false;
-        }, 400);
+        if (bizTabs.includes(tabId) && bizWrapper) {
+            isProgrammaticScroll = true;
+            if (scrollTimeout) clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => { isProgrammaticScroll = false; }, 400);
 
-        const index = mainTabs.indexOf(tabId);
-        scrollWrapper.scrollTo({
-            left: index * scrollWrapper.clientWidth,
-            behavior: 'smooth'
-        });
+            const index = bizTabs.indexOf(tabId);
+            bizWrapper.scrollTo({
+                left: index * bizWrapper.clientWidth,
+                behavior: 'smooth'
+            });
+            lastMainTab = tabId;
+        }
+    } else {
+        if (bizWrapper) bizWrapper.classList.add('hidden');
+        if (userWrapper) userWrapper.classList.remove('hidden');
+
+        if (userTabs.includes(tabId) && userWrapper) {
+            isProgrammaticScroll = true;
+            if (scrollTimeout) clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => { isProgrammaticScroll = false; }, 400);
+
+            const index = userTabs.indexOf(tabId);
+            userWrapper.scrollTo({
+                left: index * userWrapper.clientWidth,
+                behavior: 'smooth'
+            });
+            lastMainTab = tabId;
+        }
     }
 
     // Gestionamos la visibilidad de vistas secundarias / modales por capas
-    const secondaryViews = ['payment', 'business-dashboard', 'public-business', 'cart', 'category'];
+    const secondaryViews = ['payment', 'public-business', 'cart', 'category'];
     secondaryViews.forEach(v => {
         const el = document.getElementById('view-' + v);
         if (el) {
@@ -72,10 +82,8 @@ function switchTab(tabId) {
         }
     });
 
-    if (tabId === 'explore') {
-        renderBusinessDirectory(allPublicBusinesses);
-    }
-    if (tabId === 'profile') renderProfileView();
+    if (tabId === 'explore') renderBusinessDirectory(allPublicBusinesses);
+    if (tabId === 'profile' || tabId === 'business-profile') renderProfileView();
     if (tabId === 'business-dashboard') renderBusinessOrders();
     if (tabId === 'payment') { 
         holdProgress = 0; 
@@ -88,34 +96,52 @@ function switchTab(tabId) {
     const pNav = document.getElementById('personal-nav');
     const bNav = document.getElementById('business-nav');
 
-    if (['payment', 'public-business', 'cart', 'business-dashboard', 'category'].includes(tabId) && secondaryViews.includes(tabId)) {
-        pNav.classList.add('hidden');
-        bNav.classList.add('hidden');
+    if (secondaryViews.includes(tabId)) {
+        if (pNav) pNav.classList.add('hidden');
+        if (bNav) bNav.classList.add('hidden');
     } else {
         if (currentBusiness) {
-            pNav.classList.add('hidden');
-            bNav.classList.remove('hidden');
+            if (pNav) pNav.classList.add('hidden');
+            if (bNav) bNav.classList.remove('hidden');
         } else {
-            pNav.classList.remove('hidden');
-            bNav.classList.add('hidden');
+            if (pNav) pNav.classList.remove('hidden');
+            if (bNav) bNav.classList.add('hidden');
         }
     }
 
     updateNavHighlight(tabId);
 }
 
+// Sincronización en vivo del carrusel según el modo activo
 document.addEventListener('DOMContentLoaded', () => {
-    const scrollWrapper = document.getElementById('swipeScrollWrapper');
-    if (scrollWrapper) {
-        scrollWrapper.addEventListener('scroll', () => {
-            if (isProgrammaticScroll) return;
-            
-            const scrollLeft = scrollWrapper.scrollLeft;
-            const width = scrollWrapper.clientWidth;
+    const userWrapper = document.getElementById('userScrollWrapper');
+    const bizWrapper = document.getElementById('bizScrollWrapper');
+
+    if (userWrapper) {
+        userWrapper.addEventListener('scroll', () => {
+            if (isProgrammaticScroll || currentBusiness) return;
+            const scrollLeft = userWrapper.scrollLeft;
+            const width = userWrapper.clientWidth;
             const index = Math.round(scrollLeft / width);
-            const mainTabs = ['home', 'explore', 'scan', 'profile'];
-            if (mainTabs[index]) {
-                const activeTab = mainTabs[index];
+            const userTabs = ['home', 'explore', 'scan', 'profile'];
+            if (userTabs[index]) {
+                const activeTab = userTabs[index];
+                lastMainTab = activeTab;
+                updateNavHighlight(activeTab);
+                applyHeaderState(activeTab);
+            }
+        }, { passive: true });
+    }
+
+    if (bizWrapper) {
+        bizWrapper.addEventListener('scroll', () => {
+            if (isProgrammaticScroll || !currentBusiness) return;
+            const scrollLeft = bizWrapper.scrollLeft;
+            const width = bizWrapper.clientWidth;
+            const index = Math.round(scrollLeft / width);
+            const bizTabs = ['business-dashboard', 'business-scan', 'business-profile'];
+            if (bizTabs[index]) {
+                const activeTab = bizTabs[index];
                 lastMainTab = activeTab;
                 updateNavHighlight(activeTab);
                 applyHeaderState(activeTab);
@@ -124,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// --- GESTIÓN DE GESTOS TÁCTILES Y SWIPE-TO-GO-BACK ---
+// Gesto táctil swipe-to-go-back para subpantallas
 let touchstartX = 0;
 let touchendX = 0;
 let touchstartY = 0;
@@ -153,17 +179,13 @@ function handleSwipeGesture() {
     const isCart = !document.getElementById('view-cart').classList.contains('hidden');
     const isPayment = !document.getElementById('view-payment').classList.contains('hidden');
 
-    // Deslizar hacia la derecha para volver atrás desde pantallas secundarias
     if (xDiff < -50) {
         if (isCategory) {
             switchTab('home');
-            return;
         } else if (isCart) {
             switchTab('public-business');
-            return;
         } else if (isPublicBusiness || isPayment) {
             goBackFromBusiness();
-            return;
         }
     }
 }
@@ -174,7 +196,7 @@ function updateNavHighlight(activeTabId) {
     
     tabs.forEach(tab => {
         const btn = document.getElementById('nav-btn-' + tab);
-        if(!btn) return;
+        if (!btn) return;
         const icon = btn.querySelector('i');
         
         if (tab === activeTabId || (activeTabId === 'public-business' && tab === lastMainTab) || (activeTabId === 'cart' && tab === lastMainTab) || (activeTabId === 'category' && tab === lastMainTab)) {
@@ -190,9 +212,13 @@ function updateNavHighlight(activeTabId) {
 
     bizTabs.forEach(tab => {
         const btn = document.getElementById('biz-nav-btn-' + tab);
-        if(!btn) return;
+        if (!btn) return;
         const icon = btn.querySelector('i');
-        if (tab === activeTabId || (activeTabId === 'business-dashboard' && tab === 'dashboard')) {
+        const isCurrentBizTab = (tab === 'dashboard' && activeTabId === 'business-dashboard') ||
+                               (tab === 'scan' && activeTabId === 'business-scan') ||
+                               (tab === 'profile' && activeTabId === 'business-profile');
+
+        if (isCurrentBizTab) {
             btn.classList.remove('text-neutral-400');
             btn.classList.add('text-white');
             if (icon) icon.classList.add('scale-110');
@@ -205,7 +231,7 @@ function updateNavHighlight(activeTabId) {
 }
 
 function goBackFromBusiness() {
-    switchTab(lastMainTab || 'home');
+    switchTab(lastMainTab || (currentBusiness ? 'business-dashboard' : 'home'));
 }
 
 function updateHeaderAvatar() {
@@ -233,5 +259,5 @@ function updateHeaderAvatar() {
 }
 
 function handleHeaderProfileClick() {
-    switchTab('profile');
+    switchTab(currentBusiness ? 'business-profile' : 'profile');
 }

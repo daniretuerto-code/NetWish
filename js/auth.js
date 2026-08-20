@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 1. Comprobamos si venimos de un enlace de recuperación de contraseña
     const hash = window.location.hash;
     if (hash && hash.includes('type=recovery')) {
-        openNewPasswordModal();
+        if (typeof openNewPasswordModal === 'function') openNewPasswordModal();
     }
 
     // 2. Comprobamos si hay sesión de usuario personal activa
@@ -17,24 +17,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentBusiness = JSON.parse(savedBusiness);
         switchTab('business-dashboard');
         document.getElementById('businessTitleName').innerText = currentBusiness.name;
-        generateBusinessQR(currentBusiness);
-        renderBusinessOrders(); // Carga las ventas en el panel
+        if (typeof generateBusinessQR === 'function') generateBusinessQR(currentBusiness);
+        if (typeof renderBusinessOrders === 'function') renderBusinessOrders();
     } else {
-        updateHeaderAvatar();
+        if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
         renderProfileView();
     }
 
     // Inicializamos eventos y cargamos comercios
-    initHoldButtonListeners();
-    loadPublicBusinesses(); 
+    if (typeof initHoldButtonListeners === 'function') initHoldButtonListeners();
+    if (typeof loadPublicBusinesses === 'function') loadPublicBusinesses(); 
 });
 
 function renderProfileView() {
-    const container = document.getElementById('profileContentContainer');
+    const userContainer = document.getElementById('profileContentContainer');
+    const bizContainer = document.getElementById('businessProfileContentContainer');
 
     if (currentBusiness) {
         // PERFIL EXCLUSIVO DE EMPRESA
-        container.innerHTML = `
+        const targetContainer = bizContainer || userContainer;
+        if (!targetContainer) return;
+        
+        targetContainer.innerHTML = `
             <div class="flex items-center space-x-4 p-5 rounded-[32px] bg-black text-white shadow-xl">
                 <div class="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center font-bold text-xs shrink-0">
                     <i data-lucide="store" class="w-6 h-6 text-white"></i>
@@ -48,11 +52,11 @@ function renderProfileView() {
             <div class="space-y-2 pt-4">
                 <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Ajustes y Sesión</span>
                 <div class="bg-neutral-50/80 border border-neutral-200/60 rounded-[32px] overflow-hidden shadow-sm">
-                    <button onclick="openModal('Información Pública')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
+                    <button onclick="if (typeof openModal === 'function') openModal('Información Pública')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
                         <span class="text-xs font-bold text-black">Editar Perfil Público</span>
                         <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
                     </button>
-                    <button onclick="openModal('Soporte Comercios')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
+                    <button onclick="if (typeof openModal === 'function') openModal('Soporte Comercios')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
                         <span class="text-xs font-bold text-black">Soporte técnico NetWish</span>
                         <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
                     </button>
@@ -67,15 +71,15 @@ function renderProfileView() {
         `;
     } else if (currentUser) {
         // PERFIL PERSONAL
+        if (!userContainer) return;
         const meta = currentUser.user_metadata || {};
         const avatarUrl = meta.avatar_url || meta.picture;
         
-        // Si hay foto de Google, la ponemos en la caja grande; si no, dejamos las iniciales
         const avatarHTML = avatarUrl 
             ? `<img src="${avatarUrl}" class="w-full h-full object-cover" alt="Perfil">` 
             : (meta.initials || 'NW');
 
-        container.innerHTML = `
+        userContainer.innerHTML = `
             <div class="flex items-center space-x-4 p-5 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 shadow-sm">
                 <div class="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center font-bold text-xs shadow-md shrink-0 overflow-hidden p-0">
                     ${avatarHTML}
@@ -89,11 +93,11 @@ function renderProfileView() {
             <div class="space-y-2 pt-2">
                 <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Configuración</span>
                 <div class="bg-neutral-50/80 border border-neutral-200/60 rounded-[32px] overflow-hidden shadow-sm">
-                    <button onclick="openModal('Métodos de Pago')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
+                    <button onclick="if (typeof openModal === 'function') openModal('Métodos de Pago')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
                         <span class="text-xs font-bold text-black">Métodos de pago seguros</span>
                         <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
                     </button>
-                    <button onclick="openModal('Mis Reservas')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
+                    <button onclick="if (typeof openModal === 'function') openModal('Mis Reservas')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
                         <span class="text-xs font-bold text-black">Mis reservas y tickets</span>
                         <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
                     </button>
@@ -113,7 +117,8 @@ function renderProfileView() {
         `;
     } else {
         // NO LOGUEADO
-        container.innerHTML = `
+        if (!userContainer) return;
+        userContainer.innerHTML = `
             <div class="p-8 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 text-center space-y-4 shadow-sm">
                 <div class="w-14 h-14 rounded-2xl bg-black text-white flex items-center justify-center mx-auto shadow-md">
                     <i data-lucide="user" class="w-6 h-6"></i>
@@ -128,13 +133,15 @@ function renderProfileView() {
             </div>
         `;
     }
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function openBusinessLoginModal() {
     const modal = document.getElementById('customModal');
     const modalContent = document.getElementById('modalContent');
     const modalBody = document.getElementById('modalBody');
+
+    if (!modal || !modalBody) return;
 
     modalBody.innerHTML = `
         <div class="space-y-4 text-left">
@@ -165,22 +172,24 @@ function openBusinessLoginModal() {
                 </button>
             </div>
             
-            <button onclick="closeModal()" class="w-full py-1 text-neutral-400 font-medium text-xs text-center">
+            <button onclick="if (typeof closeModal === 'function') closeModal()" class="w-full py-1 text-neutral-400 font-medium text-xs text-center">
                 Cancelar
             </button>
         </div>
     `;
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 
     modal.classList.remove('hidden');
     setTimeout(() => {
         modal.classList.remove('opacity-0');
-        modalContent.classList.remove('scale-95');
+        if (modalContent) modalContent.classList.remove('scale-95');
     }, 10);
 }
 
 function openBusinessSignupRequest() {
     const modalBody = document.getElementById('modalBody');
+    if (!modalBody) return;
+    
     modalBody.innerHTML = `
         <div class="space-y-3 text-left">
             <div class="text-center space-y-0.5">
@@ -240,7 +249,7 @@ function openBusinessSignupRequest() {
             </button>
         </div>
     `;
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 async function submitBusinessRequest() {
@@ -268,7 +277,7 @@ async function submitBusinessRequest() {
                         `──────────────────\n` +
                         `<i>Enviado desde la app NetWish Palencia</i>`;
 
-    await sendToTelegram(messageHtml);
+    if (typeof sendToTelegram === 'function') await sendToTelegram(messageHtml);
 
     const modalBody = document.getElementById('modalBody');
     modalBody.innerHTML = `
@@ -280,10 +289,10 @@ async function submitBusinessRequest() {
                 <h3 class="text-base font-bold text-black">¡Solicitud Registrada!</h3>
                 <p class="text-xs text-neutral-500 leading-relaxed">Hemos registrado tu establecimiento <strong class="text-black">${name}</strong>. Nos pondremos en contacto contigo muy pronto.</p>
             </div>
-            <button onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Entendido</button>
+            <button onclick="if (typeof closeModal === 'function') closeModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Entendido</button>
         </div>
     `;
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 async function authenticateBusiness() {
@@ -319,7 +328,7 @@ async function authenticateBusiness() {
         if (checkUser && checkUser.length > 0) {
             alert(`El usuario existe, pero la CONTRASEÑA es incorrecta. Asegúrate de que es exactamente: "${pass}"`);
         } else {
-            alert(`No se encuentra el usuario: "${user}".\n\nPor favor, entra a tu tabla de Supabase, borra el nombre de la celda y vuélvelo a escribir asegurándote de no dejar espacios en blanco al final.`);
+            alert(`No se encuentra el usuario: "${user}".\n\nPor favor, revisa el nombre de usuario.`);
         }
         return;
     }
@@ -333,18 +342,22 @@ async function authenticateBusiness() {
     };
 
     localStorage.setItem('netwish_business', JSON.stringify(currentBusiness));
-    closeModal();
+    if (typeof closeModal === 'function') closeModal();
+    
     switchTab('business-dashboard');
-    document.getElementById('businessTitleName').innerText = currentBusiness.name;
-    updateHeaderAvatar();
-    generateBusinessQR(currentBusiness);
-    renderBusinessOrders();
+    
+    const titleEl = document.getElementById('businessTitleName');
+    if (titleEl) titleEl.innerText = currentBusiness.name;
+    
+    if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
+    if (typeof generateBusinessQR === 'function') generateBusinessQR(currentBusiness);
+    if (typeof renderBusinessOrders === 'function') renderBusinessOrders();
 }
 
 function logoutBusiness() {
     localStorage.removeItem('netwish_business');
     currentBusiness = null;
-    updateHeaderAvatar();
+    if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
     renderProfileView();
     switchTab('home'); 
 }
@@ -353,6 +366,8 @@ function openAuthModal(initialMode = 'login') {
     renderAuthForm(initialMode);
     const modal = document.getElementById('customModal');
     const modalContent = document.getElementById('modalContent');
+    
+    if (!modal || !modalContent) return;
     
     modal.classList.remove('hidden');
     setTimeout(() => {
@@ -363,6 +378,8 @@ function openAuthModal(initialMode = 'login') {
 
 function renderAuthForm(mode) {
     const modalBody = document.getElementById('modalBody');
+    if (!modalBody) return;
+
     const isLogin = mode === 'login';
 
     modalBody.innerHTML = `
@@ -404,7 +421,7 @@ function renderAuthForm(mode) {
 
                 <div>
                     <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Contraseña</label>
-                    <input type="password" id="authPass" ${!isLogin ? 'oninput="checkPasswordStrength()"' : ''} placeholder="> 6 caracteres" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                    <input type="password" id="authPass" ${!isLogin ? 'oninput="if(typeof checkPasswordStrength === \'function\') checkPasswordStrength()"' : ''} placeholder="> 6 caracteres" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
                 </div>
             </div>
 
@@ -429,12 +446,12 @@ function renderAuthForm(mode) {
                 `}
             </div>
 
-            <button onclick="closeModal()" class="w-full py-1 text-neutral-400 font-medium text-xs transition hover:text-black">
+            <button onclick="if(typeof closeModal === 'function') closeModal()" class="w-full py-1 text-neutral-400 font-medium text-xs transition hover:text-black">
                 Cancelar
             </button>
         </div>
     `;
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 async function signInWithGoogle() {
@@ -469,8 +486,8 @@ async function processAuthAction(mode) {
         if (error) { alert("Error al iniciar sesión."); return; }
         currentUser = data.user;
     }
-    closeModal();
-    updateHeaderAvatar();
+    if (typeof closeModal === 'function') closeModal();
+    if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
     renderProfileView();
     switchTab('home');
 }
@@ -478,7 +495,7 @@ async function processAuthAction(mode) {
 async function logoutUser() {
     await supabaseClient.auth.signOut();
     currentUser = null;
-    updateHeaderAvatar();
+    if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
     renderProfileView();
     switchTab('profile');
 }
