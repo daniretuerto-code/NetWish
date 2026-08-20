@@ -1,5 +1,7 @@
 let lastMainTab = 'home';
 let swipeAnim = 'fade-in';
+let isProgrammaticScroll = false;
+let scrollTimeout = null;
 
 // --- FUNCIÓN UNIFICADA PARA ACTUALIZAR LA CABECERA (LOGO Y AVATAR) ---
 function applyHeaderState(tabId) {
@@ -33,8 +35,15 @@ function switchTab(tabId) {
     const mainTabs = ['home', 'explore', 'scan', 'profile'];
     const scrollWrapper = document.getElementById('swipeScrollWrapper');
 
-    // Si es una pestaña principal del carrusel, hacemos scroll horizontal fluido nativo
+    // Si es una pestaña principal del carrusel, activamos el bloqueo temporal y scroll suave
     if (mainTabs.includes(tabId) && scrollWrapper) {
+        isProgrammaticScroll = true;
+        if (scrollTimeout) clearTimeout(scrollTimeout);
+        
+        scrollTimeout = setTimeout(() => {
+            isProgrammaticScroll = false;
+        }, 400); // Tiempo de duración del scroll suave
+
         const index = mainTabs.indexOf(tabId);
         scrollWrapper.scrollTo({
             left: index * scrollWrapper.clientWidth,
@@ -65,7 +74,7 @@ function switchTab(tabId) {
         if (pb) pb.style.width = '0%'; 
     }
 
-    // Aplicar estado de cabecera
+    // Aplicar estado de cabecera instantáneo al pinchar
     applyHeaderState(tabId);
 
     const pNav = document.getElementById('personal-nav');
@@ -87,11 +96,13 @@ function switchTab(tabId) {
     updateNavHighlight(tabId);
 }
 
-// Sincronizar botones y cabecera en tiempo real al deslizar con el dedo
+// Sincronizar botones y cabecera en tiempo real al deslizar con el dedo (ignora clics programáticos)
 document.addEventListener('DOMContentLoaded', () => {
     const scrollWrapper = document.getElementById('swipeScrollWrapper');
     if (scrollWrapper) {
         scrollWrapper.addEventListener('scroll', () => {
+            if (isProgrammaticScroll) return; // Evita conflictos cuando se pulsa un botón de navegación
+            
             const scrollLeft = scrollWrapper.scrollLeft;
             const width = scrollWrapper.clientWidth;
             const index = Math.round(scrollLeft / width);
@@ -100,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const activeTab = mainTabs[index];
                 lastMainTab = activeTab;
                 updateNavHighlight(activeTab);
-                applyHeaderState(activeTab); // Actualiza la cabecera en vivo al deslizar
+                applyHeaderState(activeTab);
             }
         }, { passive: true });
     }
