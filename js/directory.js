@@ -89,7 +89,6 @@ function filterDirectory() {
     renderBusinessDirectory(filtered);
 }
 
-// --- VARIABLES Y LÓGICA PARA LA NUEVA VENTANA DE CATEGORÍA ---
 let currentCategoryFilter = '';
 let currentCategoryBusinesses = [];
 
@@ -108,7 +107,6 @@ function goToDirectory(filter) {
     if (titleText) titleText.innerText = titleMap[filter] || 'Categoría';
     currentCategoryFilter = filter;
 
-    // Filtramos los negocios que pertenecen a esta categoría
     currentCategoryBusinesses = allPublicBusinesses.filter(biz => {
         const cat = (biz.category || biz.Categoria || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         return cat.includes(filter);
@@ -186,65 +184,120 @@ function filterCategoryView() {
     renderCategoryDirectory(filtered);
 }
 
+// ==========================================
+// --- CATÁLOGO DINÁMICO & SELECTOR +/- ---
+// ==========================================
+let activeBusinessName = "";
+
 function openPublicBusiness(name, type) {
-    cartTotalValue = 0; cartItemCount = 0; cartItemsList = []; isCartCheckout = false;
-    updateCartDisplay();
-    
+    activeBusinessName = name;
     activePayee = name; 
     document.getElementById('publicBizName').innerText = name;
     
     const imgEl = document.getElementById('publicBizImage');
-    const catalogEl = document.getElementById('publicBizCatalog');
     type = type || '';
 
     if (type.includes('pan') || type.includes('comercio')) {
         imgEl.src = "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80";
-        document.getElementById('publicBizTag').innerText = "Comercio";
-        catalogEl.innerHTML = `
-            <div class="p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/60 flex justify-between items-center shadow-sm">
-                <div class="flex-1 pr-4"><h4 class="text-sm font-bold text-black">Barra Rústica</h4><p class="text-[10px] text-neutral-500 mt-0.5">Recién horneada a leña.</p><p class="text-xs font-extrabold text-black mt-2">1,20 €</p></div>
-                <button onclick="addToCart(1.20, 'Barra Rústica')" class="w-10 h-10 rounded-2xl bg-white border border-neutral-200 shadow-sm flex items-center justify-center text-black active:scale-90"><i data-lucide="plus" class="w-4 h-4"></i></button>
-            </div>
-            <div class="p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/60 flex justify-between items-center shadow-sm">
-                <div class="flex-1 pr-4"><h4 class="text-sm font-bold text-black">Hogaza de Pueblo</h4><p class="text-[10px] text-neutral-500 mt-0.5">500g de masa madre pura.</p><p class="text-xs font-extrabold text-black mt-2">2,50 €</p></div>
-                <button onclick="addToCart(2.50, 'Hogaza de Pueblo')" class="w-10 h-10 rounded-2xl bg-white border border-neutral-200 shadow-sm flex items-center justify-center text-black active:scale-90"><i data-lucide="plus" class="w-4 h-4"></i></button>
-            </div>
-        `;
+        document.getElementById('publicBizTag').innerText = "Panadería / Comercio";
     } else if (type.includes('pel')) {
         imgEl.src = "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=800&q=80";
         document.getElementById('publicBizTag').innerText = "Peluquería";
-        catalogEl.innerHTML = `
-            <div class="p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/60 flex justify-between items-center shadow-sm">
-                <div class="flex-1 pr-4"><h4 class="text-sm font-bold text-black">Corte Caballero</h4><p class="text-[10px] text-neutral-500 mt-0.5">Incluye lavado y peinado.</p><p class="text-xs font-extrabold text-black mt-2">12,00 €</p></div>
-                <button onclick="addToCart(12.00, 'Corte Caballero')" class="w-10 h-10 rounded-2xl bg-white border border-neutral-200 shadow-sm flex items-center justify-center text-black active:scale-90"><i data-lucide="calendar-plus" class="w-4 h-4"></i></button>
-            </div>
-        `;
     } else {
         imgEl.src = "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&w=800&q=80";
         document.getElementById('publicBizTag').innerText = "Local Comercial";
-        catalogEl.innerHTML = `
-            <div class="p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/60 flex justify-between items-center shadow-sm">
-                <div class="flex-1 pr-4"><h4 class="text-sm font-bold text-black">Servicio Estándar</h4><p class="text-[10px] text-neutral-500 mt-0.5">Reserva de producto.</p><p class="text-xs font-extrabold text-black mt-2">10,00 €</p></div>
-                <button onclick="addToCart(10.00, 'Servicio Estándar')" class="w-10 h-10 rounded-2xl bg-white border border-neutral-200 shadow-sm flex items-center justify-center text-black active:scale-90"><i data-lucide="plus" class="w-4 h-4"></i></button>
-            </div>
-        `;
     }
-    lucide.createIcons();
+
+    renderPublicCatalogItems();
+    updateCartDisplay();
     
     if (typeof swipeAnim !== 'undefined') swipeAnim = 'slide-in-right';
     switchTab('public-business');
 }
 
-function addToCart(price, itemName) {
+function getBusinessCatalog(bizName) {
+    const storageKey = 'netwish_catalog_' + bizName;
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+        try { return JSON.parse(saved); } catch(e) {}
+    }
+    // Catálogo por defecto si el comerciante no ha añadido nada todavía
+    return [
+        { name: "Barra Rústica", desc: "Recién horneada a leña.", price: 1.20 },
+        { name: "Hogaza de Pueblo", desc: "500g de masa madre pura.", price: 2.50 }
+    ];
+}
+
+function renderPublicCatalogItems() {
+    const catalogEl = document.getElementById('publicBizCatalog');
+    if (!catalogEl) return;
+
+    const items = getBusinessCatalog(activeBusinessName);
+    let html = '';
+
+    items.forEach(item => {
+        // Comprobamos cuántas unidades hay de este artículo en la cesta actual
+        const existingInCart = cartItemsList.find(i => i.name === item.name);
+        const qty = existingInCart ? existingInCart.qty : 0;
+
+        html += `
+            <div class="p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex justify-between items-center transition">
+                <div class="flex-1 pr-4">
+                    <h4 class="text-sm font-bold text-black">${item.name}</h4>
+                    <p class="text-[10px] text-neutral-500 mt-0.5">${item.desc || 'Especialidad de la casa'}</p>
+                    <p class="text-xs font-extrabold text-black mt-2">${item.price.toLocaleString('es-ES', {minimumFractionDigits:2})} €</p>
+                </div>
+                
+                <div class="flex items-center space-x-2">
+                    ${qty > 0 ? `
+                        <div class="flex items-center bg-neutral-100 rounded-2xl p-1 border border-neutral-200/60 shadow-inner">
+                            <button onclick="changeItemQuantity('${item.name}', ${item.price}, -1)" class="w-8 h-8 rounded-xl bg-white text-black font-bold flex items-center justify-center shadow-sm active:scale-90 transition">
+                                <i data-lucide="minus" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <span class="w-8 text-center text-xs font-extrabold text-black">${qty}</span>
+                            <button onclick="changeItemQuantity('${item.name}', ${item.price}, 1)" class="w-8 h-8 rounded-xl bg-black text-white font-bold flex items-center justify-center shadow-md active:scale-90 transition">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    ` : `
+                        <button onclick="changeItemQuantity('${item.name}', ${item.price}, 1)" class="w-10 h-10 rounded-2xl bg-neutral-900 text-white shadow-md flex items-center justify-center active:scale-90 transition">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                        </button>
+                    `}
+                </div>
+            </div>
+        `;
+    });
+
+    catalogEl.innerHTML = html;
+    lucide.createIcons();
+}
+
+function changeItemQuantity(name, price, delta) {
     if(!currentUser) { openAuthModal('login'); return; }
-    cartTotalValue += price;
-    cartItemCount += 1;
-    cartItemsList.push({ name: itemName, price: price });
+
+    const existingIndex = cartItemsList.findIndex(i => i.name === name);
+
+    if (existingIndex >= 0) {
+        cartItemsList[existingIndex].qty += delta;
+        if (cartItemsList[existingIndex].qty <= 0) {
+            cartItemsList.splice(existingIndex, 1);
+        }
+    } else if (delta > 0) {
+        cartItemsList.push({ name: name, price: price, qty: 1 });
+    }
+
+    // Recalcular total y contador global
+    cartTotalValue = cartItemsList.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
+    cartItemCount = cartItemsList.reduce((acc, curr) => acc + curr.qty, 0);
+
     updateCartDisplay();
+    renderPublicCatalogItems(); // Refresca las tarjetas para mostrar el selector numérico
 }
 
 function updateCartDisplay() {
     const cartBar = document.getElementById('publicBusinessCartBar');
+    if (!cartBar) return;
     if (cartItemCount > 0) {
         cartBar.classList.remove('translate-y-32');
         document.getElementById('cartTotalDisplay').innerText = cartTotalValue.toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' €';
@@ -261,8 +314,11 @@ function openCartSummary() {
     cartItemsList.forEach(item => {
         html += `
             <div class="flex justify-between items-center text-xs py-2.5 border-b border-neutral-100 last:border-0 text-black">
-                <span>${item.name}</span>
-                <span class="font-bold">${item.price.toLocaleString('es-ES', {minimumFractionDigits:2})} €</span>
+                <div>
+                    <span class="font-bold">${item.name}</span>
+                    <span class="text-[10px] text-neutral-400 block">Cantidad: ${item.qty} uds</span>
+                </div>
+                <span class="font-bold"> ${(item.price * item.qty).toLocaleString('es-ES', {minimumFractionDigits:2})} €</span>
             </div>
         `;
     });
@@ -298,6 +354,91 @@ function processCartChoice(action) {
     } else {
         executeFullPayment(true);
     }
+}
+
+// ==========================================
+// --- PANEL DE CONTROL DE STOCK (COMERCIOS) ---
+// ==========================================
+function openStockControlModal() {
+    if (!currentBusiness) return;
+    const modal = document.getElementById('customModal');
+    const modalContent = document.getElementById('modalContent');
+    const modalBody = document.getElementById('modalBody');
+
+    const catalog = getBusinessCatalog(currentBusiness.name);
+
+    let productsHtml = '';
+    catalog.forEach((p, idx) => {
+        productsHtml += `
+            <div class="flex justify-between items-center bg-neutral-50 p-3 rounded-2xl border border-neutral-200/60">
+                <div>
+                    <span class="text-xs font-bold block text-black">${p.name}</span>
+                    <span class="text-[10px] text-neutral-500">${p.desc || ''} • <strong class="text-black">${p.price.toFixed(2)} €</strong></span>
+                </div>
+                <button onclick="deleteStockProduct(${idx})" class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-100 transition">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            </div>
+        `;
+    });
+
+    modalBody.innerHTML = `
+        <div class="space-y-4 text-left">
+            <div class="text-center space-y-1">
+                <h3 class="text-base font-bold text-black">Control de Stock y Catálogo</h3>
+                <p class="text-[11px] text-neutral-500">Añade o elimina productos de tu escaparate digital en NetWish.</p>
+            </div>
+
+            <div class="space-y-2.5 pt-1 border-t border-neutral-100">
+                <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">Añadir Nuevo Artículo</span>
+                <input type="text" id="newProdName" placeholder="Nombre (ej. Croissant de Mantequilla)" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                <input type="text" id="newProdDesc" placeholder="Descripción corta (ej. Elaborado cada mañana)" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                <input type="number" step="0.01" id="newProdPrice" placeholder="Precio en € (ej. 1.50)" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                <button onclick="saveNewStockProduct()" class="w-full py-3 bg-black text-white font-semibold rounded-xl text-xs shadow-md mt-1">
+                    Guardar y Publicar Artículo
+                </button>
+            </div>
+
+            <div class="space-y-2 pt-2 border-t border-neutral-100">
+                <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">Artículos en Stock (${catalog.length})</span>
+                <div class="max-h-40 overflow-y-auto space-y-2 pr-1">
+                    ${catalog.length > 0 ? productsHtml : '<p class="text-xs text-neutral-400 text-center py-3">No hay artículos dados de alta.</p>'}
+                </div>
+            </div>
+
+            <button onclick="closeModal()" class="w-full py-2 bg-neutral-100 hover:bg-neutral-200 text-black font-bold rounded-xl text-xs transition">
+                Cerrar Panel
+            </button>
+        </div>
+    `;
+    lucide.createIcons();
+    modal.classList.remove('hidden');
+    setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
+}
+
+function saveNewStockProduct() {
+    const name = document.getElementById('newProdName').value.trim();
+    const desc = document.getElementById('newProdDesc').value.trim();
+    const price = parseFloat(document.getElementById('newProdPrice').value);
+
+    if (!name || isNaN(price) || price <= 0) {
+        alert("Introduce un nombre y un precio válido.");
+        return;
+    }
+
+    const catalog = getBusinessCatalog(currentBusiness.name);
+    catalog.push({ name, desc, price });
+    localStorage.setItem('netwish_catalog_' + currentBusiness.name, JSON.stringify(catalog));
+
+    openStockControlModal(); // Recarga el modal para mostrar el nuevo producto
+}
+
+function deleteStockProduct(index) {
+    const catalog = getBusinessCatalog(currentBusiness.name);
+    catalog.splice(index, 1);
+    localStorage.setItem('netwish_catalog_' + currentBusiness.name, JSON.stringify(catalog));
+
+    openStockControlModal(); // Recarga el modal
 }
 
 // ==========================================
@@ -387,8 +528,8 @@ function renderBusinessOrders() {
                     <h3 class="text-xl font-extrabold text-black mt-1">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</h3>
                 </div>
             </div>
-            <button onclick="openModal('Control de Stock')" class="w-full py-4 bg-white border border-neutral-200 text-black font-bold rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2">
-                <i data-lucide="package" class="w-4 h-4"></i><span>Actualizar Stock Rápido</span>
+            <button onclick="openStockControlModal()" class="w-full py-4 bg-white border border-neutral-200 text-black font-bold rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2">
+                <i data-lucide="package" class="w-4 h-4"></i><span>Control de Stock y Catálogo</span>
             </button>
         `;
     }
