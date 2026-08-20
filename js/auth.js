@@ -1,3 +1,6 @@
+var currentUser = null;
+var currentBusiness = null;
+
 document.addEventListener('DOMContentLoaded', async () => {
     const hash = window.location.hash;
     if (hash && hash.includes('type=recovery')) {
@@ -27,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (typeof generateBusinessQR === 'function') generateBusinessQR(currentBusiness);
             if (typeof renderBusinessOrders === 'function') renderBusinessOrders();
             
-            switchTab('business-dashboard');
+            if (typeof switchTab === 'function') switchTab('business-dashboard');
             
             const titleEl = document.getElementById('businessTitleName');
             if (titleEl) titleEl.innerText = currentBusiness.name;
@@ -349,7 +352,7 @@ async function authenticateBusiness() {
     if (typeof generateBusinessQR === 'function') generateBusinessQR(currentBusiness);
     if (typeof renderBusinessOrders === 'function') renderBusinessOrders();
 
-    switchTab('business-dashboard');
+    if (typeof switchTab === 'function') switchTab('business-dashboard');
     
     const titleEl = document.getElementById('businessTitleName');
     if (titleEl) titleEl.innerText = currentBusiness.name;
@@ -360,7 +363,7 @@ function logoutBusiness() {
     currentBusiness = null;
     if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
     renderProfileView();
-    switchTab('home'); 
+    if (typeof switchTab === 'function') switchTab('home'); 
 }
 
 function checkPasswordStrength() {
@@ -524,7 +527,7 @@ async function processAuthAction(mode) {
     if (typeof closeModal === 'function') closeModal();
     if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
     renderProfileView();
-    switchTab('home');
+    if (typeof switchTab === 'function') switchTab('home');
 }
 
 async function logoutUser() {
@@ -532,5 +535,5 @@ async function logoutUser() {
     currentUser = null;
     if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
     renderProfileView();
-    switchTab('profile');
+    if (typeof switchTab === 'function') switchTab('profile');
 }
