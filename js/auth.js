@@ -90,7 +90,8 @@ function renderProfileView() {
                         <span class="text-xs font-bold text-black">Mis reservas y tickets</span>
                         <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
                     </button>
-                    <button onclick="openBusinessLoginModal()" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60 bg-black/5">
+                    <!-- ELIMINADO EL bg-black/5 DE ESTE BOTÓN -->
+                    <button onclick="openBusinessLoginModal()" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
                         <span class="text-xs font-bold text-black flex items-center space-x-2">
                             <i data-lucide="store" class="w-4 h-4 text-neutral-700"></i>
                             <span>¿Tienes un negocio? Acceso comercios</span>
