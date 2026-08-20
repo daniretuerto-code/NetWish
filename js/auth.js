@@ -68,10 +68,17 @@ function renderProfileView() {
     } else if (currentUser) {
         // PERFIL PERSONAL
         const meta = currentUser.user_metadata || {};
+        const avatarUrl = meta.avatar_url || meta.picture;
+        
+        // Si hay foto de Google, la ponemos en la caja grande; si no, dejamos las iniciales
+        const avatarHTML = avatarUrl 
+            ? `<img src="${avatarUrl}" class="w-full h-full object-cover" alt="Perfil">` 
+            : (meta.initials || 'NW');
+
         container.innerHTML = `
             <div class="flex items-center space-x-4 p-5 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 shadow-sm">
-                <div class="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center font-bold text-xs shadow-md shrink-0">
-                    ${meta.initials || 'NW'}
+                <div class="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center font-bold text-xs shadow-md shrink-0 overflow-hidden p-0">
+                    ${avatarHTML}
                 </div>
                 <div class="overflow-hidden text-left">
                     <h2 class="text-xs font-bold text-black truncate">${meta.name || ''} ${meta.surname || ''}</h2>
@@ -90,7 +97,6 @@ function renderProfileView() {
                         <span class="text-xs font-bold text-black">Mis reservas y tickets</span>
                         <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
                     </button>
-                    <!-- ELIMINADO EL bg-black/5 DE ESTE BOTÓN -->
                     <button onclick="openBusinessLoginModal()" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
                         <span class="text-xs font-bold text-black flex items-center space-x-2">
                             <i data-lucide="store" class="w-4 h-4 text-neutral-700"></i>
