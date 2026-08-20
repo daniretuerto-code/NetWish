@@ -41,15 +41,31 @@ function switchTab(tabId) {
         if (pb) pb.style.width = '0%'; 
     }
 
+    // --- GESTIÓN DINÁMICA DE LA CABECERA (LOGO CENTRADO Y OCULTAR AVATAR EN PERFIL) ---
+    const mainHeader = document.getElementById('mainAppHeader');
+    const avatarBtn = document.getElementById('headerAvatar');
+
+    if (tabId === 'public-business' || tabId === 'cart') {
+        if (mainHeader) mainHeader.classList.add('hidden');
+    } else {
+        if (mainHeader) mainHeader.classList.remove('hidden');
+        if (tabId === 'profile') {
+            if (mainHeader) {
+                mainHeader.classList.remove('justify-between');
+                mainHeader.classList.add('justify-center');
+            }
+            if (avatarBtn) avatarBtn.classList.add('hidden');
+        } else {
+            if (mainHeader) {
+                mainHeader.classList.remove('justify-center');
+                mainHeader.classList.add('justify-between');
+            }
+            if (avatarBtn) avatarBtn.classList.remove('hidden');
+        }
+    }
+
     const pNav = document.getElementById('personal-nav');
     const bNav = document.getElementById('business-nav');
-    const mainHeader = document.getElementById('mainAppHeader');
-    
-    if (tabId === 'public-business' || tabId === 'cart') {
-        mainHeader.classList.add('hidden');
-    } else {
-        mainHeader.classList.remove('hidden');
-    }
 
     if (['payment', 'public-business', 'cart', 'business-dashboard'].includes(tabId) && secondaryViews.includes(tabId)) {
         pNav.classList.add('hidden');
@@ -140,6 +156,7 @@ function goBackFromBusiness() {
 
 function updateHeaderAvatar() {
     const avatarBtn = document.getElementById('headerAvatar');
+    if (!avatarBtn) return;
     
     if (currentBusiness) {
         avatarBtn.innerHTML = "BIZ";
