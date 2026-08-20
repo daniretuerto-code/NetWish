@@ -1,35 +1,5 @@
-async function openPersonalQR() {
+function openPersonalQR() {
     if (!currentUser) { openAuthModal('login'); return; }
-
-    // 1. LANZAMIENTO NATIVO INMEDIATO (Face ID / Huella)
-    if (window.PublicKeyCredential) {
-        try {
-            const challenge = new Uint8Array(16);
-            window.crypto.getRandomValues(challenge);
-            const userId = new Uint8Array(16);
-            window.crypto.getRandomValues(userId);
-
-            // Al estar dentro de un evento de click, el navegador permite abrir el prompt nativo directamente
-            await navigator.credentials.create({
-                publicKey: {
-                    challenge: challenge,
-                    rp: { name: "NetWish Seguridad" },
-                    user: { id: userId, name: currentUser?.email || "usuario", displayName: "Usuario NetWish" },
-                    pubKeyCredParams: [{ type: "public-key", alg: -7 }],
-                    authenticatorSelection: { userVerification: "required" },
-                    timeout: 60000
-                }
-            });
-            // Si el Face ID / Huella es correcto, el código sigue hacia abajo
-        } catch (err) {
-            console.warn("Verificación biométrica cancelada o fallida", err);
-            // Fallback por si lo pruebas en el ordenador o cancelas
-            const fallback = confirm("La validación biométrica ha fallado o fue cancelada. Como estamos en fase de pruebas, ¿quieres saltar la seguridad y ver el código?");
-            if(!fallback) return; // Si dice que no, cortamos aquí y no enseñamos el QR
-        }
-    }
-
-    // 2. MOSTRAR EL QR (Tu código original intacto)
     const modal = document.getElementById('customModal');
     const modalContent = document.getElementById('modalContent');
     const modalBody = document.getElementById('modalBody');
