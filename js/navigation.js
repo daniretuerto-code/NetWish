@@ -6,22 +6,32 @@ function switchTab(tabId) {
         lastMainTab = tabId;
     }
 
-    const views = ['home', 'explore', 'scan', 'profile', 'payment', 'business-dashboard', 'public-business', 'cart'];
-    
-    views.forEach(v => {
+    const mainTabs = ['home', 'explore', 'scan', 'profile'];
+    const scrollWrapper = document.getElementById('swipeScrollWrapper');
+
+    // Si es una pestaña principal del carrusel, hacemos scroll horizontal fluido nativo de Apple
+    if (mainTabs.includes(tabId) && scrollWrapper) {
+        const index = mainTabs.indexOf(tabId);
+        scrollWrapper.scrollTo({
+            left: index * scrollWrapper.clientWidth,
+            behavior: 'smooth'
+        });
+    }
+
+    // Gestionamos la visibilidad de vistas secundarias / modales por capas
+    const secondaryViews = ['payment', 'business-dashboard', 'public-business', 'cart'];
+    secondaryViews.forEach(v => {
         const el = document.getElementById('view-' + v);
         if (el) {
-            el.classList.add('hidden');
-            el.classList.remove('slide-in-right', 'slide-in-left', 'fade-in');
+            if (v === tabId) {
+                el.classList.remove('hidden');
+                el.classList.add('flex', 'fade-in');
+            } else {
+                el.classList.add('hidden');
+                el.classList.remove('flex', 'fade-in');
+            }
         }
     });
-
-    const targetView = document.getElementById('view-' + tabId);
-    if (targetView) {
-        targetView.classList.remove('hidden');
-        targetView.classList.add(swipeAnim);
-    }
-    swipeAnim = 'fade-in'; 
 
     if (tabId === 'profile') renderProfileView();
     if (tabId === 'business-dashboard') renderBusinessOrders();
@@ -41,7 +51,7 @@ function switchTab(tabId) {
         mainHeader.classList.remove('hidden');
     }
 
-    if (tabId === 'payment' || tabId === 'public-business' || tabId === 'cart') {
+    if (['payment', 'public-business', 'cart', 'business-dashboard'].includes(tabId) && secondaryViews.includes(tabId)) {
         pNav.classList.add('hidden');
         bNav.classList.add('hidden');
     } else {
@@ -56,6 +66,23 @@ function switchTab(tabId) {
 
     updateNavHighlight(tabId);
 }
+
+// Sincronizar botones inferiores cuando el usuario desliza con el dedo de forma manual en vivo
+document.addEventListener('DOMContentLoaded', () => {
+    const scrollWrapper = document.getElementById('swipeScrollWrapper');
+    if (scrollWrapper) {
+        scrollWrapper.addEventListener('scroll', () => {
+            const scrollLeft = scrollWrapper.scrollLeft;
+            const width = scrollWrapper.clientWidth;
+            const index = Math.round(scrollLeft / width);
+            const mainTabs = ['home', 'explore', 'scan', 'profile'];
+            if (mainTabs[index]) {
+                lastMainTab = mainTabs[index];
+                updateNavHighlight(mainTabs[index]);
+            }
+        }, { passive: true });
+    }
+});
 
 function updateNavHighlight(activeTabId) {
     const tabs = ['home', 'explore', 'scan', 'profile'];
@@ -104,12 +131,10 @@ function resetAndExplore() {
     if (titleText) titleText.innerText = "Directorio Urbano";
 
     if (typeof filterCategory === 'function') filterCategory('todos');
-    swipeAnim = 'fade-in';
     switchTab('explore');
 }
 
 function goBackFromBusiness() {
-    swipeAnim = 'slide-in-left';
     switchTab(lastMainTab || 'home');
 }
 
@@ -118,20 +143,16 @@ function updateHeaderAvatar() {
     
     if (currentBusiness) {
         avatarBtn.innerHTML = "BIZ";
-        // Añadimos overflow-hidden y p-0 para evitar desbordes
         avatarBtn.className = "w-9 h-9 rounded-2xl bg-amber-500 text-white border border-amber-600 flex items-center justify-center text-[10px] font-bold shadow-md transition hover:scale-105 active:scale-95 overflow-hidden p-0";
     } else if (currentUser) {
         const meta = currentUser.user_metadata || {};
-        // Detectamos si Google nos ha pasado una foto de perfil
         const avatarUrl = meta.avatar_url || meta.picture;
         
         avatarBtn.className = "w-9 h-9 rounded-2xl bg-black text-white border border-neutral-800 flex items-center justify-center text-xs font-bold shadow-md transition hover:scale-105 active:scale-95 overflow-hidden p-0";
         
         if (avatarUrl) {
-            // Si hay URL, inyectamos la imagen directamente
             avatarBtn.innerHTML = `<img src="${avatarUrl}" class="w-full h-full object-cover" alt="Perfil">`;
         } else {
-            // Si no hay foto, mantenemos tu lógica original con las iniciales
             avatarBtn.innerHTML = meta.initials || "NW";
         }
     } else {
@@ -142,61 +163,4 @@ function updateHeaderAvatar() {
 
 function handleHeaderProfileClick() {
     switchTab('profile');
-}
-
-// ==========================================
-// --- MOTOR DE NAVEGACIÓN POR DESLIZAMIENTO ---
-// ==========================================
-let touchstartX = 0;
-let touchendX = 0;
-let touchstartY = 0;
-let touchendY = 0;
-
-document.addEventListener('touchstart', e => {
-    touchstartX = e.changedTouches[0].screenX;
-    touchstartY = e.changedTouches[0].screenY;
-}, { passive: true });
-
-document.addEventListener('touchend', e => {
-    touchendX = e.changedTouches[0].screenX;
-    touchendY = e.changedTouches[0].screenY;
-    handleSwipeGesture();
-}, { passive: true });
-
-function handleSwipeGesture() {
-    const xDiff = touchstartX - touchendX;
-    const yDiff = touchstartY - touchendY;
-    
-    if (Math.abs(yDiff) > Math.abs(xDiff)) return;
-    if (Math.abs(xDiff) < 50) return;
-
-    const tabs = ['home', 'explore', 'scan', 'profile'];
-    let activeTabIndex = -1;
-    
-    for (let i = 0; i < tabs.length; i++) {
-        if (!document.getElementById('view-' + tabs[i]).classList.contains('hidden')) {
-            activeTabIndex = i;
-            break;
-        }
-    }
-
-    const isPublicBusiness = !document.getElementById('view-public-business').classList.contains('hidden');
-    const isCart = !document.getElementById('view-cart').classList.contains('hidden');
-
-    if (xDiff > 0) {
-        if (activeTabIndex >= 0 && activeTabIndex < tabs.length - 1) {
-            swipeAnim = 'slide-in-right';
-            switchTab(tabs[activeTabIndex + 1]);
-        }
-    } else {
-        if (activeTabIndex > 0) {
-            swipeAnim = 'slide-in-left';
-            switchTab(tabs[activeTabIndex - 1]);
-        } else if (isCart) {
-            swipeAnim = 'slide-in-left';
-            switchTab('public-business'); 
-        } else if (isPublicBusiness) {
-            goBackFromBusiness();
-        }
-    }
 }
