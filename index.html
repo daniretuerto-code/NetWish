@@ -19,7 +19,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <!-- ARCHIVO CSS CON VERSIÓN ANTI-CACHÉ -->
-    <link rel="stylesheet" href="css/styles.css?v=4">
+    <link rel="stylesheet" href="css/styles.css?v=5">
 </head>
 <body>
 
@@ -39,7 +39,6 @@
                 
                 <!-- VISTA 1: INICIO -->
                 <div id="view-home" class="view-pane px-6 pt-2 pb-28 space-y-5">
-                    <!-- CORREGIDO: Añadido mask-image estándar para evitar el aviso del linter -->
                     <section class="glass-dark p-6 rounded-[32px] text-white flex flex-col justify-between space-y-5 relative overflow-hidden shadow-xl transform-gpu" style="-webkit-mask-image: radial-gradient(white, black); mask-image: radial-gradient(white, black);">
                         <div class="absolute -right-10 -top-10 w-36 h-36 bg-gradient-to-br from-neutral-700/30 to-transparent rounded-full blur-2xl pointer-events-none"></div>
                         <div class="flex justify-between items-start relative z-10">
@@ -118,23 +117,16 @@
                     </div>
                 </div>
 
-                <!-- VISTA 2: EXPLORAR DIRECTORIO -->
+                <!-- VISTA 2: EXPLORAR DIRECTORIO (GENERAL) -->
                 <div id="view-explore" class="view-pane px-6 pt-2 pb-28 space-y-4">
                     <div class="space-y-1 px-1">
-                        <h2 id="exploreTitle" class="text-xl font-bold text-black tracking-tight">Directorio Urbano</h2>
-                        <p class="text-[11px] text-neutral-500">Descubre comercios en Palencia y haz tus pedidos.</p>
+                        <h2 class="text-xl font-bold text-black tracking-tight">Directorio Urbano</h2>
+                        <p class="text-[11px] text-neutral-500">Todos los comercios de Palencia en un solo lugar.</p>
                     </div>
                     
                     <div class="relative flex items-center shadow-sm">
                         <i data-lucide="search" class="absolute left-4 w-4 h-4 text-neutral-400"></i>
                         <input type="text" id="directorySearch" onkeyup="filterDirectory()" placeholder="Buscar locales..." class="w-full bg-neutral-50 border border-neutral-200/80 rounded-2xl py-3.5 pl-11 pr-4 text-xs text-black placeholder-neutral-400 focus:outline-none focus:border-black transition">
-                    </div>
-
-                    <div id="directoryFilters" class="flex space-x-2 overflow-x-auto no-scrollbar pb-1">
-                        <button onclick="filterCategory('todos')" class="px-4 py-2 bg-white text-black text-[10px] font-bold rounded-xl whitespace-nowrap border border-neutral-200 shadow-sm transition hover:bg-neutral-50 active:scale-95">Todos</button>
-                        <button onclick="filterCategory('pan')" class="px-4 py-2 bg-white text-neutral-600 text-[10px] font-bold rounded-xl whitespace-nowrap border border-neutral-200/60 shadow-sm transition hover:bg-neutral-50 active:scale-95">Panaderías</button>
-                        <button onclick="filterCategory('rest')" class="px-4 py-2 bg-white text-neutral-600 text-[10px] font-bold rounded-xl whitespace-nowrap border border-neutral-200/60 shadow-sm transition hover:bg-neutral-50 active:scale-95">Restaurantes</button>
-                        <button onclick="filterCategory('pel')" class="px-4 py-2 bg-white text-neutral-600 text-[10px] font-bold rounded-xl whitespace-nowrap border border-neutral-200/60 shadow-sm transition hover:bg-neutral-50 active:scale-95">Peluquerías</button>
                     </div>
 
                     <div id="dynamicBusinessList" class="space-y-3 pt-2 pb-6">
@@ -157,6 +149,28 @@
                     <div id="profileContentContainer" class="w-full"></div>
                 </div>
 
+            </div>
+
+            <!-- VISTA NUEVA: CATEGORÍA INDEPENDIENTE -->
+            <div id="view-category" class="absolute inset-0 bg-white z-20 hidden flex-col allow-scroll px-6 pt-20 pb-28 space-y-4">
+                <div class="flex items-center space-x-3 px-1">
+                    <button onclick="switchTab('home')" class="w-10 h-10 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-black hover:bg-neutral-200 transition active:scale-95">
+                        <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                    </button>
+                    <div>
+                        <h2 id="categoryViewTitle" class="text-xl font-bold text-black tracking-tight">Categoría</h2>
+                        <p class="text-[11px] text-neutral-500">Locales y servicios en Palencia.</p>
+                    </div>
+                </div>
+
+                <div class="relative flex items-center shadow-sm">
+                    <i data-lucide="search" class="absolute left-4 w-4 h-4 text-neutral-400"></i>
+                    <input type="text" id="categorySearch" onkeyup="filterCategoryView()" placeholder="Buscar en esta categoría..." class="w-full bg-neutral-50 border border-neutral-200/80 rounded-2xl py-3.5 pl-11 pr-4 text-xs text-black placeholder-neutral-400 focus:outline-none focus:border-black transition">
+                </div>
+
+                <div id="dynamicCategoryList" class="space-y-3 pt-2 pb-6">
+                    <!-- Se rellena vía JS -->
+                </div>
             </div>
 
             <!-- VISTAS FLOTANTES / SECUNDARIAS -->
@@ -303,7 +317,7 @@
         <!-- BARRAS DE NAVEGACIÓN INFERIORES -->
         <nav id="personal-nav" class="absolute bottom-4 left-4 right-4 border border-neutral-200/80 bg-white/90 backdrop-blur-2xl px-6 py-3.5 rounded-[32px] flex justify-around items-center z-40 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
             <button id="nav-btn-home" onclick="switchTab('home')" class="flex flex-col items-center text-black space-y-1 transition group"><i data-lucide="home" class="w-5 h-5 transition-transform group-active:scale-90 scale-110"></i><span class="text-[9px] font-medium tracking-tight">Inicio</span></button>
-            <button id="nav-btn-explore" onclick="resetAndExplore()" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="compass" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Explorar</span></button>
+            <button id="nav-btn-explore" onclick="switchTab('explore')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="compass" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Explorar</span></button>
             <button id="nav-btn-scan" onclick="switchTab('scan')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="scan" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">QR</span></button>
             <button id="nav-btn-profile" onclick="switchTab('profile')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="user" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Perfil</span></button>
         </nav>
@@ -321,13 +335,13 @@
 
     </div>
 
-    <!-- SCRIPTS EN ORDEN CORRECTO Y CON ANTI-CACHÉ V4 -->
-    <script src="js/config.js?v=4"></script>
-    <script src="js/navigation.js?v=4"></script>
-    <script src="js/auth.js?v=4"></script>
-    <script src="js/directory.js?v=4"></script>
-    <script src="js/scanner.js?v=4"></script>
-    <script src="js/payment.js?v=4"></script>
+    <!-- SCRIPTS EN ORDEN CORRECTO Y CON ANTI-CACHÉ V5 -->
+    <script src="js/config.js?v=5"></script>
+    <script src="js/navigation.js?v=5"></script>
+    <script src="js/auth.js?v=5"></script>
+    <script src="js/directory.js?v=5"></script>
+    <script src="js/scanner.js?v=5"></script>
+    <script src="js/payment.js?v=5"></script>
 
 </body>
 </html>
