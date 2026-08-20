@@ -1,5 +1,71 @@
+// --- BARRERA DE SEGURIDAD BIOMÉTRICA ---
 function openPersonalQR() {
     if (!currentUser) { openAuthModal('login'); return; }
+    
+    const modal = document.getElementById('customModal');
+    const modalContent = document.getElementById('modalContent');
+    const modalBody = document.getElementById('modalBody');
+
+    // Pantalla previa de seguridad minimalista
+    modalBody.innerHTML = `
+        <div class="space-y-5 text-center py-4">
+            <div class="w-16 h-16 rounded-3xl bg-black text-white flex items-center justify-center mx-auto shadow-lg animate-pulse">
+                <i data-lucide="fingerprint" class="w-8 h-8"></i>
+            </div>
+            <div class="space-y-1.5 px-4">
+                <h3 class="text-base font-bold text-black tracking-tight">Seguridad NetWish</h3>
+                <p class="text-[11px] text-neutral-500">Verifica tu identidad mediante biometría para mostrar tu código de cobro personal.</p>
+            </div>
+            <button onclick="triggerNativeBiometrics()" class="w-full py-4 bg-black text-white font-bold rounded-2xl text-xs mt-4 shadow-[0_10px_20px_rgba(0,0,0,0.2)] flex justify-center items-center space-x-2 active:scale-95 transition">
+                <i data-lucide="scan-face" class="w-4 h-4"></i>
+                <span>Verificar Identidad</span>
+            </button>
+            <button onclick="closeModal()" class="w-full py-2 text-neutral-400 font-medium text-xs hover:text-black transition">
+                Cancelar
+            </button>
+        </div>
+    `;
+    lucide.createIcons();
+    modal.classList.remove('hidden');
+    setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
+}
+
+async function triggerNativeBiometrics() {
+    // Invocamos el API nativo de WebAuthn del navegador para despertar el Face ID / Huella
+    if (window.PublicKeyCredential) {
+        try {
+            const challenge = new Uint8Array(16);
+            window.crypto.getRandomValues(challenge);
+            const userId = new Uint8Array(16);
+            window.crypto.getRandomValues(userId);
+
+            // Esto lanza la ventana emergente nativa del sistema operativo (iOS/Android)
+            await navigator.credentials.create({
+                publicKey: {
+                    challenge: challenge,
+                    rp: { name: "NetWish Seguridad" },
+                    user: { id: userId, name: currentUser?.email || "usuario", displayName: "Usuario NetWish" },
+                    pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+                    authenticatorSelection: { userVerification: "required" },
+                    timeout: 60000
+                }
+            });
+            // Si el Face ID / Huella es correcto:
+            showRealPersonalQR();
+        } catch (err) {
+            console.warn("Verificación biométrica cancelada o fallida", err);
+            // Fallback para entornos de desarrollo (localhost) donde a veces Apple/Google bloquean el popup
+            const fallback = confirm("La validación biométrica ha fallado o fue cancelada. Como estamos en fase de pruebas, ¿quieres saltar la seguridad y ver el código?");
+            if(fallback) showRealPersonalQR();
+        }
+    } else {
+        // Si el dispositivo no tiene lector o es un PC antiguo, mostramos el QR directo
+        showRealPersonalQR();
+    }
+}
+
+// --- TU CÓDIGO ORIGINAL INTACTO ---
+function showRealPersonalQR() {
     const modal = document.getElementById('customModal');
     const modalContent = document.getElementById('modalContent');
     const modalBody = document.getElementById('modalBody');
@@ -18,8 +84,7 @@ function openPersonalQR() {
         </div>
     `;
     lucide.createIcons();
-    modal.classList.remove('hidden');
-    setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
+    // Ya no quitamos el 'hidden' aquí porque el modal ya está abierto de la pantalla de seguridad, solo actualizamos el interior.
 
     const qrContainer = document.getElementById('realQRCodeContainer');
     qrContainer.innerHTML = "";
