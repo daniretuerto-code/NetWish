@@ -35,7 +35,8 @@
         <main id="mainContentArea" class="flex-1 allow-scroll px-6 pt-20 pb-28 flex flex-col">
             
             <div id="view-home" class="space-y-5 w-full pt-2">
-                <section class="glass-dark p-6 rounded-[32px] text-white flex flex-col justify-between space-y-5 relative overflow-hidden shadow-xl">
+                <!-- SECCIÓN DEL QR CON LA ESQUINA GRIS ARREGLADA (transform-gpu y webkit-mask-image) -->
+                <section class="glass-dark p-6 rounded-[32px] text-white flex flex-col justify-between space-y-5 relative overflow-hidden shadow-xl transform-gpu" style="-webkit-mask-image: -webkit-radial-gradient(white, black);">
                     <div class="absolute -right-10 -top-10 w-36 h-36 bg-gradient-to-br from-neutral-700/30 to-transparent rounded-full blur-2xl pointer-events-none"></div>
                     <div class="flex justify-between items-start relative z-10">
                         <div>
