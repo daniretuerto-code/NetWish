@@ -1,3 +1,4 @@
+let activeBusinessId = "";
 let activeBusinessCategory = "";
 let activeBusinessName = "";
 let currentCategoryFilter = '';
@@ -50,10 +51,13 @@ function renderBusinessDirectory(businesses) {
 
     let html = '';
     businesses.forEach(biz => {
-        const name = biz.name || biz.Nombre || biz.username;
+        const bizId = String(biz.id || biz.ID || biz.username || biz.name || '');
+        const name = biz.name || biz.Nombre || biz.username || 'Comercio';
         const cat = (biz.category || biz.Categoria || '').toLowerCase();
         
-        let icon = 'store'; let colorClass = 'text-neutral-600'; let bgClass = 'bg-neutral-500/10 border-neutral-500/20';
+        let icon = 'store'; 
+        let colorClass = 'text-neutral-600'; 
+        let bgClass = 'bg-neutral-500/10 border-neutral-500/20';
         
         if (cat.includes('pan') || cat.includes('comercio') || cat.includes('bakery')) { 
             icon = 'shopping-bag'; colorClass = 'text-amber-600'; bgClass = 'bg-amber-500/10 border-amber-500/20'; 
@@ -63,20 +67,22 @@ function renderBusinessDirectory(businesses) {
             icon = 'utensils'; colorClass = 'text-rose-600'; bgClass = 'bg-rose-500/10 border-rose-500/20'; 
         } else if (cat.includes('movil') || cat.includes('taxi')) {
             icon = 'car'; colorClass = 'text-emerald-600'; bgClass = 'bg-emerald-500/10 border-emerald-500/20';
-        } else if (cat.includes('ocio') || cat.includes('evento')) {
-            icon = 'sparkles'; colorClass = 'text-purple-600'; bgClass = 'bg-purple-500/10 border-purple-500/20';
         } else if (cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio')) {
-            icon = 'headphones'; colorClass = 'text-indigo-500'; bgClass = 'bg-indigo-500/10 border-indigo-500/20';
+            icon = 'disc'; colorClass = 'text-yellow-500'; bgClass = 'bg-amber-500/20 border-amber-500/40';
         }
 
+        const safeId = encodeURIComponent(bizId);
+        const safeName = encodeURIComponent(name);
+        const safeCat = encodeURIComponent(cat);
+
         html += `
-            <button onclick="openPublicBusiness('${name}', '${cat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
+            <button onclick="openPublicBusiness('${safeId}', '${safeName}', '${safeCat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
                 <div class="w-12 h-12 rounded-xl ${bgClass} flex items-center justify-center shrink-0">
                     <i data-lucide="${icon}" class="w-5 h-5 ${colorClass}"></i>
                 </div>
                 <div class="flex-1 overflow-hidden">
                     <h3 class="text-sm font-bold text-black truncate">${name}</h3>
-                    <p class="text-[10px] text-neutral-500 truncate mt-0.5">${biz.category || 'Comercio Local'} • Click & Collect</p>
+                    <p class="text-[10px] text-neutral-500 truncate mt-0.5">${biz.category || 'Comercio Local'} • NetWish</p>
                 </div>
                 <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-300"></i>
             </button>
@@ -106,7 +112,7 @@ function goToDirectory(filter) {
         'movil': 'Movilidad Urbana',
         'ocio': 'Ocio y Cultura',
         'comercio': 'Comercios Locales',
-        'disco': 'Discográficas y Estudios'
+        'disco': 'Producción Musical & Beats'
     };
 
     if (titleText) titleText.innerText = titleMap[filter] || 'Categoría';
@@ -145,10 +151,13 @@ function renderCategoryDirectory(businesses) {
 
     let html = '';
     businesses.forEach(biz => {
-        const name = biz.name || biz.Nombre || biz.username;
+        const bizId = String(biz.id || biz.ID || biz.username || biz.name || '');
+        const name = biz.name || biz.Nombre || biz.username || 'Comercio';
         const cat = (biz.category || biz.Categoria || '').toLowerCase();
         
-        let icon = 'store'; let colorClass = 'text-neutral-600'; let bgClass = 'bg-neutral-500/10 border-neutral-500/20';
+        let icon = 'store'; 
+        let colorClass = 'text-neutral-600'; 
+        let bgClass = 'bg-neutral-500/10 border-neutral-500/20';
         
         if (cat.includes('pan') || cat.includes('comercio') || cat.includes('bakery')) { 
             icon = 'shopping-bag'; colorClass = 'text-amber-600'; bgClass = 'bg-amber-500/10 border-amber-500/20'; 
@@ -157,11 +166,15 @@ function renderCategoryDirectory(businesses) {
         } else if (cat.includes('rest') || cat.includes('bar')) { 
             icon = 'utensils'; colorClass = 'text-rose-600'; bgClass = 'bg-rose-500/10 border-rose-500/20'; 
         } else if (cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio')) {
-            icon = 'headphones'; colorClass = 'text-indigo-500'; bgClass = 'bg-indigo-500/10 border-indigo-500/20';
+            icon = 'disc'; colorClass = 'text-yellow-500'; bgClass = 'bg-amber-500/20 border-amber-500/40';
         }
 
+        const safeId = encodeURIComponent(bizId);
+        const safeName = encodeURIComponent(name);
+        const safeCat = encodeURIComponent(cat);
+
         html += `
-            <button onclick="openPublicBusiness('${name}', '${cat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
+            <button onclick="openPublicBusiness('${safeId}', '${safeName}', '${safeCat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
                 <div class="w-12 h-12 rounded-xl ${bgClass} flex items-center justify-center shrink-0">
                     <i data-lucide="${icon}" class="w-5 h-5 ${colorClass}"></i>
                 </div>
@@ -187,97 +200,109 @@ function filterCategoryView() {
     renderCategoryDirectory(filtered);
 }
 
-function openPublicBusiness(name, type) {
-    activeBusinessName = name;
-    activeBusinessCategory = type || '';
-    activePayee = name; 
-    document.getElementById('publicBizName').innerText = name;
+function openPublicBusiness(safeId, safeName, safeType) {
+    activeBusinessId = decodeURIComponent(safeId || '');
+    activeBusinessName = decodeURIComponent(safeName || '');
+    activeBusinessCategory = decodeURIComponent(safeType || '').toLowerCase();
+    activePayee = activeBusinessName;
     
+    document.getElementById('publicBizName').innerText = activeBusinessName;
     const imgEl = document.getElementById('publicBizImage');
 
-    if (activeBusinessCategory.includes('pan') || activeBusinessCategory.includes('comercio')) {
+    if (activeBusinessCategory.includes('disco') || activeBusinessCategory.includes('music') || activeBusinessCategory.includes('produ') || activeBusinessCategory.includes('estudio')) {
+        imgEl.src = "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=800&q=80";
+        document.getElementById('publicBizTag').innerText = "RECORD LABEL";
+    } else if (activeBusinessCategory.includes('pan') || activeBusinessCategory.includes('comercio')) {
         imgEl.src = "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80";
         document.getElementById('publicBizTag').innerText = "Comercio Local";
     } else if (activeBusinessCategory.includes('pel')) {
         imgEl.src = "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=800&q=80";
         document.getElementById('publicBizTag').innerText = "Peluquería";
-    } else if (activeBusinessCategory.includes('disco') || activeBusinessCategory.includes('music') || activeBusinessCategory.includes('estudio')) {
-        imgEl.src = "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=800&q=80";
-        document.getElementById('publicBizTag').innerText = "Record Label";
     } else {
         imgEl.src = "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&w=800&q=80";
-        document.getElementById('publicBizTag').innerText = "Establecimiento";
+        document.getElementById('publicBizTag').innerText = "Comercio";
     }
 
-    cartTotalValue = 0; cartItemCount = 0; cartItemsList = []; isCartCheckout = false;
-    renderPublicCatalogItems();
+    cartTotalValue = 0; 
+    cartItemCount = 0; 
+    cartItemsList = []; 
+    isCartCheckout = false;
+    
     updateCartDisplay();
+    renderPublicCatalogItems();
     
     if (typeof swipeAnim !== 'undefined') swipeAnim = 'slide-in-right';
     switchTab('public-business');
 }
 
-function getBusinessCatalog(bizName) {
-    const storageKey = 'netwish_catalog_' + bizName;
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-        try { return JSON.parse(saved); } catch(e) {}
-    }
-    
-    // Plantillas predeterminadas según categoría si está vacío
-    const cat = activeBusinessCategory || (currentBusiness ? currentBusiness.category.toLowerCase() : '');
-    
-    if (cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio')) {
-        return [
-            { name: "Licencia Exclusiva (.WAV + Stems)", desc: "Derechos completos. Pista sin tags.", price: 150.00 },
-            { name: "Licencia Estándar (.MP3)", desc: "Uso comercial limitado en plataformas.", price: 29.99 },
-            { name: "Reserva de Estudio (1 Hora)", desc: "Grabación vocal y asistencia de mezcla.", price: 40.00 }
-        ];
-    } else if (cat.includes('pel')) {
-        return [
-             { name: "Corte de Pelo Estándar", desc: "Lavado, corte y peinado.", price: 12.00 },
-             { name: "Arreglo de Barba", desc: "Perfilado y tratamiento.", price: 8.00 }
-         ]
-    }
-    
-    return [
-        { name: "Barra Rústica", desc: "Recién horneada a leña.", price: 1.20 },
-        { name: "Hogaza de Pueblo", desc: "500g de masa madre pura.", price: 2.50 }
-    ];
-}
-
-function renderPublicCatalogItems() {
+async function renderPublicCatalogItems() {
     const catalogEl = document.getElementById('publicBizCatalog');
     if (!catalogEl) return;
 
-    const items = getBusinessCatalog(activeBusinessName);
-    let html = '';
+    catalogEl.innerHTML = `
+        <div class="py-8 text-center space-y-2">
+            <i data-lucide="loader-2" class="w-5 h-5 mx-auto animate-spin text-neutral-400"></i>
+            <p class="text-[11px] text-neutral-400">Sincronizando catálogo...</p>
+        </div>
+    `;
+    lucide.createIcons();
 
+    let items = [];
+    try {
+        const { data, error } = await supabaseClient
+            .from('products')
+            .select('*')
+            .or(`business_id.eq.${activeBusinessId},business_id.eq.${activeBusinessName}`);
+            
+        if (error) throw error;
+        items = data || [];
+    } catch (err) {
+        console.error("Error consultando Supabase:", err);
+    }
+
+    if (items.length === 0) {
+        catalogEl.innerHTML = `
+            <div class="p-6 rounded-3xl bg-neutral-50 border border-neutral-200/60 text-center space-y-2">
+                <i data-lucide="package-open" class="w-6 h-6 mx-auto text-neutral-300"></i>
+                <p class="text-xs font-bold text-black">Sin artículos disponibles</p>
+                <p class="text-[10px] text-neutral-400">Este establecimiento aún no ha publicado artículos en su catálogo.</p>
+            </div>
+        `;
+        lucide.createIcons();
+        return;
+    }
+
+    let html = '';
     items.forEach(item => {
-        const existingInCart = cartItemsList.find(i => i.name === item.name);
+        const price = parseFloat(item.price) || 0;
+        const existingInCart = cartItemsList.find(i => i.id === item.id);
         const qty = existingInCart ? existingInCart.qty : 0;
+        const isMusic = activeBusinessCategory.includes('disco') || activeBusinessCategory.includes('music') || activeBusinessCategory.includes('produ');
 
         html += `
             <div class="p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex justify-between items-center transition">
                 <div class="flex-1 pr-4">
-                    <h4 class="text-sm font-bold text-black">${item.name}</h4>
-                    <p class="text-[10px] text-neutral-500 mt-0.5">${item.desc || 'Especialidad de la casa'}</p>
-                    <p class="text-xs font-extrabold text-black mt-2">${item.price.toLocaleString('es-ES', {minimumFractionDigits:2})} €</p>
+                    <div class="flex items-center space-x-1.5">
+                        ${isMusic ? '<i data-lucide="disc" class="w-3.5 h-3.5 text-amber-500 shrink-0"></i>' : ''}
+                        <h4 class="text-sm font-bold text-black">${item.name}</h4>
+                    </div>
+                    <p class="text-[10px] text-neutral-500 mt-0.5">${item.description || ''}</p>
+                    <p class="text-xs font-extrabold text-black mt-2">${price.toLocaleString('es-ES', {minimumFractionDigits:2})} €</p>
                 </div>
                 
-                <div class="flex items-center space-x-2">
+                <div class="flex items-center space-x-2 shrink-0">
                     ${qty > 0 ? `
                         <div class="flex items-center bg-neutral-100 rounded-2xl p-1 border border-neutral-200/60 shadow-inner">
-                            <button onclick="changeItemQuantity('${item.name}', ${item.price}, -1)" class="w-8 h-8 rounded-xl bg-white text-black font-bold flex items-center justify-center shadow-sm active:scale-90 transition">
+                            <button onclick="changeItemQuantity('${item.id}', '${encodeURIComponent(item.name)}', ${price}, -1)" class="w-8 h-8 rounded-xl bg-white text-black font-bold flex items-center justify-center shadow-sm active:scale-90 transition">
                                 <i data-lucide="minus" class="w-3.5 h-3.5"></i>
                             </button>
                             <span class="w-8 text-center text-xs font-extrabold text-black">${qty}</span>
-                            <button onclick="changeItemQuantity('${item.name}', ${item.price}, 1)" class="w-8 h-8 rounded-xl bg-black text-white font-bold flex items-center justify-center shadow-md active:scale-90 transition">
+                            <button onclick="changeItemQuantity('${item.id}', '${encodeURIComponent(item.name)}', ${price}, 1)" class="w-8 h-8 rounded-xl bg-black text-white font-bold flex items-center justify-center shadow-md active:scale-90 transition">
                                 <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                             </button>
                         </div>
                     ` : `
-                        <button onclick="changeItemQuantity('${item.name}', ${item.price}, 1)" class="w-10 h-10 rounded-2xl bg-neutral-900 text-white shadow-md flex items-center justify-center active:scale-90 transition">
+                        <button onclick="changeItemQuantity('${item.id}', '${encodeURIComponent(item.name)}', ${price}, 1)" class="w-10 h-10 rounded-2xl bg-black text-white shadow-md flex items-center justify-center active:scale-90 transition font-bold">
                             <i data-lucide="plus" class="w-4 h-4"></i>
                         </button>
                     `}
@@ -290,10 +315,14 @@ function renderPublicCatalogItems() {
     lucide.createIcons();
 }
 
-function changeItemQuantity(name, price, delta) {
-    if(!currentUser) { openAuthModal('login'); return; }
+function changeItemQuantity(id, encodedName, price, delta) {
+    if (!currentUser) { 
+        if (typeof openAuthModal === 'function') openAuthModal('login'); 
+        return; 
+    }
 
-    const existingIndex = cartItemsList.findIndex(i => i.name === name);
+    const name = decodeURIComponent(encodedName);
+    const existingIndex = cartItemsList.findIndex(i => i.id === id);
 
     if (existingIndex >= 0) {
         cartItemsList[existingIndex].qty += delta;
@@ -301,7 +330,7 @@ function changeItemQuantity(name, price, delta) {
             cartItemsList.splice(existingIndex, 1);
         }
     } else if (delta > 0) {
-        cartItemsList.push({ name: name, price: price, qty: 1 });
+        cartItemsList.push({ id: id, name: name, price: price, qty: 1 });
     }
 
     cartTotalValue = cartItemsList.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
@@ -354,7 +383,10 @@ function openCartSummary() {
 function processCartChoice(action) {
     const date = document.getElementById('orderDate').value;
     const time = document.getElementById('orderTime').value;
-    if(!date || !time) { alert("Por favor, elige un día y hora de recogida/cita."); return; }
+    if (!date || !time) { 
+        alert("Por favor, elige un día y hora de recogida/cita."); 
+        return; 
+    }
 
     pendingOrderDetails = { date, time, action };
     isCartCheckout = true;
@@ -368,37 +400,57 @@ function processCartChoice(action) {
         if (typeof swipeAnim !== 'undefined') swipeAnim = 'slide-in-right';
         switchTab('payment');
     } else {
-        executeFullPayment(true);
+        if (typeof executeFullPayment === 'function') executeFullPayment(true);
     }
 }
 
-function openStockControlModal() {
+async function openStockControlModal() {
     if (!currentBusiness) return;
     const modal = document.getElementById('customModal');
     const modalContent = document.getElementById('modalContent');
     const modalBody = document.getElementById('modalBody');
 
-    const catalog = getBusinessCatalog(currentBusiness.name);
-    
-    // Adaptación de textos para Discográfica / Estudio vs Normal
-    const cat = currentBusiness.category.toLowerCase();
+    const cat = (currentBusiness.category || '').toLowerCase();
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
 
-    const title = isMusic ? "Catálogo de Beats y Sesiones" : "Control de Stock y Catálogo";
-    const subtitle = isMusic ? "Sube tus licencias y servicios de estudio a la app." : "Añade o elimina productos de tu escaparate digital.";
-    const phName = isMusic ? "Nombre (ej. Beat Trap Exclusivo)" : "Nombre (ej. Croissant de Mantequilla)";
-    const phDesc = isMusic ? "Descripción (ej. WAV + Stems, Sin tags)" : "Descripción corta (ej. Elaborado cada mañana)";
-    const btnText = isMusic ? "Subir y Publicar Track" : "Guardar y Publicar Artículo";
+    const title = isMusic ? "Gestor de Beats & Tracks" : "Control de Stock y Catálogo";
+    const subtitle = isMusic ? "Publica licencias, beats y servicios de estudio." : "Añade o elimina productos del catálogo digital.";
+    const phName = isMusic ? "Nombre (ej. Drill Beat Vol.1)" : "Nombre (ej. Barra de Pan Rústica)";
+    const phDesc = isMusic ? "Descripción (ej. WAV + Stems, Sin tags)" : "Descripción corta (ej. Elaboración artesanal)";
+    const btnText = isMusic ? "Publicar Beat en NetWish" : "Publicar Producto";
+
+    modalBody.innerHTML = `
+        <div class="space-y-4 text-center py-6">
+            <i data-lucide="loader-2" class="w-6 h-6 mx-auto animate-spin text-black mb-2"></i>
+            <p class="text-xs text-neutral-500">Consultando Supabase...</p>
+        </div>
+    `;
+    lucide.createIcons();
+    modal.classList.remove('hidden');
+    setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
+
+    let catalog = [];
+    try {
+        const { data, error } = await supabaseClient
+            .from('products')
+            .select('*')
+            .or(`business_id.eq.${currentBusiness.id},business_id.eq.${currentBusiness.name}`);
+        if (error) throw error;
+        catalog = data || [];
+    } catch (err) {
+        console.error("Error al cargar stock:", err);
+    }
 
     let productsHtml = '';
-    catalog.forEach((p, idx) => {
+    catalog.forEach(p => {
+        const price = parseFloat(p.price) || 0;
         productsHtml += `
             <div class="flex justify-between items-center bg-neutral-50 p-3 rounded-2xl border border-neutral-200/60">
-                <div>
-                    <span class="text-xs font-bold block text-black">${p.name}</span>
-                    <span class="text-[10px] text-neutral-500">${p.desc || ''} • <strong class="text-black">${p.price.toFixed(2)} €</strong></span>
+                <div class="overflow-hidden pr-2">
+                    <span class="text-xs font-bold block text-black truncate">${p.name}</span>
+                    <span class="text-[10px] text-neutral-500 block truncate">${p.description || ''} • <strong class="text-black">${price.toFixed(2)} €</strong></span>
                 </div>
-                <button onclick="deleteStockProduct(${idx})" class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-100 transition">
+                <button onclick="deleteStockProduct('${p.id}')" class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-100 shrink-0 transition">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
             </div>
@@ -413,33 +465,34 @@ function openStockControlModal() {
             </div>
 
             <div class="space-y-2.5 pt-1 border-t border-neutral-100">
-                <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">Añadir Nuevo</span>
+                <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">Nuevo Registro</span>
                 <input type="text" id="newProdName" placeholder="${phName}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
                 <input type="text" id="newProdDesc" placeholder="${phDesc}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
-                <input type="number" step="0.01" id="newProdPrice" placeholder="Precio en € (ej. 15.00)" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
-                <button onclick="saveNewStockProduct()" class="w-full py-3 bg-black text-white font-semibold rounded-xl text-xs shadow-md mt-1">
-                    ${btnText}
+                <input type="number" step="0.01" id="newProdPrice" placeholder="Precio en € (ej. 29.99)" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                <button onclick="saveNewStockProduct()" class="w-full py-3 bg-black text-white font-semibold rounded-xl text-xs shadow-md mt-1 flex items-center justify-center space-x-2 active:scale-95 transition">
+                    <i data-lucide="cloud-upload" class="w-4 h-4"></i>
+                    <span>${btnText}</span>
                 </button>
             </div>
 
             <div class="space-y-2 pt-2 border-t border-neutral-100">
-                <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">Publicados (${catalog.length})</span>
+                <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">Artículos Publicados (${catalog.length})</span>
                 <div class="max-h-40 overflow-y-auto space-y-2 pr-1">
-                    ${catalog.length > 0 ? productsHtml : '<p class="text-xs text-neutral-400 text-center py-3">No hay nada publicado.</p>'}
+                    ${catalog.length > 0 ? productsHtml : '<p class="text-xs text-neutral-400 text-center py-3">No hay artículos dados de alta en Supabase.</p>'}
                 </div>
             </div>
 
-            <button onclick="closeModal()" class="w-full py-2 bg-neutral-100 hover:bg-neutral-200 text-black font-bold rounded-xl text-xs transition">
-                Cerrar Panel
+            <button onclick="if(typeof closeModal === 'function') closeModal()" class="w-full py-2 bg-neutral-100 hover:bg-neutral-200 text-black font-bold rounded-xl text-xs transition">
+                Cerrar
             </button>
         </div>
     `;
     lucide.createIcons();
-    modal.classList.remove('hidden');
-    setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
 }
 
-function saveNewStockProduct() {
+async function saveNewStockProduct() {
+    if (!currentBusiness) return;
+    
     const name = document.getElementById('newProdName').value.trim();
     const desc = document.getElementById('newProdDesc').value.trim();
     const price = parseFloat(document.getElementById('newProdPrice').value);
@@ -449,19 +502,37 @@ function saveNewStockProduct() {
         return;
     }
 
-    const catalog = getBusinessCatalog(currentBusiness.name);
-    catalog.push({ name, desc, price });
-    localStorage.setItem('netwish_catalog_' + currentBusiness.name, JSON.stringify(catalog));
+    const targetBizId = String(currentBusiness.id || currentBusiness.name);
 
-    openStockControlModal();
+    try {
+        const { error } = await supabaseClient
+            .from('products')
+            .insert([{ 
+                business_id: targetBizId, 
+                name: name, 
+                description: desc, 
+                price: price 
+            }]);
+            
+        if (error) throw error;
+        openStockControlModal();
+    } catch (err) {
+        alert("Error en Supabase: " + err.message);
+    }
 }
 
-function deleteStockProduct(index) {
-    const catalog = getBusinessCatalog(currentBusiness.name);
-    catalog.splice(index, 1);
-    localStorage.setItem('netwish_catalog_' + currentBusiness.name, JSON.stringify(catalog));
-
-    openStockControlModal();
+async function deleteStockProduct(productId) {
+    try {
+        const { error } = await supabaseClient
+            .from('products')
+            .delete()
+            .eq('id', productId);
+            
+        if (error) throw error;
+        openStockControlModal();
+    } catch (err) {
+        alert("Error al eliminar: " + err.message);
+    }
 }
 
 function renderBusinessOrders() {
@@ -487,118 +558,95 @@ function renderBusinessOrders() {
         if (o.status.includes('Pendiente') || o.status === 'Pagado Online') pendingOrdersCount++;
     });
 
-    // 1. EL BOTÓN DEL QR DE NEGOCIO (Sustituye al QR al aire)
-    let html = `
-        <section class="glass-dark p-6 rounded-[32px] text-white flex flex-col justify-between space-y-5 relative overflow-hidden shadow-xl transform-gpu" style="-webkit-mask-image: radial-gradient(white, black); mask-image: radial-gradient(white, black);">
-            <div class="absolute -right-10 -top-10 w-36 h-36 bg-gradient-to-br from-neutral-500/30 to-transparent rounded-full blur-2xl pointer-events-none"></div>
-            <div class="flex justify-between items-start relative z-10">
-                <div>
-                    <span class="text-[9px] text-neutral-400 font-mono tracking-widest uppercase bg-white/10 px-2.5 py-1 rounded-full border border-white/5">TERMINAL VIRTUAL</span>
-                    <h2 class="text-lg font-medium tracking-tight mt-2 text-white">Cobro Rápido</h2>
-                </div>
-                <div class="w-10 h-10 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center backdrop-blur-md">
-                    <i data-lucide="qr-code" class="w-5 h-5 text-white"></i>
-                </div>
-            </div>
-            <button onclick="openBusinessQR()" class="w-full py-3.5 bg-white text-black font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-100 active:scale-[0.98] relative z-10 shadow-lg flex items-center justify-center space-x-2">
-                <i data-lucide="qr-code" class="w-4 h-4"></i>
-                <span>Mostrar QR de Negocio</span>
-            </button>
-        </section>
-    `;
+    let html = '';
 
-    // 2. LA INTERFAZ PREMIUM SEGÚN CATEGORÍA (Discográfica vs Resto)
     if (isMusic) {
-        html += `
+        html = `
+            <div class="bg-gradient-to-br from-neutral-950 via-neutral-900 to-black p-6 rounded-[36px] text-white border border-amber-500/30 shadow-2xl relative overflow-hidden">
+                <div class="flex justify-between items-center relative z-10 mb-4">
+                    <span class="text-[9px] font-mono uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/30">GOLD RECORD CERTIFIED</span>
+                    <i data-lucide="disc" class="w-6 h-6 text-amber-400 animate-pulse"></i>
+                </div>
+
+                <div class="flex items-center space-x-4 my-3 relative z-10">
+                    <div class="w-16 h-16 rounded-full bg-gradient-to-tr from-yellow-700 via-amber-300 to-yellow-500 p-0.5 shadow-xl flex items-center justify-center shrink-0 animate-[spin_8s_linear_infinite]">
+                        <div class="w-full h-full rounded-full bg-neutral-950 flex items-center justify-center border border-amber-400/50">
+                            <div class="w-6 h-6 rounded-full bg-amber-400 border-2 border-black flex items-center justify-center text-[8px] font-black text-black">GOLD</div>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-extrabold text-white tracking-tight">${currentBusiness.name}</h2>
+                        <p class="text-[10px] text-amber-300/80 font-mono mt-0.5">Estudio de Grabación & Label</p>
+                    </div>
+                </div>
+
+                <button onclick="if(typeof openBusinessQR === 'function') openBusinessQR()" class="w-full mt-2 py-3 bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600 text-black font-extrabold rounded-2xl text-xs tracking-wide shadow-lg flex items-center justify-center space-x-2 active:scale-95 transition">
+                    <i data-lucide="qr-code" class="w-4 h-4"></i>
+                    <span>Mostrar QR de Cobro VIP</span>
+                </button>
+            </div>
+
             <div class="grid grid-cols-2 gap-3">
-                <div class="p-4 rounded-3xl bg-neutral-900 border border-neutral-800 text-left shadow-lg">
-                    <span class="text-[10px] text-neutral-400 font-mono uppercase tracking-widest">Licencias / Beats</span>
+                <div class="p-4 rounded-3xl bg-neutral-900 border border-amber-500/20 text-left shadow-lg">
+                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-widest">Licencias Vendidas</span>
                     <h3 class="text-2xl font-black text-white mt-1">${pendingOrdersCount}</h3>
                 </div>
-                <div class="p-4 rounded-3xl bg-neutral-900 border border-neutral-800 text-left shadow-lg">
-                    <span class="text-[10px] text-neutral-400 font-mono uppercase tracking-widest">Royalties (Caja)</span>
-                    <h3 class="text-2xl font-black text-emerald-400 mt-1">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</h3>
+                <div class="p-4 rounded-3xl bg-neutral-900 border border-amber-500/20 text-left shadow-lg">
+                    <span class="text-[9px] text-amber-400/80 font-mono uppercase tracking-widest">Royalties Acumulados</span>
+                    <h3 class="text-2xl font-black text-amber-400 mt-1">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</h3>
                 </div>
             </div>
-            <div class="flex space-x-3">
-                <button onclick="openStockControlModal()" class="flex-1 py-4 bg-black text-white border border-neutral-800 font-bold rounded-2xl shadow-xl active:scale-95 transition flex justify-center items-center space-x-2">
-                    <i data-lucide="music" class="w-4 h-4"></i><span>Subir Beats</span>
-                </button>
-                <button onclick="openModal('Agenda de Sesiones')" class="flex-1 py-4 bg-white text-black font-bold border border-neutral-200 rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2">
-                    <i data-lucide="mic" class="w-4 h-4"></i><span>Sesiones</span>
-                </button>
-            </div>
-        `;
-    } else if (cat.includes('pel')) {
-        html += `
+
             <div class="grid grid-cols-2 gap-3">
-                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
-                    <span class="text-[10px] text-neutral-400 font-mono uppercase">Citas Pendientes</span>
-                    <h3 class="text-xl font-extrabold text-black mt-1">${pendingOrdersCount}</h3>
-                </div>
-                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
-                    <span class="text-[10px] text-neutral-400 font-mono uppercase">Caja Acumulada</span>
-                    <h3 class="text-xl font-extrabold text-black mt-1">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</h3>
-                </div>
-            </div>
-            <div class="flex space-x-3">
-                <button onclick="openStockControlModal()" class="flex-1 py-4 bg-white border border-neutral-200 text-black font-bold rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2">
-                    <i data-lucide="scissors" class="w-4 h-4"></i><span>Servicios</span>
+                <button onclick="openStockControlModal()" class="py-4 bg-gradient-to-r from-amber-400 to-yellow-500 text-black font-black rounded-2xl shadow-xl active:scale-95 transition flex justify-center items-center space-x-2 text-xs">
+                    <i data-lucide="music" class="w-4 h-4"></i>
+                    <span>Gestor de Beats</span>
                 </button>
-                <button onclick="openModal('Agenda de Citas')" class="flex-1 py-4 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex justify-center items-center space-x-2">
-                    <i data-lucide="calendar" class="w-4 h-4"></i><span>Agenda</span>
-                </button>
-            </div>
-        `;
-    } else if (cat.includes('rest') || cat.includes('bar')) {
-        html += `
-            <div class="grid grid-cols-3 gap-3">
-                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
-                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Mesas</span>
-                    <h3 class="text-lg font-extrabold text-black">4</h3>
-                </div>
-                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
-                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Cocina</span>
-                    <h3 class="text-lg font-extrabold text-black">${pendingOrdersCount}</h3>
-                </div>
-                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
-                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Caja</span>
-                    <h3 class="text-lg font-extrabold text-black">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€</h3>
-                </div>
-            </div>
-            <div class="flex space-x-3">
-                <button onclick="openStockControlModal()" class="flex-1 py-3 bg-white border border-neutral-200 text-black font-bold rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2">
-                    <i data-lucide="book-open" class="w-4 h-4"></i><span>Carta</span>
-                </button>
-                <button onclick="switchTab('business-scan')" class="flex-1 py-3 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex justify-center items-center space-x-2">
-                    <i data-lucide="scan-line" class="w-4 h-4"></i><span>Escanear Mesa</span>
+                <button onclick="if(typeof openModal === 'function') openModal('Agenda de Grabación')" class="py-4 bg-neutral-900 text-white border border-neutral-800 font-bold rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2 text-xs">
+                    <i data-lucide="mic" class="w-4 h-4 text-amber-400"></i>
+                    <span>Horas de Estudio</span>
                 </button>
             </div>
         `;
     } else {
-        html += `
+        html = `
+            <section class="glass-dark p-6 rounded-[32px] text-white flex flex-col justify-between space-y-5 relative overflow-hidden shadow-xl">
+                <div class="flex justify-between items-start relative z-10">
+                    <div>
+                        <span class="text-[9px] text-neutral-400 font-mono tracking-widest uppercase bg-white/10 px-2.5 py-1 rounded-full">TERMINAL VIRTUAL</span>
+                        <h2 class="text-lg font-medium tracking-tight mt-2 text-white">Cobro Rápido</h2>
+                    </div>
+                    <i data-lucide="qr-code" class="w-5 h-5 text-white"></i>
+                </div>
+                <button onclick="if(typeof openBusinessQR === 'function') openBusinessQR()" class="w-full py-3.5 bg-white text-black font-semibold rounded-2xl text-xs tracking-wide transition shadow-lg flex items-center justify-center space-x-2">
+                    <i data-lucide="qr-code" class="w-4 h-4"></i>
+                    <span>Mostrar QR de Negocio</span>
+                </button>
+            </section>
+
             <div class="grid grid-cols-2 gap-3">
                 <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
-                    <span class="text-[10px] text-neutral-400 font-mono uppercase">Pedidos Click&Collect</span>
+                    <span class="text-[10px] text-neutral-400 font-mono uppercase">Pedidos</span>
                     <h3 class="text-xl font-extrabold text-black mt-1">${pendingOrdersCount}</h3>
                 </div>
                 <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
-                    <span class="text-[10px] text-neutral-400 font-mono uppercase">Caja Acumulada</span>
+                    <span class="text-[10px] text-neutral-400 font-mono uppercase">Caja</span>
                     <h3 class="text-xl font-extrabold text-black mt-1">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</h3>
                 </div>
             </div>
+
             <button onclick="openStockControlModal()" class="w-full py-4 bg-white border border-neutral-200 text-black font-bold rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2">
-                <i data-lucide="package" class="w-4 h-4"></i><span>Control de Stock y Catálogo</span>
+                <i data-lucide="package" class="w-4 h-4"></i>
+                <span>Control de Stock y Catálogo</span>
             </button>
         `;
     }
 
-    // 3. EL HISTORIAL COMÚN
     html += `
         <div class="space-y-2 pt-2">
             <div class="flex justify-between items-center px-1">
                 <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Próximos / Recientes</h3>
-                <button onclick="openModal('Historial')" class="text-[10px] font-bold text-black hover:underline">Ver historial</button>
+                <button onclick="if(typeof openModal === 'function') openModal('Historial')" class="text-[10px] font-bold text-black hover:underline">Ver historial</button>
             </div>
             <div class="space-y-2">
     `;
@@ -631,7 +679,6 @@ function renderBusinessOrders() {
     }
     
     html += `</div></div>`;
-    
     container.innerHTML = html;
     lucide.createIcons();
 }
