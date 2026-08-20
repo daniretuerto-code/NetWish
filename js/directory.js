@@ -1,6 +1,7 @@
 let activeBusinessId = "";
 let activeBusinessCategory = "";
 let activeBusinessName = "";
+let activeBusinessUsername = "";
 let currentCategoryFilter = '';
 let currentCategoryBusinesses = [];
 
@@ -51,8 +52,9 @@ function renderBusinessDirectory(businesses) {
 
     let html = '';
     businesses.forEach(biz => {
-        const bizId = String(biz.id || biz.ID || biz.username || biz.name || '');
+        const bizId = String(biz.id || biz.ID || '');
         const name = biz.name || biz.Nombre || biz.username || 'Comercio';
+        const username = biz.username || '';
         const cat = (biz.category || biz.Categoria || '').toLowerCase();
         
         let icon = 'store'; 
@@ -73,10 +75,11 @@ function renderBusinessDirectory(businesses) {
 
         const safeId = encodeURIComponent(bizId);
         const safeName = encodeURIComponent(name);
+        const safeUser = encodeURIComponent(username);
         const safeCat = encodeURIComponent(cat);
 
         html += `
-            <button onclick="openPublicBusiness('${safeId}', '${safeName}', '${safeCat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
+            <button onclick="openPublicBusiness('${safeId}', '${safeName}', '${safeUser}', '${safeCat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
                 <div class="w-12 h-12 rounded-xl ${bgClass} flex items-center justify-center shrink-0">
                     <i data-lucide="${icon}" class="w-5 h-5 ${colorClass}"></i>
                 </div>
@@ -151,8 +154,9 @@ function renderCategoryDirectory(businesses) {
 
     let html = '';
     businesses.forEach(biz => {
-        const bizId = String(biz.id || biz.ID || biz.username || biz.name || '');
+        const bizId = String(biz.id || biz.ID || '');
         const name = biz.name || biz.Nombre || biz.username || 'Comercio';
+        const username = biz.username || '';
         const cat = (biz.category || biz.Categoria || '').toLowerCase();
         
         let icon = 'store'; 
@@ -171,10 +175,11 @@ function renderCategoryDirectory(businesses) {
 
         const safeId = encodeURIComponent(bizId);
         const safeName = encodeURIComponent(name);
+        const safeUser = encodeURIComponent(username);
         const safeCat = encodeURIComponent(cat);
 
         html += `
-            <button onclick="openPublicBusiness('${safeId}', '${safeName}', '${safeCat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
+            <button onclick="openPublicBusiness('${safeId}', '${safeName}', '${safeUser}', '${safeCat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
                 <div class="w-12 h-12 rounded-xl ${bgClass} flex items-center justify-center shrink-0">
                     <i data-lucide="${icon}" class="w-5 h-5 ${colorClass}"></i>
                 </div>
@@ -200,9 +205,10 @@ function filterCategoryView() {
     renderCategoryDirectory(filtered);
 }
 
-function openPublicBusiness(safeId, safeName, safeType) {
+function openPublicBusiness(safeId, safeName, safeUser, safeType) {
     activeBusinessId = decodeURIComponent(safeId || '');
     activeBusinessName = decodeURIComponent(safeName || '');
+    activeBusinessUsername = decodeURIComponent(safeUser || '');
     activeBusinessCategory = decodeURIComponent(safeType || '').toLowerCase();
     activePayee = activeBusinessName;
     
@@ -249,10 +255,18 @@ async function renderPublicCatalogItems() {
 
     let items = [];
     try {
+        const queryIdentifiers = [
+            activeBusinessId,
+            activeBusinessName,
+            activeBusinessUsername
+        ].filter(v => v && v.trim() !== '');
+
+        const orFilter = queryIdentifiers.map(val => `business_id.eq.${val}`).join(',');
+
         const { data, error } = await supabaseClient
             .from('products')
             .select('*')
-            .or(`business_id.eq.${activeBusinessId},business_id.eq.${activeBusinessName}`);
+            .or(orFilter);
             
         if (error) throw error;
         items = data || [];
@@ -431,10 +445,17 @@ async function openStockControlModal() {
 
     let catalog = [];
     try {
+        const targetBizId = String(currentBusiness.id || currentBusiness.name || currentBusiness.username || '');
+        const targetBizName = String(currentBusiness.name || '');
+        const targetBizUser = String(currentBusiness.username || '');
+
+        const queryIdentifiers = [targetBizId, targetBizName, targetBizUser].filter(v => v && v.trim() !== '');
+        const orFilter = queryIdentifiers.map(val => `business_id.eq.${val}`).join(',');
+
         const { data, error } = await supabaseClient
             .from('products')
             .select('*')
-            .or(`business_id.eq.${currentBusiness.id},business_id.eq.${currentBusiness.name}`);
+            .or(orFilter);
         if (error) throw error;
         catalog = data || [];
     } catch (err) {
