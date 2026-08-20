@@ -1,15 +1,14 @@
-var allPublicBusinesses = [];
-var activeBusinessName = "";
-var activeBusinessUsername = "";
-var activeBusinessCategory = "";
-var currentCategoryFilter = '';
-var currentCategoryBusinesses = [];
-var activePayee = "";
-var cartTotalValue = 0;
-var cartItemCount = 0;
-var cartItemsList = [];
-var isCartCheckout = false;
-var pendingOrderDetails = null;
+let activeBusinessName = "";
+let activeBusinessUsername = "";
+let activeBusinessCategory = "";
+let currentCategoryFilter = '';
+let currentCategoryBusinesses = [];
+let activePayee = "";
+let cartTotalValue = 0;
+let cartItemCount = 0;
+let cartItemsList = [];
+let isCartCheckout = false;
+let pendingOrderDetails = null;
 
 async function loadPublicBusinesses() {
     const listContainer = document.getElementById('dynamicBusinessList');
@@ -132,7 +131,7 @@ function goToDirectory(filter) {
     const searchInput = document.getElementById('categorySearch');
     if (searchInput) searchInput.value = '';
 
-    if (typeof switchTab === 'function') switchTab('category');
+    switchTab('category');
 }
 
 function renderCategoryDirectory(businesses) {
@@ -236,7 +235,7 @@ function openPublicBusiness(safeName, safeUser, safeType) {
     renderPublicCatalogItems();
     
     if (typeof swipeAnim !== 'undefined') swipeAnim = 'slide-in-right';
-    if (typeof switchTab === 'function') switchTab('public-business');
+    switchTab('public-business');
 }
 
 async function renderPublicCatalogItems() {
@@ -255,7 +254,8 @@ async function renderPublicCatalogItems() {
     try {
         const identifierFilters = [
             activeBusinessUsername ? `business_id.eq.${activeBusinessUsername}` : null,
-            activeBusinessName ? `business_id.eq.${activeBusinessName}` : null
+            activeBusinessName ? `business_id.eq.${activeBusinessName}` : null,
+            `business_id.eq.biz_db`
         ].filter(Boolean).join(',');
 
         const { data, error } = await supabaseClient
@@ -386,7 +386,7 @@ function openCartSummary() {
     document.getElementById('publicBusinessCartBar').classList.add('translate-y-32');
     
     if (typeof swipeAnim !== 'undefined') swipeAnim = 'slide-in-right';
-    if (typeof switchTab === 'function') switchTab('cart');
+    switchTab('cart');
 }
 
 function processCartChoice(action) {
@@ -394,7 +394,7 @@ function processCartChoice(action) {
     const timeInput = document.getElementById('orderTime');
 
     if (!dateInput || !timeInput || !dateInput.value || !timeInput.value) { 
-        alert("Por favor, selecciona un día y hora para tu recogida o reserva."); 
+        alert("Por favor, selecciona un día y hora para tu recogida."); 
         return; 
     }
 
@@ -414,12 +414,12 @@ function processCartChoice(action) {
         if (payeeInitials) payeeInitials.innerText = activePayee.substring(0, 2).toUpperCase();
         
         if (typeof swipeAnim !== 'undefined') swipeAnim = 'slide-in-right';
-        if (typeof switchTab === 'function') switchTab('payment');
+        switchTab('payment');
     } else {
         if (typeof executeFullPayment === 'function') {
             executeFullPayment(true);
         } else {
-            console.error("No se encuentra la función executeFullPayment.");
+            console.error("No se ha definido la función executeFullPayment.");
         }
     }
 }

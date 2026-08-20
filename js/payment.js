@@ -1,6 +1,6 @@
-var rawAmountString = "000";
-var holdProgress = 0;
-var holdInterval = null;
+let rawAmountString = "000";
+let holdProgress = 0;
+let holdInterval = null;
 
 function appendNum(num) {
     if (rawAmountString === "000" || rawAmountString === "0") {
