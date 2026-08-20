@@ -2,7 +2,6 @@ let lastMainTab = 'home';
 let isProgrammaticScroll = false;
 let scrollTimeout = null;
 
-// --- FUNCIÓN UNIFICADA PARA ACTUALIZAR LA CABECERA ---
 function applyHeaderState(tabId) {
     const mainHeader = document.getElementById('mainAppHeader');
     const avatarBtn = document.getElementById('headerAvatar');
@@ -32,7 +31,6 @@ function switchTab(tabId) {
     const userWrapper = document.getElementById('userScrollWrapper');
     const bizWrapper = document.getElementById('bizScrollWrapper');
 
-    // Gestión del modo comercio vs modo usuario
     if (currentBusiness) {
         if (userWrapper) userWrapper.classList.add('hidden');
         if (bizWrapper) bizWrapper.classList.remove('hidden');
@@ -67,7 +65,6 @@ function switchTab(tabId) {
         }
     }
 
-    // Gestionamos la visibilidad de vistas secundarias / modales por capas
     const secondaryViews = ['payment', 'public-business', 'cart', 'category'];
     secondaryViews.forEach(v => {
         const el = document.getElementById('view-' + v);
@@ -82,9 +79,21 @@ function switchTab(tabId) {
         }
     });
 
-    if (tabId === 'explore') renderBusinessDirectory(allPublicBusinesses);
-    if (tabId === 'profile' || tabId === 'business-profile') renderProfileView();
-    if (tabId === 'business-dashboard') renderBusinessOrders();
+    if (tabId === 'explore') {
+        if (typeof renderBusinessDirectory === 'function' && typeof allPublicBusinesses !== 'undefined') {
+            renderBusinessDirectory(allPublicBusinesses);
+        }
+    }
+    
+    // CORRECCIÓN: Renderizar SIEMPRE el perfil si entramos a él
+    if (tabId === 'profile' || tabId === 'business-profile') {
+        if (typeof renderProfileView === 'function') renderProfileView();
+    }
+    
+    if (tabId === 'business-dashboard') {
+        if (typeof renderBusinessOrders === 'function') renderBusinessOrders();
+    }
+
     if (tabId === 'payment') { 
         holdProgress = 0; 
         const pb = document.getElementById('progressBar'); 
@@ -112,7 +121,6 @@ function switchTab(tabId) {
     updateNavHighlight(tabId);
 }
 
-// Sincronización en vivo del carrusel según el modo activo
 document.addEventListener('DOMContentLoaded', () => {
     const userWrapper = document.getElementById('userScrollWrapper');
     const bizWrapper = document.getElementById('bizScrollWrapper');
@@ -129,6 +137,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 lastMainTab = activeTab;
                 updateNavHighlight(activeTab);
                 applyHeaderState(activeTab);
+                
+                // Aseguramos render al deslizar
+                if (activeTab === 'profile') if(typeof renderProfileView === 'function') renderProfileView();
             }
         }, { passive: true });
     }
@@ -145,12 +156,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 lastMainTab = activeTab;
                 updateNavHighlight(activeTab);
                 applyHeaderState(activeTab);
+                
+                // Aseguramos render al deslizar
+                if (activeTab === 'business-profile') if(typeof renderProfileView === 'function') renderProfileView();
+                if (activeTab === 'business-dashboard') if(typeof renderBusinessOrders === 'function') renderBusinessOrders();
             }
         }, { passive: true });
     }
 });
 
-// Gesto táctil swipe-to-go-back para subpantallas
 let touchstartX = 0;
 let touchendX = 0;
 let touchstartY = 0;
@@ -192,7 +206,7 @@ function handleSwipeGesture() {
 
 function updateNavHighlight(activeTabId) {
     const tabs = ['home', 'explore', 'scan', 'profile'];
-    const bizTabs = ['dashboard', 'scan', 'profile'];
+    const bizTabs = ['business-dashboard', 'business-scan', 'business-profile'];
     
     tabs.forEach(tab => {
         const btn = document.getElementById('nav-btn-' + tab);
@@ -214,9 +228,9 @@ function updateNavHighlight(activeTabId) {
         const btn = document.getElementById('biz-nav-btn-' + tab);
         if (!btn) return;
         const icon = btn.querySelector('i');
-        const isCurrentBizTab = (tab === 'dashboard' && activeTabId === 'business-dashboard') ||
-                               (tab === 'scan' && activeTabId === 'business-scan') ||
-                               (tab === 'profile' && activeTabId === 'business-profile');
+        const isCurrentBizTab = (tab === 'business-dashboard' && activeTabId === 'business-dashboard') ||
+                               (tab === 'business-scan' && activeTabId === 'business-scan') ||
+                               (tab === 'business-profile' && activeTabId === 'business-profile');
 
         if (isCurrentBizTab) {
             btn.classList.remove('text-neutral-400');

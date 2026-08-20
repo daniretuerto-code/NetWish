@@ -1,30 +1,33 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Comprobamos si venimos de un enlace de recuperación de contraseña
     const hash = window.location.hash;
     if (hash && hash.includes('type=recovery')) {
         if (typeof openNewPasswordModal === 'function') openNewPasswordModal();
     }
 
-    // 2. Comprobamos si hay sesión de usuario personal activa
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
         currentUser = session.user;
     }
 
-    // 3. Comprobamos si hay sesión de negocio activa
     const savedBusiness = localStorage.getItem('netwish_business');
     if (savedBusiness) {
         currentBusiness = JSON.parse(savedBusiness);
-        switchTab('business-dashboard');
-        document.getElementById('businessTitleName').innerText = currentBusiness.name;
+        
+        // CORRECCIÓN: Renderizamos todo ANTES de cambiar de pestaña para evitar vacíos
+        if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
+        renderProfileView(); 
         if (typeof generateBusinessQR === 'function') generateBusinessQR(currentBusiness);
         if (typeof renderBusinessOrders === 'function') renderBusinessOrders();
+        
+        switchTab('business-dashboard');
+        
+        const titleEl = document.getElementById('businessTitleName');
+        if(titleEl) titleEl.innerText = currentBusiness.name;
     } else {
         if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
         renderProfileView();
     }
 
-    // Inicializamos eventos y cargamos comercios
     if (typeof initHoldButtonListeners === 'function') initHoldButtonListeners();
     if (typeof loadPublicBusinesses === 'function') loadPublicBusinesses(); 
 });
@@ -34,7 +37,6 @@ function renderProfileView() {
     const bizContainer = document.getElementById('businessProfileContentContainer');
 
     if (currentBusiness) {
-        // PERFIL EXCLUSIVO DE EMPRESA
         const targetContainer = bizContainer || userContainer;
         if (!targetContainer) return;
         
@@ -70,7 +72,6 @@ function renderProfileView() {
             </div>
         `;
     } else if (currentUser) {
-        // PERFIL PERSONAL
         if (!userContainer) return;
         const meta = currentUser.user_metadata || {};
         const avatarUrl = meta.avatar_url || meta.picture;
@@ -116,7 +117,6 @@ function renderProfileView() {
             </div>
         `;
     } else {
-        // NO LOGUEADO
         if (!userContainer) return;
         userContainer.innerHTML = `
             <div class="p-8 rounded-[32px] bg-neutral-50/80 border border-neutral-200/60 text-center space-y-4 shadow-sm">
@@ -344,14 +344,16 @@ async function authenticateBusiness() {
     localStorage.setItem('netwish_business', JSON.stringify(currentBusiness));
     if (typeof closeModal === 'function') closeModal();
     
+    // CORRECCIÓN: Renderizamos todo justo al iniciar sesión
+    if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
+    renderProfileView();
+    if (typeof generateBusinessQR === 'function') generateBusinessQR(currentBusiness);
+    if (typeof renderBusinessOrders === 'function') renderBusinessOrders();
+
     switchTab('business-dashboard');
     
     const titleEl = document.getElementById('businessTitleName');
     if (titleEl) titleEl.innerText = currentBusiness.name;
-    
-    if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
-    if (typeof generateBusinessQR === 'function') generateBusinessQR(currentBusiness);
-    if (typeof renderBusinessOrders === 'function') renderBusinessOrders();
 }
 
 function logoutBusiness() {
