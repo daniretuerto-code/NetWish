@@ -26,7 +26,6 @@
     <div class="w-full h-[100dvh] sm:h-[844px] sm:max-w-[390px] sm:rounded-[48px] bg-white flex flex-col relative shadow-[0_30px_90px_rgba(0,0,0,0.12)] overflow-hidden sm:border-[8px] sm:border-neutral-900 mx-auto my-auto">
         
         <header id="mainAppHeader" class="absolute top-0 left-0 right-0 px-6 pt-8 pb-3 border-b border-neutral-100/80 flex justify-between items-center glass-panel z-30 transition-opacity">
-            <!-- AÑADIDO: onclick="switchTab('home')" y estilos para que sea clickable -->
             <h1 onclick="switchTab('home')" class="text-2xl font-bold tracking-tight text-black font-serif italic cursor-pointer active:scale-95 transition-transform">NetWish</h1>
             <button onclick="handleHeaderProfileClick()" id="headerAvatar" class="w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner transition hover:scale-105 active:scale-95">
                 IN
@@ -55,11 +54,8 @@
 
                 <div class="space-y-3">
                     <div class="flex justify-between items-center px-1">
+                        <!-- ELIMINADO EL BOTÓN ONLINE DE AQUÍ -->
                         <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Servicios Activos</h3>
-                        <span class="text-[9px] font-mono text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/60 flex items-center space-x-1">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            <span>Online</span>
-                        </span>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">

@@ -4,7 +4,20 @@ async function loadPublicBusinesses() {
     try {
         const { data, error } = await supabaseClient.from('businesses').select('*');
         if (error) throw error;
-        allPublicBusinesses = data || [];
+        
+        // --- MEJORA: Filtro anti-duplicados por nombre ---
+        const uniqueBusinesses = [];
+        const seenNames = new Set();
+        
+        (data || []).forEach(biz => {
+            const name = (biz.name || biz.Nombre || biz.username || '').trim().toLowerCase();
+            if (!seenNames.has(name)) {
+                seenNames.add(name);
+                uniqueBusinesses.push(biz);
+            }
+        });
+        
+        allPublicBusinesses = uniqueBusinesses;
         renderBusinessDirectory(allPublicBusinesses);
     } catch (err) {
         listContainer.innerHTML = `<p class="text-xs text-center text-rose-500 py-4">Error al cargar el directorio urbano.</p>`;
