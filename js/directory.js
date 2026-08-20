@@ -44,7 +44,7 @@ function renderBusinessDirectory(businesses) {
                 <p class="text-xs text-neutral-500 px-4">Aún no hay locales dados de alta. ¡Estamos trabajando en ello!</p>
             </div>
         `;
-        lucide.createIcons();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         return;
     }
 
@@ -79,14 +79,14 @@ function renderBusinessDirectory(businesses) {
                 </div>
                 <div class="flex-1 overflow-hidden">
                     <h3 class="text-sm font-bold text-black truncate">${name}</h3>
-                    <p class="text-[10px] text-neutral-500 truncate mt-0.5">${biz.category || 'Comercio Local'} • Click & Collect</p>
+                    <p class="text-[10px] text-neutral-500 truncate mt-0.5">${biz.category || 'Comercio Local'} • NetWish</p>
                 </div>
                 <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-300"></i>
             </button>
         `;
     });
     listContainer.innerHTML = html;
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function filterDirectory() {
@@ -141,7 +141,7 @@ function renderCategoryDirectory(businesses) {
                 <p class="text-xs text-neutral-500 px-4">Aún no hay locales de esta categoría dados de alta. ¡Estamos trabajando en ello!</p>
             </div>
         `;
-        lucide.createIcons();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         return;
     }
 
@@ -181,7 +181,7 @@ function renderCategoryDirectory(businesses) {
         `;
     });
     listContainer.innerHTML = html;
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function filterCategoryView() {
@@ -238,7 +238,7 @@ async function renderPublicCatalogItems() {
             <p class="text-[11px] text-neutral-400">Sincronizando catálogo...</p>
         </div>
     `;
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 
     let items = [];
     try {
@@ -261,7 +261,7 @@ async function renderPublicCatalogItems() {
                 <p class="text-[10px] text-neutral-400">Este establecimiento aún no ha publicado artículos en su catálogo.</p>
             </div>
         `;
-        lucide.createIcons();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         return;
     }
 
@@ -305,7 +305,7 @@ async function renderPublicCatalogItems() {
     });
 
     catalogEl.innerHTML = html;
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function changeItemQuantity(id, encodedName, price, delta) {
@@ -418,7 +418,7 @@ async function openStockControlModal() {
             <p class="text-xs text-neutral-500">Consultando Supabase...</p>
         </div>
     `;
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     modal.classList.remove('hidden');
     setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
 
@@ -480,7 +480,7 @@ async function openStockControlModal() {
             </button>
         </div>
     `;
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 async function saveNewStockProduct() {
@@ -526,7 +526,7 @@ async function deleteStockProduct(productId) {
     }
 }
 
-function renderBusinessOrders() {
+async function renderBusinessOrders() {
     if (!currentBusiness) return;
     
     const container = document.getElementById('dynamicDashboardContent');
@@ -534,19 +534,27 @@ function renderBusinessOrders() {
     
     const cat = (currentBusiness.category || '').toLowerCase();
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
-    
-    const orders = JSON.parse(localStorage.getItem('netwish_global_orders') || '[]');
-    const myOrders = orders.filter(o => {
-        const bName = (currentBusiness.name || '').toLowerCase();
-        const oName = (o.businessName || '').toLowerCase();
-        return oName.includes(bName.split(' ')[0]) || bName.includes(oName.split(' ')[0]);
-    });
-    
+    const bName = currentBusiness.name || '';
+
+    let myOrders = [];
+    try {
+        const { data, error } = await supabaseClient
+            .from('orders')
+            .select('*')
+            .or(`business_name.eq.${bName},business_name.ilike.%${bName.split(' ')[0]}%`)
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+        myOrders = data || [];
+    } catch (err) {
+        console.error("Error consultando órdenes en Supabase:", err);
+    }
+
     let totalMoney = 0;
     let pendingOrdersCount = 0;
     myOrders.forEach(o => {
-        if (o.status === 'Pagado Online') totalMoney += o.total;
-        if (o.status.includes('Pendiente') || o.status === 'Pagado Online') pendingOrdersCount++;
+        const orderTotal = parseFloat(o.total) || 0;
+        if (o.status === 'Pagado Online') totalMoney += orderTotal;
+        if (o.status && (o.status.includes('Pendiente') || o.status === 'Pagado Online')) pendingOrdersCount++;
     });
 
     let html = '';
@@ -691,10 +699,11 @@ function renderBusinessOrders() {
     if (myOrders.length === 0) {
         html += '<p class="text-xs text-neutral-400 text-center py-4">No hay actividad reciente registrada.</p>';
     } else {
-        myOrders.reverse().forEach(o => {
+        myOrders.forEach(o => {
             const isPaid = o.status === 'Pagado Online';
             const iconBg = isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600';
-            const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
+            const iconName = isMusic ? 'disc' : (isPaid ? 'shopping-bag' : 'clock');
+            const totalVal = parseFloat(o.total) || 0;
             
             html += `
                 <div class="p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-sm flex justify-between items-center">
@@ -707,7 +716,7 @@ function renderBusinessOrders() {
                         </div>
                     </div>
                     <div class="text-right">
-                        <span class="block text-sm font-bold text-black">${o.total.toFixed(2)} €</span>
+                        <span class="block text-sm font-bold text-black">${totalVal.toFixed(2)} €</span>
                         <span class="block text-[9px] ${isPaid ? 'text-emerald-600' : 'text-amber-600'} font-bold">${o.status}</span>
                     </div>
                 </div>
@@ -717,5 +726,5 @@ function renderBusinessOrders() {
     
     html += `</div></div>`;
     container.innerHTML = html;
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
