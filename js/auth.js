@@ -1,28 +1,41 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Recuperación de contraseña vía enlace
     const hash = window.location.hash;
     if (hash && hash.includes('type=recovery')) {
         if (typeof openNewPasswordModal === 'function') openNewPasswordModal();
     }
 
+    // 2. Sesión personal en Supabase
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
         currentUser = session.user;
     }
 
+    // 3. Sesión de comercio en localStorage
     const savedBusiness = localStorage.getItem('netwish_business');
     if (savedBusiness) {
-        currentBusiness = JSON.parse(savedBusiness);
-        
-        // CORRECCIÓN: Renderizamos todo ANTES de cambiar de pestaña para evitar vacíos
-        if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
-        renderProfileView(); 
-        if (typeof generateBusinessQR === 'function') generateBusinessQR(currentBusiness);
-        if (typeof renderBusinessOrders === 'function') renderBusinessOrders();
-        
-        switchTab('business-dashboard');
-        
-        const titleEl = document.getElementById('businessTitleName');
-        if(titleEl) titleEl.innerText = currentBusiness.name;
+        try {
+            currentBusiness = JSON.parse(savedBusiness);
+            // Saneamiento de id antiguo
+            if (currentBusiness && currentBusiness.id === 'biz_db') {
+                currentBusiness.id = currentBusiness.name;
+                localStorage.setItem('netwish_business', JSON.stringify(currentBusiness));
+            }
+        } catch (e) {
+            currentBusiness = null;
+        }
+
+        if (currentBusiness) {
+            if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
+            renderProfileView(); 
+            if (typeof generateBusinessQR === 'function') generateBusinessQR(currentBusiness);
+            if (typeof renderBusinessOrders === 'function') renderBusinessOrders();
+            
+            switchTab('business-dashboard');
+            
+            const titleEl = document.getElementById('businessTitleName');
+            if (titleEl) titleEl.innerText = currentBusiness.name;
+        }
     } else {
         if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
         renderProfileView();
@@ -217,6 +230,7 @@ function openBusinessSignupRequest() {
                             <option value="Panadería">Panadería</option>
                             <option value="Peluquería">Peluquería</option>
                             <option value="Restaurante">Restaurante</option>
+                            <option value="Discográfica">Producción Musical / Estudio</option>
                             <option value="Comercio General">Comercio General</option>
                         </select>
                     </div>
@@ -253,13 +267,13 @@ function openBusinessSignupRequest() {
 }
 
 async function submitBusinessRequest() {
-    const city = document.getElementById('reqBizCity').value.trim();
-    const address = document.getElementById('reqBizAddress').value.trim();
-    const name = document.getElementById('reqBizName').value.trim();
-    const category = document.getElementById('reqBizCategory').value;
-    const type = document.getElementById('reqBizType').value;
-    const email = document.getElementById('reqBizEmail').value.trim();
-    const phone = document.getElementById('reqBizPhone').value.trim();
+    const city = document.getElementById('reqBizCity')?.value.trim() || 'Palencia';
+    const address = document.getElementById('reqBizAddress')?.value.trim();
+    const name = document.getElementById('reqBizName')?.value.trim();
+    const category = document.getElementById('reqBizCategory')?.value;
+    const type = document.getElementById('reqBizType')?.value;
+    const email = document.getElementById('reqBizEmail')?.value.trim();
+    const phone = document.getElementById('reqBizPhone')?.value.trim();
 
     if (!address || !name || !email || !phone) {
         alert("Por favor, rellena todos los campos.");
@@ -314,37 +328,33 @@ async function authenticateBusiness() {
         data = response.data;
         error = response.error;
     } catch (err) {
-        alert("Error de conexión técnica con la base de datos: " + err.message);
+        alert("Error de conexión con la base de datos: " + err.message);
         return;
     }
 
-    if (error) {
-        alert("Error devuelto por la base de datos: " + error.message);
-        return;
-    }
-
-    if (!data || data.length === 0) {
+    if (error || !data || data.length === 0) {
         const { data: checkUser } = await supabaseClient.from('businesses').select('*').eq('username', user);
         if (checkUser && checkUser.length > 0) {
-            alert(`El usuario existe, pero la CONTRASEÑA es incorrecta. Asegúrate de que es exactamente: "${pass}"`);
+            alert("Contraseña incorrecta.");
         } else {
-            alert(`No se encuentra el usuario: "${user}".\n\nPor favor, revisa el nombre de usuario.`);
+            alert("No se encuentra el usuario de comercio.");
         }
         return;
     }
 
     const biz = data[0];
+    const bizRealName = biz.name || biz.Nombre || biz.username;
 
     currentBusiness = {
-        id: biz.id || 'biz_db',
-        name: biz.name || biz.Nombre || 'Mi Negocio',
-        category: biz.category || biz.Categoria || 'Comercio'
+        id: bizRealName,
+        name: bizRealName,
+        category: biz.category || biz.Categoria || 'Comercio',
+        username: biz.username
     };
 
     localStorage.setItem('netwish_business', JSON.stringify(currentBusiness));
     if (typeof closeModal === 'function') closeModal();
     
-    // CORRECCIÓN: Renderizamos todo justo al iniciar sesión
     if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
     renderProfileView();
     if (typeof generateBusinessQR === 'function') generateBusinessQR(currentBusiness);
@@ -378,6 +388,28 @@ function openAuthModal(initialMode = 'login') {
     }, 10);
 }
 
+function checkPasswordStrength() {
+    const pass = document.getElementById('authPass')?.value || '';
+    const strengthEl = document.getElementById('passwordStrengthBar');
+    if (!strengthEl) return;
+    
+    let strength = 0;
+    if (pass.length >= 6) strength += 1;
+    if (/[A-Z]/.test(pass)) strength += 1;
+    if (/[0-9]/.test(pass)) strength += 1;
+    if (/[^A-Za-z0-9]/.test(pass)) strength += 1;
+
+    const colors = ['bg-rose-500', 'bg-amber-500', 'bg-blue-500', 'bg-emerald-500'];
+    const widths = ['25%', '50%', '75%', '100%'];
+
+    if (pass.length === 0) {
+        strengthEl.style.width = '0%';
+    } else {
+        strengthEl.className = `h-1 transition-all duration-300 rounded-full ${colors[strength - 1] || 'bg-rose-500'}`;
+        strengthEl.style.width = widths[strength - 1] || '25%';
+    }
+}
+
 function renderAuthForm(mode) {
     const modalBody = document.getElementById('modalBody');
     if (!modalBody) return;
@@ -388,7 +420,7 @@ function renderAuthForm(mode) {
         <div class="space-y-3 text-left">
             <div class="text-center space-y-0.5">
                 <h3 class="text-base font-bold text-black">${isLogin ? 'Iniciar Sesión' : 'Crear una cuenta'}</h3>
-                <p class="text-[11px] text-neutral-500">${isLogin ? 'Introduce tus credenciales.' : 'Rellene sus datos personales.'}</p>
+                <p class="text-[11px] text-neutral-500">${isLogin ? 'Introduce tus credenciales.' : 'Rellena tus datos personales.'}</p>
             </div>
             
             <div class="space-y-2.5 pt-1">
@@ -423,14 +455,19 @@ function renderAuthForm(mode) {
 
                 <div>
                     <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Contraseña</label>
-                    <input type="password" id="authPass" ${!isLogin ? 'oninput="if(typeof checkPasswordStrength === \'function\') checkPasswordStrength()"' : ''} placeholder="> 6 caracteres" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                    <input type="password" id="authPass" ${!isLogin ? 'oninput="checkPasswordStrength()"' : ''} placeholder="> 6 caracteres" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                    ${!isLogin ? `
+                    <div class="w-full bg-neutral-100 h-1 mt-1.5 rounded-full overflow-hidden">
+                        <div id="passwordStrengthBar" class="h-1 w-0 transition-all duration-300"></div>
+                    </div>
+                    ` : ''}
                 </div>
             </div>
 
             <button onclick="processAuthAction('${mode}')" class="w-full py-3.5 bg-black text-white font-semibold rounded-xl text-xs tracking-wide transition hover:bg-neutral-800 shadow-md mt-2">
                 ${isLogin ? 'Entrar' : 'Completar Registro'}
             </button>
-            
+
             ${isLogin ? `
             <div class="pt-2">
                 <button onclick="signInWithGoogle()" class="w-full py-3.5 bg-white border border-neutral-200/90 rounded-xl text-xs font-semibold text-black flex items-center justify-center space-x-2.5 hover:bg-neutral-50 transition shadow-sm active:scale-98">
@@ -475,8 +512,15 @@ async function processAuthAction(mode) {
     if (mode === 'register') {
         const name = document.getElementById('authName').value.trim();
         const surname = document.getElementById('authSurname').value.trim();
+        const emailConfirm = document.getElementById('authEmailConfirm')?.value.trim();
         const dob = document.getElementById('authDob').value;
-        if (!name || !surname || !dob) { alert("Rellene todos los campos."); return; }
+
+        if (emailConfirm && email !== emailConfirm) {
+            alert("Los correos no coinciden.");
+            return;
+        }
+
+        if (!name || !surname || !dob) { alert("Rellena todos los campos."); return; }
         const initials = (name[0] + (surname[0] || '')).toUpperCase();
         const { data, error } = await supabaseClient.auth.signUp({
             email, password: pass, options: { data: { name, surname, dob, initials } }

@@ -1,7 +1,5 @@
-let activeBusinessId = "";
-let activeBusinessCategory = "";
 let activeBusinessName = "";
-let activeBusinessUsername = "";
+let activeBusinessCategory = "";
 let currentCategoryFilter = '';
 let currentCategoryBusinesses = [];
 
@@ -52,9 +50,7 @@ function renderBusinessDirectory(businesses) {
 
     let html = '';
     businesses.forEach(biz => {
-        const bizId = String(biz.id || biz.ID || '');
         const name = biz.name || biz.Nombre || biz.username || 'Comercio';
-        const username = biz.username || '';
         const cat = (biz.category || biz.Categoria || '').toLowerCase();
         
         let icon = 'store'; 
@@ -73,19 +69,17 @@ function renderBusinessDirectory(businesses) {
             icon = 'disc'; colorClass = 'text-yellow-500'; bgClass = 'bg-amber-500/20 border-amber-500/40';
         }
 
-        const safeId = encodeURIComponent(bizId);
         const safeName = encodeURIComponent(name);
-        const safeUser = encodeURIComponent(username);
         const safeCat = encodeURIComponent(cat);
 
         html += `
-            <button onclick="openPublicBusiness('${safeId}', '${safeName}', '${safeUser}', '${safeCat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
+            <button onclick="openPublicBusiness('${safeName}', '${safeCat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
                 <div class="w-12 h-12 rounded-xl ${bgClass} flex items-center justify-center shrink-0">
                     <i data-lucide="${icon}" class="w-5 h-5 ${colorClass}"></i>
                 </div>
                 <div class="flex-1 overflow-hidden">
                     <h3 class="text-sm font-bold text-black truncate">${name}</h3>
-                    <p class="text-[10px] text-neutral-500 truncate mt-0.5">${biz.category || 'Comercio Local'} • NetWish</p>
+                    <p class="text-[10px] text-neutral-500 truncate mt-0.5">${biz.category || 'Comercio Local'} • Click & Collect</p>
                 </div>
                 <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-300"></i>
             </button>
@@ -107,7 +101,6 @@ function filterDirectory() {
 
 function goToDirectory(filter) {
     const titleText = document.getElementById('categoryViewTitle');
-    
     let titleMap = {
         'pan': 'Panaderías',
         'rest': 'Restaurantes',
@@ -154,9 +147,7 @@ function renderCategoryDirectory(businesses) {
 
     let html = '';
     businesses.forEach(biz => {
-        const bizId = String(biz.id || biz.ID || '');
         const name = biz.name || biz.Nombre || biz.username || 'Comercio';
-        const username = biz.username || '';
         const cat = (biz.category || biz.Categoria || '').toLowerCase();
         
         let icon = 'store'; 
@@ -173,13 +164,11 @@ function renderCategoryDirectory(businesses) {
             icon = 'disc'; colorClass = 'text-yellow-500'; bgClass = 'bg-amber-500/20 border-amber-500/40';
         }
 
-        const safeId = encodeURIComponent(bizId);
         const safeName = encodeURIComponent(name);
-        const safeUser = encodeURIComponent(username);
         const safeCat = encodeURIComponent(cat);
 
         html += `
-            <button onclick="openPublicBusiness('${safeId}', '${safeName}', '${safeUser}', '${safeCat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
+            <button onclick="openPublicBusiness('${safeName}', '${safeCat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
                 <div class="w-12 h-12 rounded-xl ${bgClass} flex items-center justify-center shrink-0">
                     <i data-lucide="${icon}" class="w-5 h-5 ${colorClass}"></i>
                 </div>
@@ -205,10 +194,8 @@ function filterCategoryView() {
     renderCategoryDirectory(filtered);
 }
 
-function openPublicBusiness(safeId, safeName, safeUser, safeType) {
-    activeBusinessId = decodeURIComponent(safeId || '');
+function openPublicBusiness(safeName, safeType) {
     activeBusinessName = decodeURIComponent(safeName || '');
-    activeBusinessUsername = decodeURIComponent(safeUser || '');
     activeBusinessCategory = decodeURIComponent(safeType || '').toLowerCase();
     activePayee = activeBusinessName;
     
@@ -255,18 +242,10 @@ async function renderPublicCatalogItems() {
 
     let items = [];
     try {
-        const queryIdentifiers = [
-            activeBusinessId,
-            activeBusinessName,
-            activeBusinessUsername
-        ].filter(v => v && v.trim() !== '');
-
-        const orFilter = queryIdentifiers.map(val => `business_id.eq.${val}`).join(',');
-
         const { data, error } = await supabaseClient
             .from('products')
             .select('*')
-            .or(orFilter);
+            .or(`business_id.eq.${activeBusinessName},business_id.ilike.%${activeBusinessName.split(' ')[0]}%,business_id.eq.biz_db`);
             
         if (error) throw error;
         items = data || [];
@@ -445,17 +424,10 @@ async function openStockControlModal() {
 
     let catalog = [];
     try {
-        const targetBizId = String(currentBusiness.id || currentBusiness.name || currentBusiness.username || '');
-        const targetBizName = String(currentBusiness.name || '');
-        const targetBizUser = String(currentBusiness.username || '');
-
-        const queryIdentifiers = [targetBizId, targetBizName, targetBizUser].filter(v => v && v.trim() !== '');
-        const orFilter = queryIdentifiers.map(val => `business_id.eq.${val}`).join(',');
-
         const { data, error } = await supabaseClient
             .from('products')
             .select('*')
-            .or(orFilter);
+            .or(`business_id.eq.${currentBusiness.name},business_id.ilike.%${currentBusiness.name.split(' ')[0]}%,business_id.eq.biz_db`);
         if (error) throw error;
         catalog = data || [];
     } catch (err) {
@@ -523,13 +495,11 @@ async function saveNewStockProduct() {
         return;
     }
 
-    const targetBizId = String(currentBusiness.id || currentBusiness.name);
-
     try {
         const { error } = await supabaseClient
             .from('products')
             .insert([{ 
-                business_id: targetBizId, 
+                business_id: currentBusiness.name, 
                 name: name, 
                 description: desc, 
                 price: price 
@@ -629,8 +599,54 @@ function renderBusinessOrders() {
                 </button>
             </div>
         `;
+    } else if (cat.includes('pel')) {
+        html += `
+            <div class="grid grid-cols-2 gap-3">
+                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
+                    <span class="text-[10px] text-neutral-400 font-mono uppercase">Citas Pendientes</span>
+                    <h3 class="text-xl font-extrabold text-black mt-1">${pendingOrdersCount}</h3>
+                </div>
+                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
+                    <span class="text-[10px] text-neutral-400 font-mono uppercase">Caja Acumulada</span>
+                    <h3 class="text-xl font-extrabold text-black mt-1">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</h3>
+                </div>
+            </div>
+            <div class="flex space-x-3">
+                <button onclick="openStockControlModal()" class="flex-1 py-4 bg-white border border-neutral-200 text-black font-bold rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2">
+                    <i data-lucide="scissors" class="w-4 h-4"></i><span>Servicios</span>
+                </button>
+                <button onclick="if(typeof openModal === 'function') openModal('Agenda de Citas')" class="flex-1 py-4 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex justify-center items-center space-x-2">
+                    <i data-lucide="calendar" class="w-4 h-4"></i><span>Agenda</span>
+                </button>
+            </div>
+        `;
+    } else if (cat.includes('rest') || cat.includes('bar')) {
+        html += `
+            <div class="grid grid-cols-3 gap-3">
+                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
+                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Mesas</span>
+                    <h3 class="text-lg font-extrabold text-black">4</h3>
+                </div>
+                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
+                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Cocina</span>
+                    <h3 class="text-lg font-extrabold text-black">${pendingOrdersCount}</h3>
+                </div>
+                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
+                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Caja</span>
+                    <h3 class="text-lg font-extrabold text-black">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€</h3>
+                </div>
+            </div>
+            <div class="flex space-x-3">
+                <button onclick="openStockControlModal()" class="flex-1 py-3 bg-white border border-neutral-200 text-black font-bold rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2">
+                    <i data-lucide="book-open" class="w-4 h-4"></i><span>Carta</span>
+                </button>
+                <button onclick="if(typeof switchTab === 'function') switchTab('business-scan')" class="flex-1 py-3 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex justify-center items-center space-x-2">
+                    <i data-lucide="scan-line" class="w-4 h-4"></i><span>Escanear Mesa</span>
+                </button>
+            </div>
+        `;
     } else {
-        html = `
+        html += `
             <section class="glass-dark p-6 rounded-[32px] text-white flex flex-col justify-between space-y-5 relative overflow-hidden shadow-xl">
                 <div class="flex justify-between items-start relative z-10">
                     <div>
