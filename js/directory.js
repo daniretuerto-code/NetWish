@@ -547,7 +547,7 @@ async function deleteStockProduct(productId) {
     }
 }
 
-function renderBusinessOrders() {
+async function renderBusinessOrders() {
     if (!currentBusiness) return;
     
     const container = document.getElementById('dynamicDashboardContent');
@@ -556,14 +556,34 @@ function renderBusinessOrders() {
     const cat = (currentBusiness.category || '').toLowerCase();
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
     
-    const orders = JSON.parse(localStorage.getItem('netwish_global_orders') || '[]');
+    // 1. Obtener pedidos desde Supabase y combinar con LocalStorage
+    let orders = [];
+    try {
+        const { data, error } = await supabaseClient
+            .from('orders')
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (!error && data) orders = data;
+    } catch (e) {
+        console.warn("Lectura de orders Supabase:", e);
+    }
+
+    const localOrders = JSON.parse(localStorage.getItem('netwish_global_orders') || '[]');
     
-    // Normalizador de nombres tolerante a variaciones (JUUANCP, Juan Cepeda, espacios, tildes)
+    // Fusión sin duplicados
+    const combinedOrders = [...orders];
+    localOrders.forEach(lo => {
+        const exists = combinedOrders.some(co => co.id === lo.id || (co.date === lo.date && co.time === lo.time && co.total === lo.total && co.customer === lo.customer));
+        if (!exists) combinedOrders.push(lo);
+    });
+    
+    // Normalizador de nombres tolerante a variaciones
     const cleanCurrentBiz = (currentBusiness.name || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const bizKeywords = cleanCurrentBiz.split(/\s+/).filter(w => w.length > 2);
 
-    const myOrders = orders.filter(o => {
-        const oName = (o.businessName || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const myOrders = combinedOrders.filter(o => {
+        const rawName = o.business_name || o.businessName || '';
+        const oName = rawName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         if (oName === cleanCurrentBiz || oName.includes(cleanCurrentBiz) || cleanCurrentBiz.includes(oName)) return true;
         return bizKeywords.some(keyword => oName.includes(keyword));
     });

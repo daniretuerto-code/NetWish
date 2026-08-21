@@ -39,7 +39,7 @@ function initHoldButtonListeners() {
             if (holdProgress >= 100) {
                 clearInterval(holdTimer);
                 holdTimer = null;
-                executeFullPayment(false); // Falso porque no es solo reserva, es pago completo
+                executeFullPayment(false);
             }
         }, 20);
     };
@@ -61,7 +61,7 @@ function initHoldButtonListeners() {
     btn.addEventListener('touchcancel', cancelHold);
 }
 
-function executeFullPayment(isReservationOnly = false) {
+async function executeFullPayment(isReservationOnly = false) {
     const numericValue = parseInt(rawAmountString, 10) / 100;
     const finalValue = isReservationOnly ? cartTotalValue : numericValue;
 
@@ -70,23 +70,44 @@ function executeFullPayment(isReservationOnly = false) {
         return; 
     }
 
-    // Guardar pedido/reserva si venimos del carrito para que el comercio lo vea
+    // Sincronización en Supabase y respaldo local multiplataforma
     if (isCartCheckout) {
-        const orders = JSON.parse(localStorage.getItem('netwish_global_orders') || '[]');
-        
         let itemNames = cartItemsList.map(i => i.name).join(', ');
-        if (itemNames.length > 30) itemNames = itemNames.substring(0,27) + '...';
+        if (itemNames.length > 30) itemNames = itemNames.substring(0, 27) + '...';
 
-        orders.push({
+        const customerName = currentUser ? (currentUser.user_metadata?.name ? `${currentUser.user_metadata.name} ${currentUser.user_metadata.surname || ''}`.trim() : currentUser.email.split('@')[0]) : "Cliente Invitado";
+        const orderStatus = isReservationOnly ? 'Pendiente (Pago Local)' : 'Pagado Online';
+
+        const orderObj = {
             id: Date.now(),
+            business_name: activePayee,
             businessName: activePayee,
             items: `${cartItemCount}x (${itemNames})`,
             total: finalValue,
             date: pendingOrderDetails.date,
             time: pendingOrderDetails.time,
-            customer: currentUser ? (currentUser.user_metadata.name || currentUser.email.split('@')[0]) : "Cliente Invitado",
-            status: isReservationOnly ? 'Pendiente (Pago Local)' : 'Pagado Online'
-        });
+            customer: customerName,
+            status: orderStatus
+        };
+
+        // 1. Guardado en Supabase (sincroniza Móvil y PC)
+        try {
+            await supabaseClient.from('orders').insert([{
+                business_name: activePayee,
+                items: orderObj.items,
+                total: finalValue,
+                date: pendingOrderDetails.date,
+                time: pendingOrderDetails.time,
+                customer: customerName,
+                status: orderStatus
+            }]);
+        } catch (dbErr) {
+            console.warn("Aviso Supabase Orders (se mantiene local):", dbErr);
+        }
+
+        // 2. Respaldo en LocalStorage
+        const orders = JSON.parse(localStorage.getItem('netwish_global_orders') || '[]');
+        orders.push(orderObj);
         localStorage.setItem('netwish_global_orders', JSON.stringify(orders));
     }
 
@@ -119,7 +140,6 @@ function executeFullPayment(isReservationOnly = false) {
         modalContent.classList.remove('scale-95'); 
     }, 10);
     
-    // Reseteamos las variables del carrito global
     isCartCheckout = false; 
     cartItemsList = [];
 }
