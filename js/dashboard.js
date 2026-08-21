@@ -243,12 +243,14 @@ function openHistoryModal(dateFilter = '') {
 async function renderBusinessOrders() {
     if (!currentBusiness) return;
     
-    const container = document.getElementById('dynamicDashboardContent');
-    if (!container) return;
+    const dashboardContainer = document.getElementById('dynamicDashboardContent');
+    const ordersContainer = document.getElementById('dynamicOrdersTabContent');
+    if (!dashboardContainer) return;
     
     const cat = (currentBusiness.category || '').toLowerCase();
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
     
+    // Suscripción Realtime
     if (!ordersRealtimeSubscription && typeof supabaseClient.channel === 'function') {
         ordersRealtimeSubscription = supabaseClient
             .channel('public:orders')
@@ -285,7 +287,7 @@ async function renderBusinessOrders() {
         return bizKeywords.some(keyword => oName.includes(keyword));
     });
 
-    // Ordenamiento por fecha real de recepción
+    // Ordenamiento por fecha de creación descendente
     myOrders.sort((a, b) => {
         const timeA = a.created_at ? new Date(a.created_at).getTime() : (parseInt(a.id, 10) || 0);
         const timeB = b.created_at ? new Date(b.created_at).getTime() : (parseInt(b.id, 10) || 0);
@@ -309,10 +311,11 @@ async function renderBusinessOrders() {
         }
     });
 
-    let html = '';
+    // 1. RENDERIZADO DEL DASHBOARD PRINCIPAL
+    let dashHtml = '';
 
     if (isMusic) {
-        html = `
+        dashHtml = `
             <div class="bg-gradient-to-br from-neutral-950 via-neutral-900 to-black p-6 rounded-[36px] text-white border border-amber-500/30 shadow-2xl relative overflow-hidden">
                 <div class="flex justify-between items-center relative z-10 mb-4">
                     <span class="text-[9px] font-mono uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/30">GOLD RECORD CERTIFIED</span>
@@ -360,7 +363,7 @@ async function renderBusinessOrders() {
             </div>
         `;
     } else if (cat.includes('pel')) {
-        html += `
+        dashHtml += `
             <div class="grid grid-cols-2 gap-3">
                 <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
                     <span class="text-[10px] text-neutral-400 font-mono uppercase">Citas Activas</span>
@@ -381,7 +384,7 @@ async function renderBusinessOrders() {
             </div>
         `;
     } else if (cat.includes('rest') || cat.includes('bar')) {
-        html += `
+        dashHtml += `
             <div class="grid grid-cols-3 gap-3">
                 <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
                     <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Mesas</span>
@@ -406,7 +409,7 @@ async function renderBusinessOrders() {
             </div>
         `;
     } else {
-        html += `
+        dashHtml += `
             <section class="glass-dark p-6 rounded-[32px] text-white flex flex-col justify-between space-y-5 relative overflow-hidden shadow-xl">
                 <div class="flex justify-between items-start relative z-10">
                     <div>
@@ -439,18 +442,18 @@ async function renderBusinessOrders() {
         `;
     }
 
-    // --- 1. SECCIÓN: ÚLTIMO PEDIDO RECIBIDO ---
-    html += `
+    // SECCIÓN DE ÚLTIMO PEDIDO EN EL DASHBOARD
+    dashHtml += `
         <div class="space-y-2 pt-2">
             <div class="flex justify-between items-center px-1">
                 <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Último Pedido</h3>
-                <button onclick="openHistoryModal()" class="text-[10px] font-bold text-black hover:underline">Ver historial</button>
+                <button onclick="switchTab('business-orders')" class="text-[10px] font-bold text-black hover:underline">Ver todos</button>
             </div>
             <div>
     `;
 
     if (myOrders.length === 0) {
-        html += '<p class="text-xs text-neutral-400 text-center py-4 bg-neutral-50 rounded-3xl border border-neutral-100">No hay actividad reciente registrada.</p>';
+        dashHtml += '<p class="text-xs text-neutral-400 text-center py-4 bg-neutral-50 rounded-3xl border border-neutral-100">No hay actividad reciente registrada.</p>';
     } else {
         const o = myOrders[0]; 
         const isCompleted = o.status === 'Completado';
@@ -459,7 +462,7 @@ async function renderBusinessOrders() {
         const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
         const totalVal = parseFloat(o.total) || 0;
         
-        html += `
+        dashHtml += `
             <div class="p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex justify-between items-center">
                 <div class="flex items-center space-x-3 overflow-hidden flex-1 mr-2">
                     <div class="w-9 h-9 rounded-2xl ${iconBg} flex items-center justify-center shrink-0"><i data-lucide="${iconName}" class="w-4 h-4"></i></div>
@@ -476,77 +479,80 @@ async function renderBusinessOrders() {
             </div>
         `;
     }
-    html += `</div></div>`;
+    dashHtml += `</div></div>`;
+    dashboardContainer.innerHTML = dashHtml;
 
-    // --- 2. SECCIÓN: GESTIÓN DE PEDIDOS (PENDIENTES CON CHECK VS COMPLETADOS) ---
-    const isPendingTab = activeOrdersTab === 'pending';
-    const displayList = isPendingTab ? pendingOrders : completedOrders;
+    // 2. RENDERIZADO DE LA PESTAÑA DEDICADA DE PEDIDOS
+    if (ordersContainer) {
+        const isPendingTab = activeOrdersTab === 'pending';
+        const displayList = isPendingTab ? pendingOrders : completedOrders;
 
-    html += `
-        <div class="space-y-3 pt-3">
+        let ordersHtml = `
             <div class="flex justify-between items-center px-1">
-                <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Gestión de Pedidos</span>
                 <div class="flex items-center space-x-1.5 bg-neutral-100 p-1 rounded-2xl border border-neutral-200/60 shadow-inner">
-                    <button onclick="setOrdersTab('pending')" class="px-2.5 py-1 rounded-xl text-[11px] font-bold transition ${isPendingTab ? 'bg-white text-black shadow-sm' : 'text-neutral-400 hover:text-black'} flex items-center space-x-1">
+                    <button onclick="setOrdersTab('pending')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${isPendingTab ? 'bg-white text-black shadow-sm' : 'text-neutral-400 hover:text-black'} flex items-center space-x-1.5">
                         <span>Pendientes</span>
                         <span class="w-4 h-4 rounded-full ${isPendingTab ? 'bg-black text-white' : 'bg-neutral-200 text-neutral-600'} text-[9px] flex items-center justify-center font-mono">${pendingOrders.length}</span>
                     </button>
-                    <button onclick="setOrdersTab('completed')" class="px-2.5 py-1 rounded-xl text-[11px] font-bold transition ${!isPendingTab ? 'bg-white text-black shadow-sm' : 'text-neutral-400 hover:text-black'} flex items-center space-x-1">
+                    <button onclick="setOrdersTab('completed')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${!isPendingTab ? 'bg-white text-black shadow-sm' : 'text-neutral-400 hover:text-black'} flex items-center space-x-1.5">
                         <span>Completados</span>
                         <span class="w-4 h-4 rounded-full ${!isPendingTab ? 'bg-black text-white' : 'bg-neutral-200 text-neutral-600'} text-[9px] flex items-center justify-center font-mono">${completedOrders.length}</span>
                     </button>
                 </div>
+                <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">${displayList.length} total</span>
             </div>
 
-            <div class="space-y-2">
-    `;
+            <div class="space-y-2 pt-1">
+        `;
 
-    if (displayList.length === 0) {
-        const emptyMsg = isPendingTab ? "No tienes pedidos pendientes de entrega." : "Aún no hay pedidos completados.";
-        html += `<p class="text-xs text-neutral-400 text-center py-6 bg-neutral-50/60 rounded-3xl border border-neutral-100">${emptyMsg}</p>`;
-    } else {
-        displayList.forEach(o => {
-            const isCompleted = o.status === 'Completado';
-            const isPaid = o.status === 'Pagado Online';
-            const iconBg = isCompleted ? 'bg-neutral-100 text-neutral-400' : (isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600');
-            const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
-            const totalVal = parseFloat(o.total) || 0;
-            
-            html += `
-                <div class="p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex justify-between items-center transition hover:border-black/20">
-                    <div class="flex items-center space-x-3 overflow-hidden flex-1 mr-2">
-                        <div class="w-9 h-9 rounded-2xl ${iconBg} flex items-center justify-center shrink-0">
-                            <i data-lucide="${iconName}" class="w-4 h-4"></i>
-                        </div>
-                        <div class="overflow-hidden">
-                            <span class="text-xs font-bold block text-black truncate">${o.items}</span>
-                            <span class="text-[9px] text-neutral-500 font-mono block">Día: ${o.date} • ${o.time}</span>
-                            <span class="text-[9px] text-neutral-400 block truncate">Cliente: ${o.customer}</span>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center space-x-2.5 shrink-0">
-                        <div class="text-right">
-                            <span class="block text-sm font-bold text-black">${totalVal.toFixed(2)} €</span>
-                            <span class="block text-[9px] ${isCompleted ? 'text-neutral-400' : (isPaid ? 'text-emerald-600' : 'text-amber-600')} font-bold">${o.status}</span>
-                        </div>
-
-                        ${!isCompleted ? `
-                            <button onclick="completeBusinessOrder('${o.id}')" title="Completar pedido" class="w-9 h-9 rounded-2xl bg-black text-white hover:bg-neutral-800 flex items-center justify-center active:scale-90 transition shadow-md shrink-0">
-                                <i data-lucide="check" class="w-4 h-4"></i>
-                            </button>
-                        ` : `
-                            <div class="w-9 h-9 rounded-2xl bg-neutral-100 text-neutral-400 flex items-center justify-center shrink-0">
-                                <i data-lucide="check-check" class="w-4 h-4"></i>
+        if (displayList.length === 0) {
+            const emptyMsg = isPendingTab ? "No tienes pedidos pendientes de entrega." : "Aún no hay pedidos marcados como completados.";
+            ordersHtml += `<p class="text-xs text-neutral-400 text-center py-8 bg-neutral-50/60 rounded-3xl border border-neutral-100">${emptyMsg}</p>`;
+        } else {
+            displayList.forEach(o => {
+                const isCompleted = o.status === 'Completado';
+                const isPaid = o.status === 'Pagado Online';
+                const iconBg = isCompleted ? 'bg-neutral-100 text-neutral-400' : (isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600');
+                const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
+                const totalVal = parseFloat(o.total) || 0;
+                
+                ordersHtml += `
+                    <div class="p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex justify-between items-center transition hover:border-black/20">
+                        <div class="flex items-center space-x-3 overflow-hidden flex-1 mr-2">
+                            <div class="w-9 h-9 rounded-2xl ${iconBg} flex items-center justify-center shrink-0">
+                                <i data-lucide="${iconName}" class="w-4 h-4"></i>
                             </div>
-                        `}
+                            <div class="overflow-hidden">
+                                <span class="text-xs font-bold block text-black truncate">${o.items}</span>
+                                <span class="text-[9px] text-neutral-500 font-mono block">Día: ${o.date} • ${o.time}</span>
+                                <span class="text-[9px] text-neutral-400 block truncate">Cliente: ${o.customer}</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-2.5 shrink-0">
+                            <div class="text-right">
+                                <span class="block text-sm font-bold text-black">${totalVal.toFixed(2)} €</span>
+                                <span class="block text-[9px] ${isCompleted ? 'text-neutral-400' : (isPaid ? 'text-emerald-600' : 'text-amber-600')} font-bold">${o.status}</span>
+                            </div>
+
+                            ${!isCompleted ? `
+                                <button onclick="completeBusinessOrder('${o.id}')" title="Completar pedido" class="w-9 h-9 rounded-2xl bg-black text-white hover:bg-neutral-800 flex items-center justify-center active:scale-90 transition shadow-md shrink-0">
+                                    <i data-lucide="check" class="w-4 h-4"></i>
+                                </button>
+                            ` : `
+                                <div class="w-9 h-9 rounded-2xl bg-neutral-100 text-neutral-400 flex items-center justify-center shrink-0">
+                                    <i data-lucide="check-check" class="w-4 h-4"></i>
+                                </div>
+                            `}
+                        </div>
                     </div>
-                </div>
-            `;
-        });
+                `;
+            });
+        }
+
+        ordersHtml += `</div>`;
+        ordersContainer.innerHTML = ordersHtml;
     }
-    
-    html += `</div></div>`;
-    container.innerHTML = html;
+
     lucide.createIcons();
 }

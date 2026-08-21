@@ -18,7 +18,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <link rel="stylesheet" href="css/styles.css?v=13">
+    <link rel="stylesheet" href="css/styles.css?v=14">
 </head>
 <body>
 
@@ -149,6 +149,7 @@
             <!-- 2. CARRUSEL MODO COMERCIO / NEGOCIO -->
             <div id="bizScrollWrapper" class="horizontal-scroll-container hidden">
                 
+                <!-- Pestaña 1: Dashboard Principal -->
                 <div id="view-business-dashboard" class="view-pane px-6 pt-2 pb-28 space-y-5">
                     <div class="flex items-center justify-between px-1">
                         <div>
@@ -160,6 +161,19 @@
                     <div id="dynamicDashboardContent" class="space-y-5"></div>
                 </div>
 
+                <!-- Pestaña 2: Gestión de Pedidos -->
+                <div id="view-business-orders" class="view-pane px-6 pt-2 pb-28 space-y-4">
+                    <div class="flex items-center justify-between px-1">
+                        <div>
+                            <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">GESTIÓN ACTIVA</span>
+                            <h2 class="text-xl font-bold text-black tracking-tight">Pedidos</h2>
+                        </div>
+                        <button onclick="openHistoryModal()" class="text-xs font-bold text-black underline">Historial</button>
+                    </div>
+                    <div id="dynamicOrdersTabContent" class="space-y-4"></div>
+                </div>
+
+                <!-- Pestaña 3: Cobrar QR -->
                 <div id="view-business-scan" class="view-pane px-6 pb-28 flex flex-col items-center justify-center text-center my-auto space-y-6">
                     <div class="w-16 h-16 rounded-[28px] bg-black text-white flex items-center justify-center mx-auto shadow-xl"><i data-lucide="scan-line" class="w-8 h-8"></i></div>
                     <div class="space-y-1.5">
@@ -169,6 +183,7 @@
                     <button onclick="startCameraModal()" class="w-full py-3.5 bg-black text-white rounded-2xl text-xs font-semibold transition hover:bg-neutral-800 shadow-md">Abrir Terminal de Cobro</button>
                 </div>
 
+                <!-- Pestaña 4: Perfil de Negocio -->
                 <div id="view-business-profile" class="view-pane px-6 pt-2 pb-28 space-y-5">
                     <div id="businessProfileContentContainer" class="w-full"></div>
                 </div>
@@ -256,7 +271,6 @@
                     </div>
                 </div>
 
-                <!-- BLOQUE DE FECHA CON TOGGLE / SWITCH -->
                 <div class="bg-white p-5 rounded-3xl border border-neutral-200/80 shadow-sm space-y-4">
                     <div class="flex items-center justify-between">
                         <h3 class="text-[10px] font-bold text-neutral-400 uppercase tracking-widest flex items-center space-x-2">
@@ -292,7 +306,6 @@
                 </div>
             </div>
 
-            <!-- VISTA PÚBLICA DEL COMERCIO -->
             <div id="view-public-business" class="absolute inset-0 bg-white z-30 hidden flex-col allow-scroll pb-24">
                 <div class="relative w-full h-[240px] bg-neutral-200 shrink-0">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent z-10"></div>
@@ -343,8 +356,10 @@
             <button id="nav-btn-profile" onclick="switchTab('profile')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="user" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Perfil</span></button>
         </nav>
 
-        <nav id="business-nav" class="hidden absolute bottom-4 left-4 right-4 border border-neutral-800 bg-black/95 backdrop-blur-2xl px-6 py-3.5 rounded-[32px] flex justify-around items-center z-40 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
+        <!-- BARRA DE NAVEGACIÓN COMERCIO CON SECCIÓN PEDIDOS DEDICADA -->
+        <nav id="business-nav" class="hidden absolute bottom-4 left-4 right-4 border border-neutral-800 bg-black/95 backdrop-blur-2xl px-4 py-3.5 rounded-[32px] flex justify-around items-center z-40 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
             <button id="biz-nav-btn-dashboard" onclick="switchTab('business-dashboard')" class="flex flex-col items-center text-white space-y-1 transition group"><i data-lucide="layout-dashboard" class="w-5 h-5 transition-transform group-active:scale-90 scale-110"></i><span class="text-[9px] font-medium tracking-tight">Panel</span></button>
+            <button id="biz-nav-btn-orders" onclick="switchTab('business-orders')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="clipboard-list" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Pedidos</span></button>
             <button id="biz-nav-btn-scan" onclick="switchTab('business-scan')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="scan-line" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Cobrar</span></button>
             <button id="biz-nav-btn-profile" onclick="switchTab('business-profile')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="store" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Negocio</span></button>
         </nav>
@@ -357,14 +372,14 @@
     </div>
 
     <!-- SCRIPTS MODULARES ACTUALIZADOS -->
-    <script src="js/config.js?v=13"></script>
-    <script src="js/navigation.js?v=13"></script>
-    <script src="js/auth.js?v=13"></script>
-    <script src="js/directory.js?v=13"></script>
-    <script src="js/catalog-cart.js?v=13"></script>
-    <script src="js/dashboard.js?v=13"></script>
-    <script src="js/scanner.js?v=13"></script>
-    <script src="js/payment.js?v=13"></script>
+    <script src="js/config.js?v=14"></script>
+    <script src="js/navigation.js?v=14"></script>
+    <script src="js/auth.js?v=14"></script>
+    <script src="js/directory.js?v=14"></script>
+    <script src="js/catalog-cart.js?v=14"></script>
+    <script src="js/dashboard.js?v=14"></script>
+    <script src="js/scanner.js?v=14"></script>
+    <script src="js/payment.js?v=14"></script>
 
 </body>
 </html>

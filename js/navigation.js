@@ -1,277 +1,208 @@
-let lastMainTab = 'home';
-let isProgrammaticScroll = false;
-let scrollTimeout = null;
+// --- ÓRDENES Y CONFIGURACIÓN DE PESTAÑAS ---
+const userTabOrder = ['home', 'explore', 'scan', 'profile'];
+const bizTabOrder = ['business-dashboard', 'business-orders', 'business-scan', 'business-profile'];
 
-function applyHeaderState(tabId) {
-    const mainHeader = document.getElementById('mainAppHeader');
-    const avatarBtn = document.getElementById('headerAvatar');
-    if (!mainHeader) return;
-
-    if (tabId === 'public-business' || tabId === 'cart') {
-        mainHeader.classList.add('hidden');
-        return;
-    } else {
-        mainHeader.classList.remove('hidden');
-    }
-
-    if (tabId === 'profile' || tabId === 'business-profile') {
-        mainHeader.classList.remove('justify-between');
-        mainHeader.classList.add('justify-center');
-        if (avatarBtn) avatarBtn.classList.add('hidden');
-    } else {
-        mainHeader.classList.remove('justify-center');
-        mainHeader.classList.add('justify-between');
-        if (avatarBtn) avatarBtn.classList.remove('hidden');
-    }
-}
-
+// --- CONTROLADOR PRINCIPAL DE ENRUTAMIENTO Y TRANSICIONES ---
 function switchTab(tabId) {
-    const userTabs = ['home', 'explore', 'scan', 'profile'];
-    const bizTabs = ['business-dashboard', 'business-scan', 'business-profile'];
+    activeTab = tabId;
+    
     const userWrapper = document.getElementById('userScrollWrapper');
     const bizWrapper = document.getElementById('bizScrollWrapper');
+    const personalNav = document.getElementById('personal-nav');
+    const bizNav = document.getElementById('business-nav');
 
+    // 1. Cerrar submenús flotantes si se navega a pestañas principales
+    const subViews = ['view-category', 'view-payment', 'view-cart', 'view-public-business'];
+    if (userTabOrder.includes(tabId) || bizTabOrder.includes(tabId)) {
+        subViews.forEach(vId => {
+            const el = document.getElementById(vId);
+            if (el) {
+                el.classList.add('hidden');
+            }
+        });
+    }
+
+    // 2. Comprobación y alternancia de wrappers según el modo (Comercio o Usuario)
     if (currentBusiness) {
+        if (personalNav) personalNav.classList.add('hidden');
+        if (bizNav) bizNav.classList.remove('hidden');
         if (userWrapper) userWrapper.classList.add('hidden');
         if (bizWrapper) bizWrapper.classList.remove('hidden');
 
-        if (bizTabs.includes(tabId) && bizWrapper) {
-            isProgrammaticScroll = true;
-            if (scrollTimeout) clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(() => { isProgrammaticScroll = false; }, 400);
-
-            const index = bizTabs.indexOf(tabId);
-            bizWrapper.scrollTo({
-                left: index * bizWrapper.clientWidth,
-                behavior: 'smooth'
-            });
-            lastMainTab = tabId;
+        if (bizTabOrder.includes(tabId)) {
+            const index = bizTabOrder.indexOf(tabId);
+            if (bizWrapper) {
+                bizWrapper.scrollTo({
+                    left: index * bizWrapper.clientWidth,
+                    behavior: 'smooth'
+                });
+            }
+            updateActiveBizNavButton(tabId);
         }
     } else {
+        if (bizNav) bizNav.classList.add('hidden');
+        if (personalNav) personalNav.classList.remove('hidden');
         if (bizWrapper) bizWrapper.classList.add('hidden');
         if (userWrapper) userWrapper.classList.remove('hidden');
 
-        if (userTabs.includes(tabId) && userWrapper) {
-            isProgrammaticScroll = true;
-            if (scrollTimeout) clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(() => { isProgrammaticScroll = false; }, 400);
-
-            const index = userTabs.indexOf(tabId);
-            userWrapper.scrollTo({
-                left: index * userWrapper.clientWidth,
-                behavior: 'smooth'
-            });
-            lastMainTab = tabId;
-        }
-    }
-
-    const secondaryViews = ['payment', 'public-business', 'cart', 'category'];
-    secondaryViews.forEach(v => {
-        const el = document.getElementById('view-' + v);
-        if (el) {
-            if (v === tabId) {
-                el.classList.remove('hidden');
-                el.classList.add('flex', 'fade-in');
-            } else {
-                el.classList.add('hidden');
-                el.classList.remove('flex', 'fade-in');
+        if (userTabOrder.includes(tabId)) {
+            const index = userTabOrder.indexOf(tabId);
+            if (userWrapper) {
+                userWrapper.scrollTo({
+                    left: index * userWrapper.clientWidth,
+                    behavior: 'smooth'
+                });
             }
-        }
-    });
-
-    if (tabId === 'explore') {
-        if (typeof renderBusinessDirectory === 'function' && typeof allPublicBusinesses !== 'undefined') {
-            renderBusinessDirectory(allPublicBusinesses);
-        }
-    }
-    
-    // CORRECCIÓN: Renderizar SIEMPRE el perfil si entramos a él
-    if (tabId === 'profile' || tabId === 'business-profile') {
-        if (typeof renderProfileView === 'function') renderProfileView();
-    }
-    
-    if (tabId === 'business-dashboard') {
-        if (typeof renderBusinessOrders === 'function') renderBusinessOrders();
-    }
-
-    if (tabId === 'payment') { 
-        holdProgress = 0; 
-        const pb = document.getElementById('progressBar'); 
-        if (pb) pb.style.width = '0%'; 
-    }
-
-    applyHeaderState(tabId);
-
-    const pNav = document.getElementById('personal-nav');
-    const bNav = document.getElementById('business-nav');
-
-    if (secondaryViews.includes(tabId)) {
-        if (pNav) pNav.classList.add('hidden');
-        if (bNav) bNav.classList.add('hidden');
-    } else {
-        if (currentBusiness) {
-            if (pNav) pNav.classList.add('hidden');
-            if (bNav) bNav.classList.remove('hidden');
-        } else {
-            if (pNav) pNav.classList.remove('hidden');
-            if (bNav) bNav.classList.add('hidden');
+            updateActiveUserNavButton(tabId);
         }
     }
 
-    updateNavHighlight(tabId);
+    // 3. Manejo de vistas modulares y submenús flotantes
+    if (tabId === 'category') {
+        const catView = document.getElementById('view-category');
+        if (catView) {
+            catView.classList.remove('hidden');
+            catView.scrollTop = 0;
+        }
+    } else if (tabId === 'payment') {
+        const payView = document.getElementById('view-payment');
+        if (payView) {
+            payView.classList.remove('hidden');
+            payView.scrollTop = 0;
+        }
+    } else if (tabId === 'cart') {
+        const cartView = document.getElementById('view-cart');
+        if (cartView) {
+            cartView.classList.remove('hidden');
+            cartView.scrollTop = 0;
+        }
+    } else if (tabId === 'public-business') {
+        const pubBizView = document.getElementById('view-public-business');
+        if (pubBizView) {
+            pubBizView.classList.remove('hidden');
+            pubBizView.scrollTop = 0;
+        }
+    }
+
+    // 4. Refresco dinámico de iconos Lucide
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
 }
 
+// --- ACTUALIZACIÓN VISUAL DE BOTONES (MODO USUARIO) ---
+function updateActiveUserNavButton(activeId) {
+    userTabOrder.forEach(tab => {
+        const btn = document.getElementById(`nav-btn-${tab}`);
+        if (!btn) return;
+        const icon = btn.querySelector('i');
+        const text = btn.querySelector('span');
+
+        if (tab === activeId) {
+            btn.className = "flex flex-col items-center text-black space-y-1 transition group";
+            if (icon) icon.className = "w-5 h-5 transition-transform group-active:scale-90 scale-110";
+            if (text) text.className = "text-[9px] font-bold tracking-tight";
+        } else {
+            btn.className = "flex flex-col items-center text-neutral-400 transition space-y-1 group";
+            if (icon) icon.className = "w-5 h-5 transition-transform group-active:scale-90";
+            if (text) text.className = "text-[9px] font-medium tracking-tight";
+        }
+    });
+}
+
+// --- ACTUALIZACIÓN VISUAL DE BOTONES (MODO COMERCIO) ---
+function updateActiveBizNavButton(activeId) {
+    const keyMap = {
+        'business-dashboard': 'dashboard',
+        'business-orders': 'orders',
+        'business-scan': 'scan',
+        'business-profile': 'profile'
+    };
+    
+    bizTabOrder.forEach(tab => {
+        const shortKey = keyMap[tab];
+        const btn = document.getElementById(`biz-nav-btn-${shortKey}`);
+        if (!btn) return;
+        const icon = btn.querySelector('i');
+        const text = btn.querySelector('span');
+
+        if (tab === activeId) {
+            btn.className = "flex flex-col items-center text-white space-y-1 transition group";
+            if (icon) icon.className = "w-5 h-5 transition-transform group-active:scale-90 scale-110";
+            if (text) text.className = "text-[9px] font-bold tracking-tight";
+        } else {
+            btn.className = "flex flex-col items-center text-neutral-400 transition space-y-1 group";
+            if (icon) icon.className = "w-5 h-5 transition-transform group-active:scale-90";
+            if (text) text.className = "text-[9px] font-medium tracking-tight";
+        }
+    });
+}
+
+// --- ESCUCHADORES DE SCROLL SNAP E INERCIA TÁCTIL ---
 document.addEventListener('DOMContentLoaded', () => {
     const userWrapper = document.getElementById('userScrollWrapper');
     const bizWrapper = document.getElementById('bizScrollWrapper');
 
+    // Sincronización del deslizamiento horizontal para usuarios
     if (userWrapper) {
         userWrapper.addEventListener('scroll', () => {
-            if (isProgrammaticScroll || currentBusiness) return;
-            const scrollLeft = userWrapper.scrollLeft;
-            const width = userWrapper.clientWidth;
-            const index = Math.round(scrollLeft / width);
-            const userTabs = ['home', 'explore', 'scan', 'profile'];
-            if (userTabs[index]) {
-                const activeTab = userTabs[index];
-                lastMainTab = activeTab;
-                updateNavHighlight(activeTab);
-                applyHeaderState(activeTab);
-                
-                // Aseguramos render al deslizar
-                if (activeTab === 'profile') if(typeof renderProfileView === 'function') renderProfileView();
+            const index = Math.round(userWrapper.scrollLeft / userWrapper.clientWidth);
+            const targetTab = userTabOrder[index];
+            if (targetTab && activeTab !== targetTab) {
+                updateActiveUserNavButton(targetTab);
+                activeTab = targetTab;
             }
         }, { passive: true });
     }
 
+    // Sincronización del deslizamiento horizontal para comercios (4 pestañas)
     if (bizWrapper) {
         bizWrapper.addEventListener('scroll', () => {
-            if (isProgrammaticScroll || !currentBusiness) return;
-            const scrollLeft = bizWrapper.scrollLeft;
-            const width = bizWrapper.clientWidth;
-            const index = Math.round(scrollLeft / width);
-            const bizTabs = ['business-dashboard', 'business-scan', 'business-profile'];
-            if (bizTabs[index]) {
-                const activeTab = bizTabs[index];
-                lastMainTab = activeTab;
-                updateNavHighlight(activeTab);
-                applyHeaderState(activeTab);
-                
-                // Aseguramos render al deslizar
-                if (activeTab === 'business-profile') if(typeof renderProfileView === 'function') renderProfileView();
-                if (activeTab === 'business-dashboard') if(typeof renderBusinessOrders === 'function') renderBusinessOrders();
+            const index = Math.round(bizWrapper.scrollLeft / bizWrapper.clientWidth);
+            const targetTab = bizTabOrder[index];
+            if (targetTab && activeTab !== targetTab) {
+                updateActiveBizNavButton(targetTab);
+                activeTab = targetTab;
             }
         }, { passive: true });
     }
+
+    // Inicializar estado del avatar del header
+    updateHeaderAvatar();
 });
 
-let touchstartX = 0;
-let touchendX = 0;
-let touchstartY = 0;
-let touchendY = 0;
-
-document.addEventListener('touchstart', e => {
-    touchstartX = e.changedTouches[0].screenX;
-    touchstartY = e.changedTouches[0].screenY;
-}, { passive: true });
-
-document.addEventListener('touchend', e => {
-    touchendX = e.changedTouches[0].screenX;
-    touchendY = e.changedTouches[0].screenY;
-    handleSwipeGesture();
-}, { passive: true });
-
-function handleSwipeGesture() {
-    const xDiff = touchstartX - touchendX;
-    const yDiff = touchstartY - touchendY;
-    
-    if (Math.abs(yDiff) > Math.abs(xDiff)) return;
-    if (Math.abs(xDiff) < 50) return;
-
-    const isCategory = !document.getElementById('view-category').classList.contains('hidden');
-    const isPublicBusiness = !document.getElementById('view-public-business').classList.contains('hidden');
-    const isCart = !document.getElementById('view-cart').classList.contains('hidden');
-    const isPayment = !document.getElementById('view-payment').classList.contains('hidden');
-
-    if (xDiff < -50) {
-        if (isCategory) {
-            switchTab('home');
-        } else if (isCart) {
-            switchTab('public-business');
-        } else if (isPublicBusiness || isPayment) {
-            goBackFromBusiness();
-        }
+// --- CLIC EN EL AVATAR DE LA CABECERA ---
+function handleHeaderProfileClick() {
+    if (currentBusiness) {
+        switchTab('business-profile');
+    } else {
+        switchTab('profile');
     }
 }
 
-function updateNavHighlight(activeTabId) {
-    const tabs = ['home', 'explore', 'scan', 'profile'];
-    const bizTabs = ['business-dashboard', 'business-scan', 'business-profile'];
-    
-    tabs.forEach(tab => {
-        const btn = document.getElementById('nav-btn-' + tab);
-        if (!btn) return;
-        const icon = btn.querySelector('i');
-        
-        if (tab === activeTabId || (activeTabId === 'public-business' && tab === lastMainTab) || (activeTabId === 'cart' && tab === lastMainTab) || (activeTabId === 'category' && tab === lastMainTab)) {
-            btn.classList.remove('text-neutral-400');
-            btn.classList.add('text-black');
-            if (icon) icon.classList.add('scale-110');
-        } else {
-            btn.classList.remove('text-black');
-            btn.classList.add('text-neutral-400');
-            if (icon) icon.classList.remove('scale-110');
-        }
-    });
-
-    bizTabs.forEach(tab => {
-        const btn = document.getElementById('biz-nav-btn-' + tab);
-        if (!btn) return;
-        const icon = btn.querySelector('i');
-        const isCurrentBizTab = (tab === 'business-dashboard' && activeTabId === 'business-dashboard') ||
-                               (tab === 'business-scan' && activeTabId === 'business-scan') ||
-                               (tab === 'business-profile' && activeTabId === 'business-profile');
-
-        if (isCurrentBizTab) {
-            btn.classList.remove('text-neutral-400');
-            btn.classList.add('text-white');
-            if (icon) icon.classList.add('scale-110');
-        } else {
-            btn.classList.remove('text-white');
-            btn.classList.add('text-neutral-400');
-            if (icon) icon.classList.remove('scale-110');
-        }
-    });
-}
-
+// --- RETROCESO DESDE EL COMERCIO PÚBLICO ---
 function goBackFromBusiness() {
-    switchTab(lastMainTab || (currentBusiness ? 'business-dashboard' : 'home'));
+    const pubBizView = document.getElementById('view-public-business');
+    if (pubBizView) {
+        pubBizView.classList.add('hidden');
+    }
+    switchTab('explore');
 }
 
+// --- ACTUALIZACIÓN REACTIVA DEL AVATAR DEL HEADER ---
 function updateHeaderAvatar() {
     const avatarBtn = document.getElementById('headerAvatar');
     if (!avatarBtn) return;
-    
+
     if (currentBusiness) {
-        avatarBtn.innerHTML = "BIZ";
-        avatarBtn.className = "w-9 h-9 rounded-2xl bg-amber-500 text-white border border-amber-600 flex items-center justify-center text-[10px] font-bold shadow-md transition hover:scale-105 active:scale-95 overflow-hidden p-0";
+        avatarBtn.innerText = "BIZ";
+        avatarBtn.className = "w-9 h-9 rounded-2xl bg-black text-white border border-neutral-800 flex items-center justify-center text-xs font-bold shadow-sm transition hover:scale-105 active:scale-95";
     } else if (currentUser) {
         const meta = currentUser.user_metadata || {};
-        const avatarUrl = meta.avatar_url || meta.picture;
-        
-        avatarBtn.className = "w-9 h-9 rounded-2xl bg-black text-white border border-neutral-800 flex items-center justify-center text-xs font-bold shadow-md transition hover:scale-105 active:scale-95 overflow-hidden p-0";
-        
-        if (avatarUrl) {
-            avatarBtn.innerHTML = `<img src="${avatarUrl}" class="w-full h-full object-cover" alt="Perfil">`;
-        } else {
-            avatarBtn.innerHTML = meta.initials || "NW";
-        }
+        avatarBtn.innerText = meta.initials || 'NW';
+        avatarBtn.className = "w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner transition hover:scale-105 active:scale-95";
     } else {
-        avatarBtn.innerHTML = "IN";
-        avatarBtn.className = "w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner transition hover:scale-105 active:scale-95 overflow-hidden p-0";
+        avatarBtn.innerText = "IN";
+        avatarBtn.className = "w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner transition hover:scale-105 active:scale-95";
     }
-}
-
-function handleHeaderProfileClick() {
-    switchTab(currentBusiness ? 'business-profile' : 'profile');
 }
