@@ -139,7 +139,7 @@ async function deleteStockProduct(productId) {
     }
 }
 
-// --- CAMBIO DE ESTADO DEL PEDIDO (COMPLETAR / ENTREGAR) ---
+// --- CAMBIO DE ESTADO DEL PEDIDO (CHECK / COMPLETAR) ---
 async function completeBusinessOrder(orderId) {
     try {
         const { error } = await supabaseClient
@@ -149,7 +149,6 @@ async function completeBusinessOrder(orderId) {
             
         if (error) throw error;
 
-        // Actualización local en memoria
         const orderIndex = currentBusinessOrders.findIndex(o => String(o.id) === String(orderId));
         if (orderIndex >= 0) {
             currentBusinessOrders[orderIndex].status = 'Completado';
@@ -186,7 +185,7 @@ function openHistoryModal(dateFilter = '') {
         filteredOrders.forEach(o => {
             const isCompleted = o.status === 'Completado';
             const isPaid = o.status === 'Pagado Online';
-            const iconBg = isCompleted ? 'bg-neutral-100 text-black' : (isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600');
+            const iconBg = isCompleted ? 'bg-neutral-100 text-neutral-500' : (isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600');
             const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
             const totalVal = parseFloat(o.total) || 0;
             
@@ -250,7 +249,6 @@ async function renderBusinessOrders() {
     const cat = (currentBusiness.category || '').toLowerCase();
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
     
-    // Suscripción Realtime
     if (!ordersRealtimeSubscription && typeof supabaseClient.channel === 'function') {
         ordersRealtimeSubscription = supabaseClient
             .channel('public:orders')
@@ -287,7 +285,7 @@ async function renderBusinessOrders() {
         return bizKeywords.some(keyword => oName.includes(keyword));
     });
 
-    // Ordenar de más reciente a más antiguo por fecha de creación
+    // Ordenamiento por fecha real de recepción
     myOrders.sort((a, b) => {
         const timeA = a.created_at ? new Date(a.created_at).getTime() : (parseInt(a.id, 10) || 0);
         const timeB = b.created_at ? new Date(b.created_at).getTime() : (parseInt(b.id, 10) || 0);
@@ -441,38 +439,76 @@ async function renderBusinessOrders() {
         `;
     }
 
-    // --- SELECTOR DE PESTAÑAS: PENDIENTES VS COMPLETADOS ---
+    // --- 1. SECCIÓN: ÚLTIMO PEDIDO RECIBIDO ---
+    html += `
+        <div class="space-y-2 pt-2">
+            <div class="flex justify-between items-center px-1">
+                <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Último Pedido</h3>
+                <button onclick="openHistoryModal()" class="text-[10px] font-bold text-black hover:underline">Ver historial</button>
+            </div>
+            <div>
+    `;
+
+    if (myOrders.length === 0) {
+        html += '<p class="text-xs text-neutral-400 text-center py-4 bg-neutral-50 rounded-3xl border border-neutral-100">No hay actividad reciente registrada.</p>';
+    } else {
+        const o = myOrders[0]; 
+        const isCompleted = o.status === 'Completado';
+        const isPaid = o.status === 'Pagado Online';
+        const iconBg = isCompleted ? 'bg-neutral-100 text-neutral-500' : (isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600');
+        const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
+        const totalVal = parseFloat(o.total) || 0;
+        
+        html += `
+            <div class="p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex justify-between items-center">
+                <div class="flex items-center space-x-3 overflow-hidden flex-1 mr-2">
+                    <div class="w-9 h-9 rounded-2xl ${iconBg} flex items-center justify-center shrink-0"><i data-lucide="${iconName}" class="w-4 h-4"></i></div>
+                    <div class="overflow-hidden">
+                        <span class="text-xs font-bold block text-black truncate">${o.items}</span>
+                        <span class="text-[9px] text-neutral-500 font-mono block">Día: ${o.date} • ${o.time}</span>
+                        <span class="text-[9px] text-neutral-400 block truncate">Cliente: ${o.customer}</span>
+                    </div>
+                </div>
+                <div class="text-right shrink-0">
+                    <span class="block text-sm font-bold text-black">${totalVal.toFixed(2)} €</span>
+                    <span class="block text-[9px] ${isCompleted ? 'text-neutral-400' : (isPaid ? 'text-emerald-600' : 'text-amber-600')} font-bold">${o.status}</span>
+                </div>
+            </div>
+        `;
+    }
+    html += `</div></div>`;
+
+    // --- 2. SECCIÓN: GESTIÓN DE PEDIDOS (PENDIENTES CON CHECK VS COMPLETADOS) ---
     const isPendingTab = activeOrdersTab === 'pending';
     const displayList = isPendingTab ? pendingOrders : completedOrders;
 
     html += `
         <div class="space-y-3 pt-3">
             <div class="flex justify-between items-center px-1">
-                <!-- Selector de Filtro -->
-                <div class="flex items-center space-x-2 bg-neutral-100 p-1 rounded-2xl border border-neutral-200/60 shadow-inner">
-                    <button onclick="setOrdersTab('pending')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${isPendingTab ? 'bg-white text-black shadow-sm' : 'text-neutral-500 hover:text-black'} flex items-center space-x-1.5">
+                <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Gestión de Pedidos</span>
+                <div class="flex items-center space-x-1.5 bg-neutral-100 p-1 rounded-2xl border border-neutral-200/60 shadow-inner">
+                    <button onclick="setOrdersTab('pending')" class="px-2.5 py-1 rounded-xl text-[11px] font-bold transition ${isPendingTab ? 'bg-white text-black shadow-sm' : 'text-neutral-400 hover:text-black'} flex items-center space-x-1">
                         <span>Pendientes</span>
-                        <span class="w-4 h-4 rounded-full bg-black text-white text-[9px] flex items-center justify-center font-mono">${pendingOrders.length}</span>
+                        <span class="w-4 h-4 rounded-full ${isPendingTab ? 'bg-black text-white' : 'bg-neutral-200 text-neutral-600'} text-[9px] flex items-center justify-center font-mono">${pendingOrders.length}</span>
                     </button>
-                    <button onclick="setOrdersTab('completed')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${!isPendingTab ? 'bg-white text-black shadow-sm' : 'text-neutral-500 hover:text-black'} flex items-center space-x-1.5">
+                    <button onclick="setOrdersTab('completed')" class="px-2.5 py-1 rounded-xl text-[11px] font-bold transition ${!isPendingTab ? 'bg-white text-black shadow-sm' : 'text-neutral-400 hover:text-black'} flex items-center space-x-1">
                         <span>Completados</span>
-                        <span class="w-4 h-4 rounded-full bg-neutral-200 text-neutral-700 text-[9px] flex items-center justify-center font-mono">${completedOrders.length}</span>
+                        <span class="w-4 h-4 rounded-full ${!isPendingTab ? 'bg-black text-white' : 'bg-neutral-200 text-neutral-600'} text-[9px] flex items-center justify-center font-mono">${completedOrders.length}</span>
                     </button>
                 </div>
-                <button onclick="openHistoryModal()" class="text-[10px] font-bold text-black hover:underline">Ver historial</button>
             </div>
 
             <div class="space-y-2">
     `;
 
     if (displayList.length === 0) {
-        const emptyMsg = isPendingTab ? "No tienes pedidos pendientes de entrega." : "Aún no hay pedidos marcados como completados.";
+        const emptyMsg = isPendingTab ? "No tienes pedidos pendientes de entrega." : "Aún no hay pedidos completados.";
         html += `<p class="text-xs text-neutral-400 text-center py-6 bg-neutral-50/60 rounded-3xl border border-neutral-100">${emptyMsg}</p>`;
     } else {
         displayList.forEach(o => {
             const isCompleted = o.status === 'Completado';
             const isPaid = o.status === 'Pagado Online';
-            const iconBg = isCompleted ? 'bg-neutral-100 text-neutral-500' : (isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600');
+            const iconBg = isCompleted ? 'bg-neutral-100 text-neutral-400' : (isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600');
             const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
             const totalVal = parseFloat(o.total) || 0;
             
@@ -489,14 +525,14 @@ async function renderBusinessOrders() {
                         </div>
                     </div>
 
-                    <div class="flex items-center space-x-3 shrink-0">
+                    <div class="flex items-center space-x-2.5 shrink-0">
                         <div class="text-right">
                             <span class="block text-sm font-bold text-black">${totalVal.toFixed(2)} €</span>
                             <span class="block text-[9px] ${isCompleted ? 'text-neutral-400' : (isPaid ? 'text-emerald-600' : 'text-amber-600')} font-bold">${o.status}</span>
                         </div>
 
                         ${!isCompleted ? `
-                            <button onclick="completeBusinessOrder('${o.id}')" title="Marcar como Completado" class="w-9 h-9 rounded-2xl bg-black text-white hover:bg-neutral-800 flex items-center justify-center active:scale-90 transition shadow-md shrink-0">
+                            <button onclick="completeBusinessOrder('${o.id}')" title="Completar pedido" class="w-9 h-9 rounded-2xl bg-black text-white hover:bg-neutral-800 flex items-center justify-center active:scale-90 transition shadow-md shrink-0">
                                 <i data-lucide="check" class="w-4 h-4"></i>
                             </button>
                         ` : `
