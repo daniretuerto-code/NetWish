@@ -556,32 +556,25 @@ async function renderBusinessOrders() {
     const cat = (currentBusiness.category || '').toLowerCase();
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
     
-    // 1. Obtener pedidos desde Supabase y combinar con LocalStorage
+    // Consulta directa a Supabase
     let orders = [];
     try {
         const { data, error } = await supabaseClient
             .from('orders')
             .select('*')
-            .order('created_at', { ascending: false });
-        if (!error && data) orders = data;
+            .order('id', { ascending: false });
+        if (!error && data) {
+            orders = data;
+        }
     } catch (e) {
         console.warn("Lectura de orders Supabase:", e);
     }
 
-    const localOrders = JSON.parse(localStorage.getItem('netwish_global_orders') || '[]');
-    
-    // Fusión sin duplicados
-    const combinedOrders = [...orders];
-    localOrders.forEach(lo => {
-        const exists = combinedOrders.some(co => co.id === lo.id || (co.date === lo.date && co.time === lo.time && co.total === lo.total && co.customer === lo.customer));
-        if (!exists) combinedOrders.push(lo);
-    });
-    
     // Normalizador de nombres tolerante a variaciones
     const cleanCurrentBiz = (currentBusiness.name || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const bizKeywords = cleanCurrentBiz.split(/\s+/).filter(w => w.length > 2);
 
-    const myOrders = combinedOrders.filter(o => {
+    const myOrders = orders.filter(o => {
         const rawName = o.business_name || o.businessName || '';
         const oName = rawName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         if (oName === cleanCurrentBiz || oName.includes(cleanCurrentBiz) || cleanCurrentBiz.includes(oName)) return true;
@@ -738,8 +731,7 @@ async function renderBusinessOrders() {
     if (myOrders.length === 0) {
         html += '<p class="text-xs text-neutral-400 text-center py-4">No hay actividad reciente registrada.</p>';
     } else {
-        const displayOrders = [...myOrders].reverse();
-        displayOrders.forEach(o => {
+        myOrders.forEach(o => {
             const isPaid = o.status === 'Pagado Online';
             const iconBg = isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600';
             const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');

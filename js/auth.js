@@ -16,7 +16,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (savedBusiness) {
         try {
             currentBusiness = JSON.parse(savedBusiness);
-            // Saneamiento de id antiguo
             if (currentBusiness && currentBusiness.id === 'biz_db') {
                 currentBusiness.id = currentBusiness.name;
                 localStorage.setItem('netwish_business', JSON.stringify(currentBusiness));
