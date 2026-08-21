@@ -1,14 +1,7 @@
 let activeBusinessName = "";
-let activeBusinessUsername = "";
 let activeBusinessCategory = "";
 let currentCategoryFilter = '';
 let currentCategoryBusinesses = [];
-let activePayee = "";
-let cartTotalValue = 0;
-let cartItemCount = 0;
-let cartItemsList = [];
-let isCartCheckout = false;
-let pendingOrderDetails = null;
 
 async function loadPublicBusinesses() {
     const listContainer = document.getElementById('dynamicBusinessList');
@@ -51,14 +44,13 @@ function renderBusinessDirectory(businesses) {
                 <p class="text-xs text-neutral-500 px-4">Aún no hay locales dados de alta. ¡Estamos trabajando en ello!</p>
             </div>
         `;
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        lucide.createIcons();
         return;
     }
 
     let html = '';
     businesses.forEach(biz => {
         const name = biz.name || biz.Nombre || biz.username || 'Comercio';
-        const username = biz.username || '';
         const cat = (biz.category || biz.Categoria || '').toLowerCase();
         
         let icon = 'store'; 
@@ -71,16 +63,17 @@ function renderBusinessDirectory(businesses) {
             icon = 'scissors'; colorClass = 'text-blue-600'; bgClass = 'bg-blue-500/10 border-blue-500/20'; 
         } else if (cat.includes('rest') || cat.includes('bar')) { 
             icon = 'utensils'; colorClass = 'text-rose-600'; bgClass = 'bg-rose-500/10 border-rose-500/20'; 
+        } else if (cat.includes('movil') || cat.includes('taxi')) {
+            icon = 'car'; colorClass = 'text-emerald-600'; bgClass = 'bg-emerald-500/10 border-emerald-500/20';
         } else if (cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio')) {
             icon = 'disc'; colorClass = 'text-yellow-500'; bgClass = 'bg-amber-500/20 border-amber-500/40';
         }
 
         const safeName = encodeURIComponent(name);
-        const safeUser = encodeURIComponent(username);
         const safeCat = encodeURIComponent(cat);
 
         html += `
-            <button onclick="openPublicBusiness('${safeName}', '${safeUser}', '${safeCat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
+            <button onclick="openPublicBusiness('${safeName}', '${safeCat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
                 <div class="w-12 h-12 rounded-xl ${bgClass} flex items-center justify-center shrink-0">
                     <i data-lucide="${icon}" class="w-5 h-5 ${colorClass}"></i>
                 </div>
@@ -93,7 +86,7 @@ function renderBusinessDirectory(businesses) {
         `;
     });
     listContainer.innerHTML = html;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    lucide.createIcons();
 }
 
 function filterDirectory() {
@@ -148,14 +141,13 @@ function renderCategoryDirectory(businesses) {
                 <p class="text-xs text-neutral-500 px-4">Aún no hay locales de esta categoría dados de alta. ¡Estamos trabajando en ello!</p>
             </div>
         `;
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        lucide.createIcons();
         return;
     }
 
     let html = '';
     businesses.forEach(biz => {
         const name = biz.name || biz.Nombre || biz.username || 'Comercio';
-        const username = biz.username || '';
         const cat = (biz.category || biz.Categoria || '').toLowerCase();
         
         let icon = 'store'; 
@@ -173,11 +165,10 @@ function renderCategoryDirectory(businesses) {
         }
 
         const safeName = encodeURIComponent(name);
-        const safeUser = encodeURIComponent(username);
         const safeCat = encodeURIComponent(cat);
 
         html += `
-            <button onclick="openPublicBusiness('${safeName}', '${safeUser}', '${safeCat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
+            <button onclick="openPublicBusiness('${safeName}', '${safeCat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
                 <div class="w-12 h-12 rounded-xl ${bgClass} flex items-center justify-center shrink-0">
                     <i data-lucide="${icon}" class="w-5 h-5 ${colorClass}"></i>
                 </div>
@@ -190,7 +181,7 @@ function renderCategoryDirectory(businesses) {
         `;
     });
     listContainer.innerHTML = html;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    lucide.createIcons();
 }
 
 function filterCategoryView() {
@@ -203,9 +194,8 @@ function filterCategoryView() {
     renderCategoryDirectory(filtered);
 }
 
-function openPublicBusiness(safeName, safeUser, safeType) {
+function openPublicBusiness(safeName, safeType) {
     activeBusinessName = decodeURIComponent(safeName || '');
-    activeBusinessUsername = decodeURIComponent(safeUser || '');
     activeBusinessCategory = decodeURIComponent(safeType || '').toLowerCase();
     activePayee = activeBusinessName;
     
@@ -248,20 +238,14 @@ async function renderPublicCatalogItems() {
             <p class="text-[11px] text-neutral-400">Sincronizando catálogo...</p>
         </div>
     `;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    lucide.createIcons();
 
     let items = [];
     try {
-        const identifierFilters = [
-            activeBusinessUsername ? `business_id.eq.${activeBusinessUsername}` : null,
-            activeBusinessName ? `business_id.eq.${activeBusinessName}` : null,
-            `business_id.eq.biz_db`
-        ].filter(Boolean).join(',');
-
         const { data, error } = await supabaseClient
             .from('products')
             .select('*')
-            .or(identifierFilters);
+            .or(`business_id.eq.${activeBusinessName},business_id.ilike.%${activeBusinessName.split(' ')[0]}%,business_id.eq.biz_db`);
             
         if (error) throw error;
         items = data || [];
@@ -277,7 +261,7 @@ async function renderPublicCatalogItems() {
                 <p class="text-[10px] text-neutral-400">Este establecimiento aún no ha publicado artículos en su catálogo.</p>
             </div>
         `;
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        lucide.createIcons();
         return;
     }
 
@@ -321,7 +305,7 @@ async function renderPublicCatalogItems() {
     });
 
     catalogEl.innerHTML = html;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    lucide.createIcons();
 }
 
 function changeItemQuantity(id, encodedName, price, delta) {
@@ -390,44 +374,33 @@ function openCartSummary() {
 }
 
 function processCartChoice(action) {
-    const dateInput = document.getElementById('orderDate');
-    const timeInput = document.getElementById('orderTime');
-
-    if (!dateInput || !timeInput || !dateInput.value || !timeInput.value) { 
-        alert("Por favor, selecciona un día y hora para tu recogida."); 
+    const date = document.getElementById('orderDate').value;
+    const time = document.getElementById('orderTime').value;
+    if (!date || !time) { 
+        alert("Por favor, elige un día y hora de recogida/cita."); 
         return; 
     }
 
-    pendingOrderDetails = { date: dateInput.value, time: timeInput.value, action: action };
+    pendingOrderDetails = { date, time, action };
     isCartCheckout = true;
     
     if (action === 'pay') {
-        if (typeof rawAmountString !== 'undefined') {
-            rawAmountString = Math.round(cartTotalValue * 100).toString(); 
-            if (typeof updateAmountDisplay === 'function') updateAmountDisplay();
-        }
-        
-        const payeeNameDisplay = document.getElementById('payeeNameDisplay');
-        if (payeeNameDisplay) payeeNameDisplay.innerText = activePayee;
-        
-        const payeeInitials = document.getElementById('payeeInitialsBubble');
-        if (payeeInitials) payeeInitials.innerText = activePayee.substring(0, 2).toUpperCase();
+        rawAmountString = Math.round(cartTotalValue * 100).toString(); 
+        updateAmountDisplay();
+        document.getElementById('payeeNameDisplay').innerText = activePayee;
+        document.getElementById('payeeInitialsBubble').innerText = activePayee.substring(0, 2).toUpperCase();
         
         if (typeof swipeAnim !== 'undefined') swipeAnim = 'slide-in-right';
         switchTab('payment');
     } else {
-        if (typeof executeFullPayment === 'function') {
-            executeFullPayment(true);
-        } else {
-            console.error("No se ha definido la función executeFullPayment.");
-        }
+        if (typeof executeFullPayment === 'function') executeFullPayment(true);
     }
 }
 
 async function openStockControlModal() {
     if (!currentBusiness) return;
     const modal = document.getElementById('customModal');
-    const modalContent = document.getElementById('customModalContent') || document.getElementById('modalContent');
+    const modalContent = document.getElementById('modalContent');
     const modalBody = document.getElementById('modalBody');
 
     const cat = (currentBusiness.category || '').toLowerCase();
@@ -445,21 +418,16 @@ async function openStockControlModal() {
             <p class="text-xs text-neutral-500">Consultando Supabase...</p>
         </div>
     `;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    lucide.createIcons();
     modal.classList.remove('hidden');
-    setTimeout(() => { modal.classList.remove('opacity-0'); if(modalContent) modalContent.classList.remove('scale-95'); }, 10);
+    setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
 
     let catalog = [];
     try {
-        const identifierFilters = [
-            currentBusiness.username ? `business_id.eq.${currentBusiness.username}` : null,
-            currentBusiness.name ? `business_id.eq.${currentBusiness.name}` : null
-        ].filter(Boolean).join(',');
-
         const { data, error } = await supabaseClient
             .from('products')
             .select('*')
-            .or(identifierFilters);
+            .or(`business_id.eq.${currentBusiness.name},business_id.ilike.%${currentBusiness.name.split(' ')[0]}%,business_id.eq.biz_db`);
         if (error) throw error;
         catalog = data || [];
     } catch (err) {
@@ -512,7 +480,7 @@ async function openStockControlModal() {
             </button>
         </div>
     `;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    lucide.createIcons();
 }
 
 async function saveNewStockProduct() {
@@ -527,13 +495,11 @@ async function saveNewStockProduct() {
         return;
     }
 
-    const targetBizId = currentBusiness.username || currentBusiness.name;
-
     try {
         const { error } = await supabaseClient
             .from('products')
             .insert([{ 
-                business_id: targetBizId, 
+                business_id: currentBusiness.name, 
                 name: name, 
                 description: desc, 
                 price: price 
@@ -560,7 +526,7 @@ async function deleteStockProduct(productId) {
     }
 }
 
-async function renderBusinessOrders() {
+function renderBusinessOrders() {
     if (!currentBusiness) return;
     
     const container = document.getElementById('dynamicDashboardContent');
@@ -568,33 +534,19 @@ async function renderBusinessOrders() {
     
     const cat = (currentBusiness.category || '').toLowerCase();
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
-
-    let myOrders = [];
-    try {
-        const targetBizUser = currentBusiness.username || '';
-        const targetBizName = currentBusiness.name || '';
-        const identifierFilters = [
-            targetBizUser ? `business_name.eq.${targetBizUser}` : null,
-            targetBizName ? `business_name.eq.${targetBizName}` : null
-        ].filter(Boolean).join(',');
-
-        const { data, error } = await supabaseClient
-            .from('orders')
-            .select('*')
-            .or(identifierFilters)
-            .order('created_at', { ascending: false });
-        if (error) throw error;
-        myOrders = data || [];
-    } catch (err) {
-        console.error("Error consultando órdenes en Supabase:", err);
-    }
-
+    
+    const orders = JSON.parse(localStorage.getItem('netwish_global_orders') || '[]');
+    const myOrders = orders.filter(o => {
+        const bName = (currentBusiness.name || '').toLowerCase();
+        const oName = (o.businessName || '').toLowerCase();
+        return oName.includes(bName.split(' ')[0]) || bName.includes(oName.split(' ')[0]);
+    });
+    
     let totalMoney = 0;
     let pendingOrdersCount = 0;
     myOrders.forEach(o => {
-        const orderTotal = parseFloat(o.total) || 0;
-        if (o.status === 'Pagado Online') totalMoney += orderTotal;
-        if (o.status && (o.status.includes('Pendiente') || o.status === 'Pagado Online')) pendingOrdersCount++;
+        if (o.status === 'Pagado Online') totalMoney += o.total;
+        if (o.status.includes('Pendiente') || o.status === 'Pagado Online') pendingOrdersCount++;
     });
 
     let html = '';
@@ -739,11 +691,10 @@ async function renderBusinessOrders() {
     if (myOrders.length === 0) {
         html += '<p class="text-xs text-neutral-400 text-center py-4">No hay actividad reciente registrada.</p>';
     } else {
-        myOrders.forEach(o => {
+        myOrders.reverse().forEach(o => {
             const isPaid = o.status === 'Pagado Online';
             const iconBg = isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600';
-            const iconName = isMusic ? 'disc' : (isPaid ? 'shopping-bag' : 'clock');
-            const totalVal = parseFloat(o.total) || 0;
+            const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
             
             html += `
                 <div class="p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-sm flex justify-between items-center">
@@ -756,7 +707,7 @@ async function renderBusinessOrders() {
                         </div>
                     </div>
                     <div class="text-right">
-                        <span class="block text-sm font-bold text-black">${totalVal.toFixed(2)} €</span>
+                        <span class="block text-sm font-bold text-black">${o.total.toFixed(2)} €</span>
                         <span class="block text-[9px] ${isPaid ? 'text-emerald-600' : 'text-amber-600'} font-bold">${o.status}</span>
                     </div>
                 </div>
@@ -766,5 +717,5 @@ async function renderBusinessOrders() {
     
     html += `</div></div>`;
     container.innerHTML = html;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    lucide.createIcons();
 }
