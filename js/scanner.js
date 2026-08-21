@@ -1,29 +1,8 @@
-// --- BARRERA DE SEGURIDAD BIOMÉTRICA ---
+// --- GENERACIÓN DE CÓDIGO QR PERSONAL (DIRECTO SIN LLAVE DE ACCESO) ---
 async function openPersonalQR() {
-    if (!currentUser) { openAuthModal('login'); return; }
-
-    if (window.PublicKeyCredential) {
-        try {
-            const challenge = new Uint8Array(16);
-            window.crypto.getRandomValues(challenge);
-            const userId = new Uint8Array(16);
-            window.crypto.getRandomValues(userId);
-
-            await navigator.credentials.create({
-                publicKey: {
-                    challenge: challenge,
-                    rp: { name: "NetWish Seguridad" },
-                    user: { id: userId, name: currentUser?.email || "usuario", displayName: "Usuario NetWish" },
-                    pubKeyCredParams: [{ type: "public-key", alg: -7 }],
-                    authenticatorSelection: { userVerification: "required" },
-                    timeout: 60000
-                }
-            });
-        } catch (err) {
-            console.warn("Verificación biométrica cancelada o fallida", err);
-            const fallback = confirm("La validación biométrica ha fallado o fue cancelada. Como estamos en fase de pruebas, ¿quieres saltar la seguridad y ver el código?");
-            if(!fallback) return; 
-        }
+    if (!currentUser) { 
+        if (typeof openAuthModal === 'function') openAuthModal('login'); 
+        return; 
     }
 
     const modal = document.getElementById('customModal');
@@ -38,24 +17,35 @@ async function openPersonalQR() {
             <div id="realQRCodeContainer" class="w-52 h-52 bg-white border-2 border-neutral-200 rounded-3xl mx-auto flex items-center justify-center p-3 relative shadow-sm"></div>
             <div class="p-3 bg-neutral-50 rounded-2xl border border-neutral-200/60">
                 <span class="block text-xs font-bold text-black">${meta.name || ''} ${meta.surname || ''}</span>
-                <span class="block text-[10px] text-neutral-400 font-mono">ID: NW-${meta.initials || 'USER'}-${currentUser.id.substring(0,6)}</span>
+                <span class="block text-[10px] text-neutral-400 font-mono">ID: NW-${meta.initials || 'USER'}-${currentUser.id ? currentUser.id.substring(0,6) : 'PAL'}</span>
             </div>
-            <button onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Cerrar</button>
+            <button onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs transition active:scale-95 shadow-md">Cerrar</button>
         </div>
     `;
-    lucide.createIcons();
+    
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    
     modal.classList.remove('hidden');
-    setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
+    setTimeout(() => { 
+        modal.classList.remove('opacity-0'); 
+        if (modalContent) modalContent.classList.remove('scale-95'); 
+    }, 10);
 
     const qrContainer = document.getElementById('realQRCodeContainer');
-    qrContainer.innerHTML = "";
-    new QRCode(qrContainer, {
-        text: `NETWISH_PAY:${meta.name || 'Usuario'}:${currentUser.email}`,
-        width: 180, height: 180, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H
-    });
+    if (qrContainer && typeof QRCode !== 'undefined') {
+        qrContainer.innerHTML = "";
+        new QRCode(qrContainer, {
+            text: `NETWISH_PAY:${meta.name || 'Usuario'}:${currentUser.email}`,
+            width: 180, 
+            height: 180, 
+            colorDark: "#000000", 
+            colorLight: "#ffffff", 
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    }
 }
 
-// --- NUEVA FUNCIÓN: QR DE NEGOCIO EN MODAL ---
+// --- QR DE NEGOCIO EN MODAL ---
 function openBusinessQR() {
     if (!currentBusiness) return;
     
@@ -72,12 +62,17 @@ function openBusinessQR() {
                 <span class="block text-xs font-bold text-black">${currentBusiness.name}</span>
                 <span class="block text-[10px] text-neutral-400 font-mono uppercase tracking-widest mt-0.5">${currentBusiness.category || 'Negocio'}</span>
             </div>
-            <button onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs shadow-md">Ocultar QR</button>
+            <button onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs transition active:scale-95 shadow-md">Ocultar QR</button>
         </div>
     `;
-    lucide.createIcons();
+    
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    
     modal.classList.remove('hidden');
-    setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
+    setTimeout(() => { 
+        modal.classList.remove('opacity-0'); 
+        if (modalContent) modalContent.classList.remove('scale-95'); 
+    }, 10);
 
     generateBusinessQR(currentBusiness);
 }
@@ -89,14 +84,19 @@ function generateBusinessQR(biz) {
     try {
         const safeName = biz.name ? biz.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "Comercio";
         new QRCode(container, {
-            text: `NETWISH_BUSINESS:${safeName}:${biz.id}`,
-            width: 180, height: 180, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H
+            text: `NETWISH_BUSINESS:${safeName}:${biz.id || biz.name}`,
+            width: 180, 
+            height: 180, 
+            colorDark: "#000000", 
+            colorLight: "#ffffff", 
+            correctLevel: QRCode.CorrectLevel.H
         });
     } catch (qrErr) {
-        console.error("Error técnico al generar el código QR visual:", qrErr);
+        console.error("Error al generar el código QR visual:", qrErr);
     }
 }
 
+// --- MODAL GENÉRICO ---
 function openModal(sectionName) {
     stopCamera();
     const modal = document.getElementById('customModal');
@@ -112,14 +112,20 @@ function openModal(sectionName) {
                 <h3 class="text-lg font-bold text-black">${sectionName} — Próximamente</h3>
                 <p class="text-xs text-neutral-500">Este módulo avanzado de NetWish estará disponible muy pronto.</p>
             </div>
-            <button onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Entendido</button>
+            <button onclick="closeModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs transition active:scale-95 shadow-md">Entendido</button>
         </div>
     `;
-    lucide.createIcons();
+    
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    
     modal.classList.remove('hidden');
-    setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
+    setTimeout(() => { 
+        modal.classList.remove('opacity-0'); 
+        if (modalContent) modalContent.classList.remove('scale-95'); 
+    }, 10);
 }
 
+// --- LECTOR DE CÁMARA QR ---
 async function startCameraModal() {
     const modal = document.getElementById('customModal');
     const modalContent = document.getElementById('modalContent');
@@ -136,12 +142,17 @@ async function startCameraModal() {
                 </div>
             </div>
             <p class="text-xs text-neutral-400">Apunta al QR personal o QR de Comercio.</p>
-            <button onclick="closeModal()" class="w-full py-3.5 bg-neutral-100 text-black font-semibold rounded-2xl text-xs">Cerrar Cámara</button>
+            <button onclick="closeModal()" class="w-full py-3.5 bg-neutral-100 text-black font-semibold rounded-2xl text-xs transition active:scale-95">Cerrar Cámara</button>
         </div>
     `;
-    lucide.createIcons();
+    
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    
     modal.classList.remove('hidden');
-    setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
+    setTimeout(() => { 
+        modal.classList.remove('opacity-0'); 
+        if (modalContent) modalContent.classList.remove('scale-95'); 
+    }, 10);
 
     try {
         currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
@@ -186,25 +197,37 @@ function processScannedQRData(qrText) {
         const parts = qrText.split(':');
         activePayee = parts[1] || 'Establecimiento NetWish';
         rawAmountString = "000";
-        updateAmountDisplay();
-        document.getElementById('payeeNameDisplay').innerText = activePayee;
-        document.getElementById('payeeInitialsBubble').innerText = activePayee.substring(0, 2).toUpperCase();
-        switchTab('payment');
+        if (typeof updateAmountDisplay === 'function') updateAmountDisplay();
+        
+        const payeeNameEl = document.getElementById('payeeNameDisplay');
+        if (payeeNameEl) payeeNameEl.innerText = activePayee;
+        
+        const bubbleEl = document.getElementById('payeeInitialsBubble');
+        if (bubbleEl) bubbleEl.innerText = activePayee.substring(0, 2).toUpperCase();
+        
+        if (typeof switchTab === 'function') switchTab('payment');
     } else {
         alert("Código QR no reconocido en NetWish.");
     }
 }
 
 function stopCamera() {
-    if (scanningInterval) { clearInterval(scanningInterval); scanningInterval = null; }
-    if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); currentStream = null; }
+    if (scanningInterval) { 
+        clearInterval(scanningInterval); 
+        scanningInterval = null; 
+    }
+    if (currentStream) { 
+        currentStream.getTracks().forEach(track => track.stop()); 
+        currentStream = null; 
+    }
 }
 
 function closeModal() {
     stopCamera();
     const modal = document.getElementById('customModal');
     const modalContent = document.getElementById('modalContent');
+    if (!modal) return;
     modal.classList.add('opacity-0');
-    modalContent.classList.add('scale-95');
+    if (modalContent) modalContent.classList.add('scale-95');
     setTimeout(() => { modal.classList.add('hidden'); }, 300);
 }
