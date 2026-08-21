@@ -244,11 +244,19 @@ async function renderPublicCatalogItems() {
     try {
         const { data, error } = await supabaseClient
             .from('products')
-            .select('*')
-            .or(`business_id.eq.${activeBusinessName},business_id.ilike.%${activeBusinessName.split(' ')[0]}%,business_id.eq.biz_db`);
+            .select('*');
             
         if (error) throw error;
-        items = data || [];
+        
+        // Filtro robusto en memoria: coincide por business_id exacto, o contiene el nombre/primera palabra
+        const cleanActiveName = activeBusinessName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const firstWord = cleanActiveName.split(' ')[0];
+
+        items = (data || []).filter(item => {
+            const bId = String(item.business_id || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return bId === cleanActiveName || bId.includes(firstWord) || cleanActiveName.includes(bId) || bId === 'biz_db';
+        });
+
     } catch (err) {
         console.error("Error consultando Supabase:", err);
     }
@@ -268,9 +276,13 @@ async function renderPublicCatalogItems() {
     let html = '';
     items.forEach(item => {
         const price = parseFloat(item.price) || 0;
-        const existingInCart = cartItemsList.find(i => i.id === item.id);
+        const itemIdStr = String(item.id);
+        const existingInCart = cartItemsList.find(i => String(i.id) === itemIdStr);
         const qty = existingInCart ? existingInCart.qty : 0;
         const isMusic = activeBusinessCategory.includes('disco') || activeBusinessCategory.includes('music') || activeBusinessCategory.includes('produ');
+
+        const safeItemId = encodeURIComponent(itemIdStr);
+        const safeItemName = encodeURIComponent(item.name || 'Producto');
 
         html += `
             <div class="p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex justify-between items-center transition">
@@ -286,16 +298,16 @@ async function renderPublicCatalogItems() {
                 <div class="flex items-center space-x-2 shrink-0">
                     ${qty > 0 ? `
                         <div class="flex items-center bg-neutral-100 rounded-2xl p-1 border border-neutral-200/60 shadow-inner">
-                            <button onclick="changeItemQuantity('${item.id}', '${encodeURIComponent(item.name)}', ${price}, -1)" class="w-8 h-8 rounded-xl bg-white text-black font-bold flex items-center justify-center shadow-sm active:scale-90 transition">
+                            <button onclick="changeItemQuantity('${safeItemId}', '${safeItemName}', ${price}, -1)" class="w-8 h-8 rounded-xl bg-white text-black font-bold flex items-center justify-center shadow-sm active:scale-90 transition">
                                 <i data-lucide="minus" class="w-3.5 h-3.5"></i>
                             </button>
                             <span class="w-8 text-center text-xs font-extrabold text-black">${qty}</span>
-                            <button onclick="changeItemQuantity('${item.id}', '${encodeURIComponent(item.name)}', ${price}, 1)" class="w-8 h-8 rounded-xl bg-black text-white font-bold flex items-center justify-center shadow-md active:scale-90 transition">
+                            <button onclick="changeItemQuantity('${safeItemId}', '${safeItemName}', ${price}, 1)" class="w-8 h-8 rounded-xl bg-black text-white font-bold flex items-center justify-center shadow-md active:scale-90 transition">
                                 <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                             </button>
                         </div>
                     ` : `
-                        <button onclick="changeItemQuantity('${item.id}', '${encodeURIComponent(item.name)}', ${price}, 1)" class="w-10 h-10 rounded-2xl bg-black text-white shadow-md flex items-center justify-center active:scale-90 transition font-bold">
+                        <button onclick="changeItemQuantity('${safeItemId}', '${safeItemName}', ${price}, 1)" class="w-10 h-10 rounded-2xl bg-black text-white shadow-md flex items-center justify-center active:scale-90 transition font-bold">
                             <i data-lucide="plus" class="w-4 h-4"></i>
                         </button>
                     `}
@@ -308,14 +320,15 @@ async function renderPublicCatalogItems() {
     lucide.createIcons();
 }
 
-function changeItemQuantity(id, encodedName, price, delta) {
+function changeItemQuantity(encodedId, encodedName, price, delta) {
     if (!currentUser) { 
         if (typeof openAuthModal === 'function') openAuthModal('login'); 
         return; 
     }
 
+    const id = decodeURIComponent(encodedId);
     const name = decodeURIComponent(encodedName);
-    const existingIndex = cartItemsList.findIndex(i => i.id === id);
+    const existingIndex = cartItemsList.findIndex(i => String(i.id) === String(id));
 
     if (existingIndex >= 0) {
         cartItemsList[existingIndex].qty += delta;
@@ -426,10 +439,17 @@ async function openStockControlModal() {
     try {
         const { data, error } = await supabaseClient
             .from('products')
-            .select('*')
-            .or(`business_id.eq.${currentBusiness.name},business_id.ilike.%${currentBusiness.name.split(' ')[0]}%,business_id.eq.biz_db`);
+            .select('*');
         if (error) throw error;
-        catalog = data || [];
+        
+        const cleanBizName = (currentBusiness.name || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const firstWord = cleanBizName.split(' ')[0];
+
+        catalog = (data || []).filter(item => {
+            const bId = String(item.business_id || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return bId === cleanBizName || bId.includes(firstWord) || cleanBizName.includes(bId) || bId === 'biz_db';
+        });
+
     } catch (err) {
         console.error("Error al cargar stock:", err);
     }
