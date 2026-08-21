@@ -221,6 +221,7 @@ async function renderBusinessOrders() {
     const cat = (currentBusiness.category || '').toLowerCase();
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
     
+    // Suscripción Realtime activa
     if (!ordersRealtimeSubscription && typeof supabaseClient.channel === 'function') {
         ordersRealtimeSubscription = supabaseClient
             .channel('public:orders')
@@ -230,14 +231,20 @@ async function renderBusinessOrders() {
             .subscribe();
     }
 
+    // Consulta ordenando estrictamente por orden de llegada (created_at desc)
     let orders = [];
     try {
         const { data, error } = await supabaseClient
             .from('orders')
             .select('*')
-            .order('id', { ascending: false });
+            .order('created_at', { ascending: false, nullsFirst: false });
+            
         if (!error && data) {
             orders = data;
+        } else {
+            // Fallback si created_at no existe
+            const fallback = await supabaseClient.from('orders').select('*').order('id', { ascending: false });
+            if (fallback.data) orders = fallback.data;
         }
     } catch (e) {
         console.warn("Lectura de orders Supabase:", e);
@@ -253,7 +260,13 @@ async function renderBusinessOrders() {
         return bizKeywords.some(keyword => oName.includes(keyword));
     });
 
-    myOrders.sort((a, b) => b.id - a.id);
+    // Ordenamiento absoluto por momento de recepción real
+    myOrders.sort((a, b) => {
+        const timeA = a.created_at ? new Date(a.created_at).getTime() : (parseInt(a.id, 10) || 0);
+        const timeB = b.created_at ? new Date(b.created_at).getTime() : (parseInt(b.id, 10) || 0);
+        return timeB - timeA;
+    });
+
     currentBusinessOrders = myOrders; 
     
     let totalMoney = 0;
