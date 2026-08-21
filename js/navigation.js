@@ -84,10 +84,40 @@ function switchTab(tabId) {
         }
     }
 
-    // 4. Refresco dinámico de iconos Lucide
+    // 4. Adaptación reactiva de la cabecera (Centrado y visibilidad del avatar)
+    updateHeaderLayout(tabId);
+
+    // 5. Refresco dinámico de iconos Lucide
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
     }
+}
+
+// --- ACTUALIZACIÓN DINÁMICA DE LA CABECERA SEGÚN LA PESTAÑA ---
+function updateHeaderLayout(currentActiveTab) {
+    const header = document.getElementById('mainAppHeader');
+    const headerLogo = document.getElementById('headerLogo');
+    const headerAvatar = document.getElementById('headerAvatar');
+
+    if (!header || !headerLogo || !headerAvatar) return;
+
+    const isProfileTab = currentActiveTab === 'profile' || currentActiveTab === 'business-profile';
+
+    if (isProfileTab) {
+        // Modo Perfil: Logo centrado y avatar oculto
+        header.classList.remove('justify-between');
+        header.classList.add('justify-center');
+        headerAvatar.classList.add('hidden', 'opacity-0', 'pointer-events-none');
+        headerLogo.classList.add('text-center', 'mx-auto');
+    } else {
+        // Modo Estándar: Logo a la izquierda y avatar visible a la derecha
+        header.classList.remove('justify-center');
+        header.classList.add('justify-between');
+        headerAvatar.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+        headerLogo.classList.remove('text-center', 'mx-auto');
+    }
+
+    updateHeaderAvatar();
 }
 
 // --- ACTUALIZACIÓN VISUAL DE BOTONES (MODO USUARIO) ---
@@ -150,6 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetTab = userTabOrder[index];
             if (targetTab && activeTab !== targetTab) {
                 updateActiveUserNavButton(targetTab);
+                updateHeaderLayout(targetTab);
                 activeTab = targetTab;
             }
         }, { passive: true });
@@ -162,13 +193,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetTab = bizTabOrder[index];
             if (targetTab && activeTab !== targetTab) {
                 updateActiveBizNavButton(targetTab);
+                updateHeaderLayout(targetTab);
                 activeTab = targetTab;
             }
         }, { passive: true });
     }
 
-    // Inicializar estado del avatar del header
-    updateHeaderAvatar();
+    updateHeaderLayout(activeTab || 'home');
 });
 
 // --- CLIC EN EL AVATAR DE LA CABECERA ---
@@ -189,20 +220,27 @@ function goBackFromBusiness() {
     switchTab('explore');
 }
 
-// --- ACTUALIZACIÓN REACTIVA DEL AVATAR DEL HEADER ---
+// --- ACTUALIZACIÓN REACTIVA DEL AVATAR DEL HEADER (FOTO GOOGLE / BIZ / TEXTO) ---
 function updateHeaderAvatar() {
     const avatarBtn = document.getElementById('headerAvatar');
     if (!avatarBtn) return;
 
     if (currentBusiness) {
-        avatarBtn.innerText = "BIZ";
+        avatarBtn.innerHTML = "BIZ";
         avatarBtn.className = "w-9 h-9 rounded-2xl bg-black text-white border border-neutral-800 flex items-center justify-center text-xs font-bold shadow-sm transition hover:scale-105 active:scale-95";
     } else if (currentUser) {
         const meta = currentUser.user_metadata || {};
-        avatarBtn.innerText = meta.initials || 'NW';
-        avatarBtn.className = "w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner transition hover:scale-105 active:scale-95";
+        const avatarUrl = meta.avatar_url || meta.picture;
+
+        if (avatarUrl) {
+            avatarBtn.innerHTML = `<img src="${avatarUrl}" class="w-full h-full object-cover" alt="Perfil">`;
+            avatarBtn.className = "w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center shadow-inner transition hover:scale-105 active:scale-95 overflow-hidden p-0";
+        } else {
+            avatarBtn.innerHTML = meta.initials || 'NW';
+            avatarBtn.className = "w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner transition hover:scale-105 active:scale-95";
+        }
     } else {
-        avatarBtn.innerText = "IN";
+        avatarBtn.innerHTML = "IN";
         avatarBtn.className = "w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner transition hover:scale-105 active:scale-95";
     }
 }
