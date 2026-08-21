@@ -2,6 +2,8 @@ let activeBusinessName = "";
 let activeBusinessCategory = "";
 let currentCategoryFilter = '';
 let currentCategoryBusinesses = [];
+let ordersRealtimeSubscription = null;
+let currentBusinessOrders = []; // Variable global para guardar los pedidos del comercio activo y filtrarlos
 
 async function loadPublicBusinesses() {
     const listContainer = document.getElementById('dynamicBusinessList');
@@ -547,6 +549,82 @@ async function deleteStockProduct(productId) {
     }
 }
 
+// --- MODAL DE HISTORIAL FILTRABLE ---
+function openHistoryModal(dateFilter = '') {
+    if (!currentBusiness) return;
+    const modal = document.getElementById('customModal');
+    const modalContent = document.getElementById('modalContent');
+    const modalBody = document.getElementById('modalBody');
+
+    let filteredOrders = currentBusinessOrders;
+    if (dateFilter) {
+        filteredOrders = currentBusinessOrders.filter(o => o.date === dateFilter);
+    }
+
+    const cat = (currentBusiness.category || '').toLowerCase();
+    let ordersHtml = '';
+
+    if (filteredOrders.length === 0) {
+        ordersHtml = '<p class="text-xs text-neutral-400 text-center py-6">No hay actividad para esta fecha.</p>';
+    } else {
+        filteredOrders.forEach(o => {
+            const isPaid = o.status === 'Pagado Online';
+            const iconBg = isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600';
+            const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
+            const totalVal = parseFloat(o.total) || 0;
+            
+            ordersHtml += `
+                <div class="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/60 shadow-sm flex justify-between items-center">
+                    <div class="flex items-center space-x-3 overflow-hidden">
+                        <div class="w-8 h-8 rounded-full ${iconBg} flex items-center justify-center shrink-0"><i data-lucide="${iconName}" class="w-4 h-4"></i></div>
+                        <div class="overflow-hidden">
+                            <span class="text-xs font-bold block text-black truncate">${o.items}</span>
+                            <span class="text-[9px] text-neutral-500 font-mono">Día: ${o.date} • ${o.time}</span>
+                            <span class="text-[9px] text-neutral-400 block mt-0.5 truncate">Cliente: ${o.customer}</span>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0 ml-2">
+                        <span class="block text-sm font-bold text-black">${totalVal.toFixed(2)} €</span>
+                        <span class="block text-[9px] ${isPaid ? 'text-emerald-600' : 'text-amber-600'} font-bold">${o.status}</span>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    modalBody.innerHTML = `
+        <div class="space-y-4 text-left">
+            <div class="text-center space-y-1">
+                <h3 class="text-base font-bold text-black">Historial Completo</h3>
+                <p class="text-[11px] text-neutral-500">Revisa y filtra los pedidos recibidos.</p>
+            </div>
+
+            <div class="pt-2 border-t border-neutral-100">
+                <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Filtrar por Día</label>
+                <input type="date" id="historyDateFilter" value="${dateFilter}" onchange="openHistoryModal(this.value)" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+            </div>
+
+            <div class="space-y-2 max-h-72 overflow-y-auto pr-1 allow-scroll">
+                ${ordersHtml}
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button onclick="openHistoryModal('')" class="w-full py-3 bg-neutral-100 text-black font-semibold rounded-xl text-xs hover:bg-neutral-200 transition">
+                    Ver Todos
+                </button>
+                <button onclick="if(typeof closeModal === 'function') closeModal()" class="w-full py-3 bg-black text-white font-semibold rounded-xl text-xs shadow-md active:scale-95 transition">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    `;
+    lucide.createIcons();
+    
+    modal.classList.remove('hidden');
+    setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
+}
+
+// --- PANEL DE ÓRDENES CON SINCRONIZACIÓN EN TIEMPO REAL ---
 async function renderBusinessOrders() {
     if (!currentBusiness) return;
     
@@ -556,6 +634,16 @@ async function renderBusinessOrders() {
     const cat = (currentBusiness.category || '').toLowerCase();
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
     
+    // Activar suscripción Realtime en Supabase si no está activa
+    if (!ordersRealtimeSubscription && typeof supabaseClient.channel === 'function') {
+        ordersRealtimeSubscription = supabaseClient
+            .channel('public:orders')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+                renderBusinessOrders();
+            })
+            .subscribe();
+    }
+
     // Consulta directa a Supabase
     let orders = [];
     try {
@@ -574,12 +662,16 @@ async function renderBusinessOrders() {
     const cleanCurrentBiz = (currentBusiness.name || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const bizKeywords = cleanCurrentBiz.split(/\s+/).filter(w => w.length > 2);
 
-    const myOrders = orders.filter(o => {
+    let myOrders = orders.filter(o => {
         const rawName = o.business_name || o.businessName || '';
         const oName = rawName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         if (oName === cleanCurrentBiz || oName.includes(cleanCurrentBiz) || cleanCurrentBiz.includes(oName)) return true;
         return bizKeywords.some(keyword => oName.includes(keyword));
     });
+
+    // Ordenar explícitamente del más nuevo al más antiguo (garantía de ordenamiento)
+    myOrders.sort((a, b) => b.id - a.id);
+    currentBusinessOrders = myOrders; // Guardamos en memoria global para el Modal
     
     let totalMoney = 0;
     let pendingOrdersCount = 0;
@@ -722,8 +814,8 @@ async function renderBusinessOrders() {
     html += `
         <div class="space-y-2 pt-2">
             <div class="flex justify-between items-center px-1">
-                <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Próximos / Recientes</h3>
-                <button onclick="if(typeof openModal === 'function') openModal('Historial')" class="text-[10px] font-bold text-black hover:underline">Ver historial</button>
+                <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Último Pedido</h3>
+                <button onclick="openHistoryModal()" class="text-[10px] font-bold text-black hover:underline">Ver historial</button>
             </div>
             <div class="space-y-2">
     `;
@@ -731,29 +823,28 @@ async function renderBusinessOrders() {
     if (myOrders.length === 0) {
         html += '<p class="text-xs text-neutral-400 text-center py-4">No hay actividad reciente registrada.</p>';
     } else {
-        myOrders.forEach(o => {
-            const isPaid = o.status === 'Pagado Online';
-            const iconBg = isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600';
-            const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
-            const totalVal = parseFloat(o.total) || 0;
-            
-            html += `
-                <div class="p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-sm flex justify-between items-center">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-8 h-8 rounded-full ${iconBg} flex items-center justify-center shrink-0"><i data-lucide="${iconName}" class="w-4 h-4"></i></div>
-                        <div>
-                            <span class="text-xs font-bold block text-black">${o.items}</span>
-                            <span class="text-[9px] text-neutral-500 font-mono">Día: ${o.date} • ${o.time}</span>
-                            <span class="text-[9px] text-neutral-400 block mt-0.5">Cliente: ${o.customer}</span>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <span class="block text-sm font-bold text-black">${totalVal.toFixed(2)} €</span>
-                        <span class="block text-[9px] ${isPaid ? 'text-emerald-600' : 'text-amber-600'} font-bold">${o.status}</span>
+        const o = myOrders[0]; // Solo sacamos el último pedido
+        const isPaid = o.status === 'Pagado Online';
+        const iconBg = isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600';
+        const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
+        const totalVal = parseFloat(o.total) || 0;
+        
+        html += `
+            <div class="p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-sm flex justify-between items-center">
+                <div class="flex items-center space-x-3 overflow-hidden">
+                    <div class="w-8 h-8 rounded-full ${iconBg} flex items-center justify-center shrink-0"><i data-lucide="${iconName}" class="w-4 h-4"></i></div>
+                    <div class="overflow-hidden">
+                        <span class="text-xs font-bold block text-black truncate">${o.items}</span>
+                        <span class="text-[9px] text-neutral-500 font-mono">Día: ${o.date} • ${o.time}</span>
+                        <span class="text-[9px] text-neutral-400 block mt-0.5 truncate">Cliente: ${o.customer}</span>
                     </div>
                 </div>
-            `;
-        });
+                <div class="text-right shrink-0 ml-2">
+                    <span class="block text-sm font-bold text-black">${totalVal.toFixed(2)} €</span>
+                    <span class="block text-[9px] ${isPaid ? 'text-emerald-600' : 'text-amber-600'} font-bold">${o.status}</span>
+                </div>
+            </div>
+        `;
     }
     
     html += `</div></div>`;
