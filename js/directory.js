@@ -248,13 +248,13 @@ async function renderPublicCatalogItems() {
             
         if (error) throw error;
         
-        // Filtro robusto en memoria: coincide por business_id exacto, o contiene el nombre/primera palabra
         const cleanActiveName = activeBusinessName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const firstWord = cleanActiveName.split(' ')[0];
+        const activeTokens = cleanActiveName.split(/\s+/).filter(t => t.length > 2);
 
         items = (data || []).filter(item => {
             const bId = String(item.business_id || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            return bId === cleanActiveName || bId.includes(firstWord) || cleanActiveName.includes(bId) || bId === 'biz_db';
+            if (bId === cleanActiveName || bId === 'biz_db') return true;
+            return activeTokens.some(token => bId.includes(token));
         });
 
     } catch (err) {
@@ -443,11 +443,12 @@ async function openStockControlModal() {
         if (error) throw error;
         
         const cleanBizName = (currentBusiness.name || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const firstWord = cleanBizName.split(' ')[0];
+        const bizTokens = cleanBizName.split(/\s+/).filter(t => t.length > 2);
 
         catalog = (data || []).filter(item => {
             const bId = String(item.business_id || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            return bId === cleanBizName || bId.includes(firstWord) || cleanBizName.includes(bId) || bId === 'biz_db';
+            if (bId === cleanBizName || bId === 'biz_db') return true;
+            return bizTokens.some(token => bId.includes(token));
         });
 
     } catch (err) {
@@ -556,17 +557,23 @@ function renderBusinessOrders() {
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
     
     const orders = JSON.parse(localStorage.getItem('netwish_global_orders') || '[]');
+    
+    // Normalizador de nombres tolerante a variaciones (JUUANCP, Juan Cepeda, espacios, tildes)
+    const cleanCurrentBiz = (currentBusiness.name || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const bizKeywords = cleanCurrentBiz.split(/\s+/).filter(w => w.length > 2);
+
     const myOrders = orders.filter(o => {
-        const bName = (currentBusiness.name || '').toLowerCase();
-        const oName = (o.businessName || '').toLowerCase();
-        return oName.includes(bName.split(' ')[0]) || bName.includes(oName.split(' ')[0]);
+        const oName = (o.businessName || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        if (oName === cleanCurrentBiz || oName.includes(cleanCurrentBiz) || cleanCurrentBiz.includes(oName)) return true;
+        return bizKeywords.some(keyword => oName.includes(keyword));
     });
     
     let totalMoney = 0;
     let pendingOrdersCount = 0;
     myOrders.forEach(o => {
-        if (o.status === 'Pagado Online') totalMoney += o.total;
-        if (o.status.includes('Pendiente') || o.status === 'Pagado Online') pendingOrdersCount++;
+        const orderVal = parseFloat(o.total) || 0;
+        if (o.status === 'Pagado Online') totalMoney += orderVal;
+        if (o.status && (o.status.includes('Pendiente') || o.status === 'Pagado Online')) pendingOrdersCount++;
     });
 
     let html = '';
@@ -711,10 +718,12 @@ function renderBusinessOrders() {
     if (myOrders.length === 0) {
         html += '<p class="text-xs text-neutral-400 text-center py-4">No hay actividad reciente registrada.</p>';
     } else {
-        myOrders.reverse().forEach(o => {
+        const displayOrders = [...myOrders].reverse();
+        displayOrders.forEach(o => {
             const isPaid = o.status === 'Pagado Online';
             const iconBg = isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600';
             const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
+            const totalVal = parseFloat(o.total) || 0;
             
             html += `
                 <div class="p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-sm flex justify-between items-center">
@@ -727,7 +736,7 @@ function renderBusinessOrders() {
                         </div>
                     </div>
                     <div class="text-right">
-                        <span class="block text-sm font-bold text-black">${o.total.toFixed(2)} €</span>
+                        <span class="block text-sm font-bold text-black">${totalVal.toFixed(2)} €</span>
                         <span class="block text-[9px] ${isPaid ? 'text-emerald-600' : 'text-amber-600'} font-bold">${o.status}</span>
                     </div>
                 </div>
