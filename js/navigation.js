@@ -84,7 +84,7 @@ function switchTab(tabId) {
         }
     }
 
-    // 4. Adaptación reactiva de la cabecera (Centrado y visibilidad del avatar)
+    // 4. Adaptación de la cabecera (Centrado de logo y ocultación del avatar en perfil)
     updateHeaderLayout(tabId);
 
     // 5. Refresco dinámico de iconos Lucide
@@ -104,20 +104,21 @@ function updateHeaderLayout(currentActiveTab) {
     const isProfileTab = currentActiveTab === 'profile' || currentActiveTab === 'business-profile';
 
     if (isProfileTab) {
-        // Modo Perfil: Logo centrado y avatar oculto
+        // En Perfil: Logo centrado y avatar oculto sin margen derecho
         header.classList.remove('justify-between');
         header.classList.add('justify-center');
-        headerAvatar.classList.add('hidden', 'opacity-0', 'pointer-events-none');
+        headerAvatar.classList.add('hidden');
+        headerAvatar.style.display = 'none';
         headerLogo.classList.add('text-center', 'mx-auto');
     } else {
-        // Modo Estándar: Logo a la izquierda y avatar visible a la derecha
+        // En otras vistas: Logo alineado a la izquierda y avatar visible
         header.classList.remove('justify-center');
         header.classList.add('justify-between');
-        headerAvatar.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+        headerAvatar.classList.remove('hidden');
+        headerAvatar.style.display = 'flex';
         headerLogo.classList.remove('text-center', 'mx-auto');
+        updateHeaderAvatar();
     }
-
-    updateHeaderAvatar();
 }
 
 // --- ACTUALIZACIÓN VISUAL DE BOTONES (MODO USUARIO) ---
@@ -233,7 +234,7 @@ function updateHeaderAvatar() {
         const avatarUrl = meta.avatar_url || meta.picture;
 
         if (avatarUrl) {
-            avatarBtn.innerHTML = `<img src="${avatarUrl}" class="w-full h-full object-cover" alt="Perfil">`;
+            avatarBtn.innerHTML = `<img src="${avatarUrl}" class="w-full h-full object-cover rounded-2xl" alt="Perfil">`;
             avatarBtn.className = "w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center shadow-inner transition hover:scale-105 active:scale-95 overflow-hidden p-0";
         } else {
             avatarBtn.innerHTML = meta.initials || 'NW';

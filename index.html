@@ -18,7 +18,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <link rel="stylesheet" href="css/styles.css?v=15">
+    <link rel="stylesheet" href="css/styles.css?v=16">
 </head>
 <body>
 
@@ -332,7 +332,8 @@
                     <div class="space-y-4" id="publicBizCatalog"></div>
                 </div>
 
-                <div id="publicBusinessCartBar" class="absolute bottom-6 left-6 right-6 z-50 transition-transform translate-y-32">
+                <!-- BARRA DE CESTA AJUSTADA EN BOTTOM-24 PARA NO SOLAPAR EL MENÚ INFERIOR -->
+                <div id="publicBusinessCartBar" class="absolute bottom-24 left-6 right-6 z-50 transition-transform translate-y-32">
                     <button onclick="openCartSummary()" class="w-full bg-black text-white p-4 rounded-2xl flex justify-between items-center shadow-[0_20px_40px_rgba(0,0,0,0.3)] active:scale-95 transition-transform">
                         <div class="flex items-center space-x-3">
                             <div class="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center text-xs font-bold" id="cartCountDisplay">0</div>
@@ -368,14 +369,14 @@
     </div>
 
     <!-- SCRIPTS MODULARES ACTUALIZADOS -->
-    <script src="js/config.js?v=15"></script>
-    <script src="js/navigation.js?v=15"></script>
-    <script src="js/auth.js?v=15"></script>
-    <script src="js/directory.js?v=15"></script>
-    <script src="js/catalog-cart.js?v=15"></script>
-    <script src="js/dashboard.js?v=15"></script>
-    <script src="js/scanner.js?v=15"></script>
-    <script src="js/payment.js?v=15"></script>
+    <script src="js/config.js?v=16"></script>
+    <script src="js/navigation.js?v=16"></script>
+    <script src="js/auth.js?v=16"></script>
+    <script src="js/directory.js?v=16"></script>
+    <script src="js/catalog-cart.js?v=16"></script>
+    <script src="js/dashboard.js?v=16"></script>
+    <script src="js/scanner.js?v=16"></script>
+    <script src="js/payment.js?v=16"></script>
 
 </body>
 </html>
