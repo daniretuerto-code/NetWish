@@ -1,5 +1,7 @@
 let activeBusinessName = "";
 let activeBusinessCategory = "";
+let isScheduleEnabled = true;
+let currentPublicCatalogItems = [];
 
 function openPublicBusiness(safeName, safeType) {
     activeBusinessName = decodeURIComponent(safeName || '');
@@ -68,6 +70,8 @@ async function renderPublicCatalogItems() {
         console.error("Error consultando Supabase:", err);
     }
 
+    currentPublicCatalogItems = items;
+
     if (items.length === 0) {
         catalogEl.innerHTML = `
             <div class="p-6 rounded-3xl bg-neutral-50 border border-neutral-200/60 text-center space-y-2">
@@ -102,22 +106,8 @@ async function renderPublicCatalogItems() {
                     <p class="text-xs font-extrabold text-black mt-2">${price.toLocaleString('es-ES', {minimumFractionDigits:2})} €</p>
                 </div>
                 
-                <div class="flex items-center space-x-2 shrink-0">
-                    ${qty > 0 ? `
-                        <div class="flex items-center bg-neutral-100 rounded-2xl p-1 border border-neutral-200/60 shadow-inner">
-                            <button onclick="changeItemQuantity('${safeItemId}', '${safeItemName}', ${price}, -1)" class="w-8 h-8 rounded-xl bg-white text-black font-bold flex items-center justify-center shadow-sm active:scale-90 transition">
-                                <i data-lucide="minus" class="w-3.5 h-3.5"></i>
-                            </button>
-                            <span class="w-8 text-center text-xs font-extrabold text-black">${qty}</span>
-                            <button onclick="changeItemQuantity('${safeItemId}', '${safeItemName}', ${price}, 1)" class="w-8 h-8 rounded-xl bg-black text-white font-bold flex items-center justify-center shadow-md active:scale-90 transition">
-                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </div>
-                    ` : `
-                        <button onclick="changeItemQuantity('${safeItemId}', '${safeItemName}', ${price}, 1)" class="w-10 h-10 rounded-2xl bg-black text-white shadow-md flex items-center justify-center active:scale-90 transition font-bold">
-                            <i data-lucide="plus" class="w-4 h-4"></i>
-                        </button>
-                    `}
+                <div id="btn-container-${item.id}" class="flex items-center space-x-2 shrink-0">
+                    ${renderItemButtonHTML(item.id, safeItemId, safeItemName, price, qty)}
                 </div>
             </div>
         `;
@@ -125,6 +115,28 @@ async function renderPublicCatalogItems() {
 
     catalogEl.innerHTML = html;
     lucide.createIcons();
+}
+
+function renderItemButtonHTML(rawId, safeItemId, safeItemName, price, qty) {
+    if (qty > 0) {
+        return `
+            <div class="flex items-center bg-neutral-100 rounded-2xl p-1 border border-neutral-200/60 shadow-inner">
+                <button onclick="changeItemQuantity('${safeItemId}', '${safeItemName}', ${price}, -1)" class="w-8 h-8 rounded-xl bg-white text-black font-bold flex items-center justify-center shadow-sm active:scale-90 transition">
+                    <i data-lucide="minus" class="w-3.5 h-3.5"></i>
+                </button>
+                <span class="w-8 text-center text-xs font-extrabold text-black">${qty}</span>
+                <button onclick="changeItemQuantity('${safeItemId}', '${safeItemName}', ${price}, 1)" class="w-8 h-8 rounded-xl bg-black text-white font-bold flex items-center justify-center shadow-md active:scale-90 transition">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+        `;
+    } else {
+        return `
+            <button onclick="changeItemQuantity('${safeItemId}', '${safeItemName}', ${price}, 1)" class="w-10 h-10 rounded-2xl bg-black text-white shadow-md flex items-center justify-center active:scale-90 transition font-bold">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+            </button>
+        `;
+    }
 }
 
 function changeItemQuantity(encodedId, encodedName, price, delta) {
@@ -136,21 +148,31 @@ function changeItemQuantity(encodedId, encodedName, price, delta) {
     const id = decodeURIComponent(encodedId);
     const name = decodeURIComponent(encodedName);
     const existingIndex = cartItemsList.findIndex(i => String(i.id) === String(id));
+    let newQty = 0;
 
     if (existingIndex >= 0) {
         cartItemsList[existingIndex].qty += delta;
+        newQty = cartItemsList[existingIndex].qty;
         if (cartItemsList[existingIndex].qty <= 0) {
             cartItemsList.splice(existingIndex, 1);
+            newQty = 0;
         }
     } else if (delta > 0) {
         cartItemsList.push({ id: id, name: name, price: price, qty: 1 });
+        newQty = 1;
     }
 
     cartTotalValue = cartItemsList.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
     cartItemCount = cartItemsList.reduce((acc, curr) => acc + curr.qty, 0);
 
     updateCartDisplay();
-    renderPublicCatalogItems();
+
+    // Actualización quirúrgica del botón en memoria (Cero parpadeo ni recarga del catálogo)
+    const btnContainer = document.getElementById(`btn-container-${id}`);
+    if (btnContainer) {
+        btnContainer.innerHTML = renderItemButtonHTML(id, encodedId, encodedName, price, newQty);
+        lucide.createIcons();
+    }
 }
 
 function updateCartDisplay() {
@@ -162,6 +184,29 @@ function updateCartDisplay() {
         document.getElementById('cartCountDisplay').innerText = cartItemCount;
     } else {
         cartBar.classList.add('translate-y-32');
+    }
+}
+
+function toggleScheduleSection() {
+    isScheduleEnabled = !isScheduleEnabled;
+    const toggleBtn = document.getElementById('scheduleToggleBtn');
+    const toggleKnob = document.getElementById('scheduleToggleKnob');
+    const container = document.getElementById('scheduleInputsContainer');
+
+    if (!toggleBtn || !toggleKnob || !container) return;
+
+    if (isScheduleEnabled) {
+        toggleBtn.classList.remove('bg-neutral-200');
+        toggleBtn.classList.add('bg-black');
+        toggleKnob.classList.remove('translate-x-0');
+        toggleKnob.classList.add('translate-x-5');
+        container.classList.remove('hidden', 'opacity-0');
+    } else {
+        toggleBtn.classList.remove('bg-black');
+        toggleBtn.classList.add('bg-neutral-200');
+        toggleKnob.classList.remove('translate-x-5');
+        toggleKnob.classList.add('translate-x-0');
+        container.classList.add('hidden', 'opacity-0');
     }
 }
 
@@ -184,9 +229,25 @@ function openCartSummary() {
     document.getElementById('cartSummaryTotal').innerText = cartTotalValue.toLocaleString('es-ES', {minimumFractionDigits:2}) + ' €';
     
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('orderDate').value = today;
-    document.getElementById('orderDate').min = today;
+    const dateInput = document.getElementById('orderDate');
+    if (dateInput) {
+        dateInput.value = today;
+        dateInput.min = today;
+    }
     
+    // Reiniciar estado activo del switch al abrir la cesta
+    isScheduleEnabled = true;
+    const toggleBtn = document.getElementById('scheduleToggleBtn');
+    const toggleKnob = document.getElementById('scheduleToggleKnob');
+    const container = document.getElementById('scheduleInputsContainer');
+    if (toggleBtn && toggleKnob && container) {
+        toggleBtn.classList.remove('bg-neutral-200');
+        toggleBtn.classList.add('bg-black');
+        toggleKnob.classList.remove('translate-x-0');
+        toggleKnob.classList.add('translate-x-5');
+        container.classList.remove('hidden', 'opacity-0');
+    }
+
     document.getElementById('publicBusinessCartBar').classList.add('translate-y-32');
     
     if (typeof swipeAnim !== 'undefined') swipeAnim = 'slide-in-right';
@@ -194,11 +255,18 @@ function openCartSummary() {
 }
 
 function processCartChoice(action) {
-    const date = document.getElementById('orderDate').value;
-    const time = document.getElementById('orderTime').value;
-    if (!date || !time) { 
-        alert("Por favor, elige un día y hora de recogida/cita."); 
-        return; 
+    let date = "Inmediato / Sin Cita";
+    let time = "--:--";
+
+    if (isScheduleEnabled) {
+        const d = document.getElementById('orderDate')?.value;
+        const t = document.getElementById('orderTime')?.value;
+        if (!d || !t) { 
+            alert("Por favor, elige un día y hora de recogida/cita o desactiva la casilla."); 
+            return; 
+        }
+        date = d;
+        time = t;
     }
 
     pendingOrderDetails = { date, time, action };

@@ -18,8 +18,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <!-- Versión forzada V10 para asegurar actualización en PC -->
-    <link rel="stylesheet" href="css/styles.css?v=10">
+    <link rel="stylesheet" href="css/styles.css?v=13">
 </head>
 <body>
 
@@ -257,18 +256,28 @@
                     </div>
                 </div>
 
+                <!-- BLOQUE DE FECHA CON TOGGLE / SWITCH -->
                 <div class="bg-white p-5 rounded-3xl border border-neutral-200/80 shadow-sm space-y-4">
-                    <h3 class="text-[10px] font-bold text-neutral-400 uppercase tracking-widest flex items-center space-x-2">
-                        <i data-lucide="clock" class="w-3.5 h-3.5"></i><span>Fecha de recogida / Cita</span>
-                    </h3>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="text-[10px] font-mono text-neutral-500 mb-1 block">Día</label>
-                            <input type="date" id="orderDate" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-3 px-3.5 text-xs text-black focus:border-black outline-none transition">
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-mono text-neutral-500 mb-1 block">Hora estimada</label>
-                            <input type="time" id="orderTime" value="12:00" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-3 px-3.5 text-xs text-black focus:border-black outline-none transition">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-[10px] font-bold text-neutral-400 uppercase tracking-widest flex items-center space-x-2">
+                            <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                            <span>Fecha de recogida / Cita</span>
+                        </h3>
+                        <button type="button" onclick="toggleScheduleSection()" id="scheduleToggleBtn" class="w-11 h-6 bg-black rounded-full transition-colors relative flex items-center p-0.5 cursor-pointer">
+                            <div id="scheduleToggleKnob" class="w-5 h-5 bg-white rounded-full transition-transform transform translate-x-5 shadow-sm"></div>
+                        </button>
+                    </div>
+
+                    <div id="scheduleInputsContainer" class="space-y-3 transition-all duration-300">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-[10px] font-mono text-neutral-500 mb-1 block">Día</label>
+                                <input type="date" id="orderDate" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-3 px-3.5 text-xs text-black focus:border-black outline-none transition">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-mono text-neutral-500 mb-1 block">Hora estimada</label>
+                                <input type="time" id="orderTime" value="12:00" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-3 px-3.5 text-xs text-black focus:border-black outline-none transition">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -347,17 +356,15 @@
 
     </div>
 
-  <!-- SCRIPTS CON VERSIÓN V12 -->
-    <script src="js/config.js?v=12"></script>
-    <script src="js/navigation.js?v=12"></script>
-    <script src="js/auth.js?v=12"></script>
-    <script src="js/directory.js?v=12"></script>
-    <script src="js/catalog-cart.js?v=12"></script>
-    <script src="js/dashboard.js?v=12"></script>
-    <script src="js/scanner.js?v=12"></script>
-    <script src="js/payment.js?v=12"></script>
-</body>
-</html>
+    <!-- SCRIPTS MODULARES ACTUALIZADOS -->
+    <script src="js/config.js?v=13"></script>
+    <script src="js/navigation.js?v=13"></script>
+    <script src="js/auth.js?v=13"></script>
+    <script src="js/directory.js?v=13"></script>
+    <script src="js/catalog-cart.js?v=13"></script>
+    <script src="js/dashboard.js?v=13"></script>
+    <script src="js/scanner.js?v=13"></script>
+    <script src="js/payment.js?v=13"></script>
 
 </body>
 </html>
