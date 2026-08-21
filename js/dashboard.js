@@ -12,10 +12,10 @@ async function openStockControlModal() {
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
 
     const title = isMusic ? "Gestor de Beats & Tracks" : "Control de Stock y Catálogo";
-    const subtitle = isMusic ? "Publica licencias, beats y servicios de estudio." : "Añade o elimina productos del catálogo digital.";
-    const phName = isMusic ? "Nombre (ej. Drill Beat Vol.1)" : "Nombre (ej. Barra de Pan Rústica)";
-    const phDesc = isMusic ? "Descripción (ej. WAV + Stems, Sin tags)" : "Descripción corta (ej. Elaboración artesanal)";
-    const btnText = isMusic ? "Publicar Beat en NetWish" : "Publicar Producto";
+    const subtitle = isMusic ? "Publica licencias, beats con preview y servicios." : "Añade o elimina productos del catálogo digital.";
+    const phName = isMusic ? "Nombre del Beat (ej. Drill Beat Vol.1)" : "Nombre (ej. Barra de Pan Rústica)";
+    const phDesc = isMusic ? "Detalles (ej. 140 BPM, Key C Minor)" : "Descripción corta (ej. Elaboración artesanal)";
+    const btnText = isMusic ? "Publicar Beat con Preview" : "Publicar Producto";
 
     modalBody.innerHTML = `
         <div class="space-y-4 text-center py-6">
@@ -50,10 +50,14 @@ async function openStockControlModal() {
     let productsHtml = '';
     catalog.forEach(p => {
         const price = parseFloat(p.price) || 0;
+        const hasAudio = Boolean(p.audio_url);
         productsHtml += `
             <div class="flex justify-between items-center bg-neutral-50 p-3 rounded-2xl border border-neutral-200/60">
                 <div class="overflow-hidden pr-2">
-                    <span class="text-xs font-bold block text-black truncate">${p.name}</span>
+                    <div class="flex items-center space-x-1.5">
+                        ${hasAudio ? '<i data-lucide="volume-2" class="w-3.5 h-3.5 text-amber-500 shrink-0"></i>' : ''}
+                        <span class="text-xs font-bold block text-black truncate">${p.name}</span>
+                    </div>
                     <span class="text-[10px] text-neutral-500 block truncate">${p.description || ''} • <strong class="text-black">${price.toFixed(2)} €</strong></span>
                 </div>
                 <button onclick="deleteStockProduct('${p.id}')" class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-100 shrink-0 transition">
@@ -75,7 +79,18 @@ async function openStockControlModal() {
                 <input type="text" id="newProdName" placeholder="${phName}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
                 <input type="text" id="newProdDesc" placeholder="${phDesc}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
                 <input type="number" step="0.01" id="newProdPrice" placeholder="Precio en € (ej. 29.99)" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
-                <button onclick="saveNewStockProduct()" class="w-full py-3 bg-black text-white font-semibold rounded-xl text-xs shadow-md mt-1 flex items-center justify-center space-x-2 active:scale-95 transition">
+                
+                ${isMusic ? `
+                <div class="p-3 bg-amber-500/5 rounded-2xl border border-amber-500/20 space-y-1.5">
+                    <label class="text-[10px] font-mono text-amber-700 font-bold uppercase tracking-wider block flex items-center space-x-1.5">
+                        <i data-lucide="music" class="w-3.5 h-3.5"></i>
+                        <span>Archivo de Audio Preview (.mp3 / .wav)</span>
+                    </label>
+                    <input type="file" id="newProdAudioFile" accept="audio/mp3,audio/wav,audio/mpeg" class="w-full text-[11px] text-neutral-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-black file:text-white hover:file:bg-neutral-800 cursor-pointer">
+                </div>
+                ` : ''}
+
+                <button id="saveProdBtn" onclick="saveNewStockProduct()" class="w-full py-3 bg-black text-white font-semibold rounded-xl text-xs shadow-md mt-1 flex items-center justify-center space-x-2 active:scale-95 transition">
                     <i data-lucide="cloud-upload" class="w-4 h-4"></i>
                     <span>${btnText}</span>
                 </button>
@@ -102,21 +117,67 @@ async function saveNewStockProduct() {
     const name = document.getElementById('newProdName').value.trim();
     const desc = document.getElementById('newProdDesc').value.trim();
     const price = parseFloat(document.getElementById('newProdPrice').value);
+    const audioInput = document.getElementById('newProdAudioFile');
+    const saveBtn = document.getElementById('saveProdBtn');
 
     if (!name || isNaN(price) || price <= 0) {
         alert("Introduce un nombre y un precio válido.");
         return;
     }
 
+    let audioUrl = null;
+
+    // Subida opcional de archivo de audio a Supabase Storage
+    if (audioInput && audioInput.files.length > 0) {
+        const file = audioInput.files[0];
+        const fileExt = file.name.split('.').pop().toLowerCase();
+        const safeBiz = currentBusiness.name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+        const filePath = `${safeBiz}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Subiendo Audio a Storage...</span>`;
+            lucide.createIcons();
+        }
+
+        try {
+            const { error: uploadError } = await supabaseClient.storage
+                .from('beats')
+                .upload(filePath, file, { cacheControl: '3600', upsert: false });
+
+            if (uploadError) throw uploadError;
+
+            const { data: publicUrlData } = supabaseClient.storage
+                .from('beats')
+                .getPublicUrl(filePath);
+
+            audioUrl = publicUrlData.publicUrl;
+        } catch (storageErr) {
+            alert("Error al subir el archivo de audio: " + storageErr.message);
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = `<i data-lucide="cloud-upload" class="w-4 h-4"></i><span>Reintentar Publicación</span>`;
+                lucide.createIcons();
+            }
+            return;
+        }
+    }
+
     try {
+        const insertPayload = { 
+            business_id: currentBusiness.name, 
+            name: name, 
+            description: desc, 
+            price: price 
+        };
+
+        if (audioUrl) {
+            insertPayload.audio_url = audioUrl;
+        }
+
         const { error } = await supabaseClient
             .from('products')
-            .insert([{ 
-                business_id: currentBusiness.name, 
-                name: name, 
-                description: desc, 
-                price: price 
-            }]);
+            .insert([insertPayload]);
             
         if (error) throw error;
         openStockControlModal();
@@ -287,7 +348,7 @@ async function renderBusinessOrders() {
         return bizKeywords.some(keyword => oName.includes(keyword));
     });
 
-    // Ordenamiento por fecha de creación descendente
+    // Ordenamiento estricto por fecha real de inserción descendente
     myOrders.sort((a, b) => {
         const timeA = a.created_at ? new Date(a.created_at).getTime() : (parseInt(a.id, 10) || 0);
         const timeB = b.created_at ? new Date(b.created_at).getTime() : (parseInt(b.id, 10) || 0);
@@ -537,22 +598,22 @@ async function renderBusinessOrders() {
 
                             ${!isCompleted ? `
                                 <button onclick="completeBusinessOrder('${o.id}')" title="Completar pedido" class="w-9 h-9 rounded-2xl bg-black text-white hover:bg-neutral-800 flex items-center justify-center active:scale-90 transition shadow-md shrink-0">
-                                    <i data-lucide="check" class="w-4 h-4"></i>
-                                </button>
-                            ` : `
-                                <div class="w-9 h-9 rounded-2xl bg-neutral-100 text-neutral-400 flex items-center justify-center shrink-0">
-                                    <i data-lucide="check-check" class="w-4 h-4"></i>
-                                </div>
-                            `}
-                        </div>
+                                <i data-lucide="check" class="w-4 h-4"></i>
+                            </button>
+                        ` : `
+                            <div class="w-9 h-9 rounded-2xl bg-neutral-100 text-neutral-400 flex items-center justify-center shrink-0">
+                                <i data-lucide="check-check" class="w-4 h-4"></i>
+                            </div>
+                        `}
                     </div>
-                `;
-            });
-        }
-
-        ordersHtml += `</div>`;
-        ordersContainer.innerHTML = ordersHtml;
+                </div>
+            `;
+        });
     }
 
-    lucide.createIcons();
+    ordersHtml += `</div>`;
+    ordersContainer.innerHTML = ordersHtml;
+}
+
+lucide.createIcons();
 }

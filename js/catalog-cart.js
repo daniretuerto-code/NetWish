@@ -2,12 +2,17 @@ let activeBusinessName = "";
 let activeBusinessCategory = "";
 let isScheduleEnabled = true;
 let currentPublicCatalogItems = [];
+let currentlyPlayingAudio = null;
+let currentPlayingBtnId = null;
 
 function openPublicBusiness(safeName, safeType) {
     activeBusinessName = decodeURIComponent(safeName || '');
     activeBusinessCategory = decodeURIComponent(safeType || '').toLowerCase();
     activePayee = activeBusinessName;
     
+    // Detener reproducción si había audio en curso
+    stopCurrentAudio();
+
     document.getElementById('publicBizName').innerText = activeBusinessName;
     const imgEl = document.getElementById('publicBizImage');
 
@@ -91,30 +96,103 @@ async function renderPublicCatalogItems() {
         const existingInCart = cartItemsList.find(i => String(i.id) === itemIdStr);
         const qty = existingInCart ? existingInCart.qty : 0;
         const isMusic = activeBusinessCategory.includes('disco') || activeBusinessCategory.includes('music') || activeBusinessCategory.includes('produ');
+        const hasAudio = Boolean(item.audio_url);
 
         const safeItemId = encodeURIComponent(itemIdStr);
         const safeItemName = encodeURIComponent(item.name || 'Producto');
+        const safeAudioUrl = encodeURIComponent(item.audio_url || '');
 
         html += `
-            <div class="p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex justify-between items-center transition">
-                <div class="flex-1 pr-4">
-                    <div class="flex items-center space-x-1.5">
-                        ${isMusic ? '<i data-lucide="disc" class="w-3.5 h-3.5 text-amber-500 shrink-0"></i>' : ''}
-                        <h4 class="text-sm font-bold text-black">${item.name}</h4>
+            <div class="p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex flex-col space-y-3 transition">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1 pr-3">
+                        <div class="flex items-center space-x-1.5">
+                            ${isMusic ? '<i data-lucide="disc" class="w-3.5 h-3.5 text-amber-500 shrink-0"></i>' : ''}
+                            <h4 class="text-sm font-bold text-black">${item.name}</h4>
+                        </div>
+                        <p class="text-[10px] text-neutral-500 mt-0.5">${item.description || ''}</p>
+                        <p class="text-xs font-extrabold text-black mt-2">${price.toLocaleString('es-ES', {minimumFractionDigits:2})} €</p>
                     </div>
-                    <p class="text-[10px] text-neutral-500 mt-0.5">${item.description || ''}</p>
-                    <p class="text-xs font-extrabold text-black mt-2">${price.toLocaleString('es-ES', {minimumFractionDigits:2})} €</p>
+                    
+                    <div id="btn-container-${item.id}" class="flex items-center space-x-2 shrink-0">
+                        ${renderItemButtonHTML(item.id, safeItemId, safeItemName, price, qty)}
+                    </div>
                 </div>
-                
-                <div id="btn-container-${item.id}" class="flex items-center space-x-2 shrink-0">
-                    ${renderItemButtonHTML(item.id, safeItemId, safeItemName, price, qty)}
-                </div>
+
+                ${hasAudio ? `
+                    <div class="flex items-center space-x-2.5 p-2 bg-neutral-50 rounded-2xl border border-neutral-200/60">
+                        <button onclick="togglePlayPreview('${safeAudioUrl}', 'play-icon-${item.id}')" class="w-8 h-8 rounded-xl bg-black text-white flex items-center justify-center shrink-0 active:scale-95 transition shadow-sm">
+                            <i id="play-icon-${item.id}" data-lucide="play" class="w-3.5 h-3.5 ml-0.5"></i>
+                        </button>
+                        <div class="flex-1 overflow-hidden">
+                            <span class="text-[10px] font-mono uppercase tracking-wider text-neutral-600 block font-bold truncate">Escuchar Preview Oficial</span>
+                            <span class="text-[9px] text-neutral-400 font-mono block truncate">Audio WAV/MP3 • Calidad HQ</span>
+                        </div>
+                    </div>
+                ` : ''}
             </div>
         `;
     });
 
     catalogEl.innerHTML = html;
     lucide.createIcons();
+}
+
+// --- CONTROLADOR DE AUDIO PREVIEW ---
+function togglePlayPreview(encodedUrl, iconId) {
+    const url = decodeURIComponent(encodedUrl);
+    if (!url) return;
+
+    const iconEl = document.getElementById(iconId);
+
+    // Si ya se está reproduciendo el mismo audio, pausar
+    if (currentlyPlayingAudio && currentlyPlayingAudio.src === url && !currentlyPlayingAudio.paused) {
+        currentlyPlayingAudio.pause();
+        if (iconEl) {
+            iconEl.setAttribute('data-lucide', 'play');
+            iconEl.classList.add('ml-0.5');
+            lucide.createIcons();
+        }
+        return;
+    }
+
+    // Detener cualquier audio anterior
+    stopCurrentAudio();
+
+    // Iniciar nuevo audio
+    currentlyPlayingAudio = new Audio(url);
+    currentPlayingBtnId = iconId;
+
+    if (iconEl) {
+        iconEl.setAttribute('data-lucide', 'pause');
+        iconEl.classList.remove('ml-0.5');
+        lucide.createIcons();
+    }
+
+    currentlyPlayingAudio.play().catch(e => {
+        console.error("Error reproduciendo audio:", e);
+        stopCurrentAudio();
+    });
+
+    currentlyPlayingAudio.onended = () => {
+        stopCurrentAudio();
+    };
+}
+
+function stopCurrentAudio() {
+    if (currentlyPlayingAudio) {
+        currentlyPlayingAudio.pause();
+        currentlyPlayingAudio = null;
+    }
+    if (currentPlayingBtnId) {
+        const iconEl = document.getElementById(currentPlayingBtnId);
+        if (iconEl) {
+            iconEl.setAttribute('data-lucide', 'play');
+            iconEl.classList.add('ml-0.5');
+            lucide.createIcons();
+        }
+        currentPlayingBtnId = null;
+    }
 }
 
 function renderItemButtonHTML(rawId, safeItemId, safeItemName, price, qty) {
@@ -167,7 +245,6 @@ function changeItemQuantity(encodedId, encodedName, price, delta) {
 
     updateCartDisplay();
 
-    // Actualización quirúrgica del botón en memoria (Cero parpadeo ni recarga del catálogo)
     const btnContainer = document.getElementById(`btn-container-${id}`);
     if (btnContainer) {
         btnContainer.innerHTML = renderItemButtonHTML(id, encodedId, encodedName, price, newQty);
@@ -213,6 +290,9 @@ function toggleScheduleSection() {
 function openCartSummary() {
     if (cartItemCount === 0) return;
     
+    // Detener preview al ir a pagar
+    stopCurrentAudio();
+
     let html = '';
     cartItemsList.forEach(item => {
         html += `
@@ -235,7 +315,6 @@ function openCartSummary() {
         dateInput.min = today;
     }
     
-    // Reiniciar estado activo del switch al abrir la cesta
     isScheduleEnabled = true;
     const toggleBtn = document.getElementById('scheduleToggleBtn');
     const toggleKnob = document.getElementById('scheduleToggleKnob');
