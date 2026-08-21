@@ -1,5 +1,6 @@
 let ordersRealtimeSubscription = null;
 let currentBusinessOrders = []; 
+let activeOrdersTab = 'pending'; // 'pending' | 'completed'
 
 async function openStockControlModal() {
     if (!currentBusiness) return;
@@ -138,6 +139,33 @@ async function deleteStockProduct(productId) {
     }
 }
 
+// --- CAMBIO DE ESTADO DEL PEDIDO (COMPLETAR / ENTREGAR) ---
+async function completeBusinessOrder(orderId) {
+    try {
+        const { error } = await supabaseClient
+            .from('orders')
+            .update({ status: 'Completado' })
+            .eq('id', orderId);
+            
+        if (error) throw error;
+
+        // Actualización local en memoria
+        const orderIndex = currentBusinessOrders.findIndex(o => String(o.id) === String(orderId));
+        if (orderIndex >= 0) {
+            currentBusinessOrders[orderIndex].status = 'Completado';
+        }
+
+        renderBusinessOrders();
+    } catch (err) {
+        alert("No se pudo actualizar el pedido: " + err.message);
+    }
+}
+
+function setOrdersTab(tab) {
+    activeOrdersTab = tab;
+    renderBusinessOrders();
+}
+
 function openHistoryModal(dateFilter = '') {
     if (!currentBusiness) return;
     const modal = document.getElementById('customModal');
@@ -156,8 +184,9 @@ function openHistoryModal(dateFilter = '') {
         ordersHtml = '<p class="text-xs text-neutral-400 text-center py-6">No hay actividad para esta fecha.</p>';
     } else {
         filteredOrders.forEach(o => {
+            const isCompleted = o.status === 'Completado';
             const isPaid = o.status === 'Pagado Online';
-            const iconBg = isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600';
+            const iconBg = isCompleted ? 'bg-neutral-100 text-black' : (isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600');
             const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
             const totalVal = parseFloat(o.total) || 0;
             
@@ -173,7 +202,7 @@ function openHistoryModal(dateFilter = '') {
                     </div>
                     <div class="text-right shrink-0 ml-2">
                         <span class="block text-sm font-bold text-black">${totalVal.toFixed(2)} €</span>
-                        <span class="block text-[9px] ${isPaid ? 'text-emerald-600' : 'text-amber-600'} font-bold">${o.status}</span>
+                        <span class="block text-[9px] ${isCompleted ? 'text-neutral-500' : (isPaid ? 'text-emerald-600' : 'text-amber-600')} font-bold">${o.status}</span>
                     </div>
                 </div>
             `;
@@ -221,7 +250,7 @@ async function renderBusinessOrders() {
     const cat = (currentBusiness.category || '').toLowerCase();
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
     
-    // Suscripción Realtime activa
+    // Suscripción Realtime
     if (!ordersRealtimeSubscription && typeof supabaseClient.channel === 'function') {
         ordersRealtimeSubscription = supabaseClient
             .channel('public:orders')
@@ -231,7 +260,6 @@ async function renderBusinessOrders() {
             .subscribe();
     }
 
-    // Consulta ordenando estrictamente por orden de llegada (created_at desc)
     let orders = [];
     try {
         const { data, error } = await supabaseClient
@@ -242,7 +270,6 @@ async function renderBusinessOrders() {
         if (!error && data) {
             orders = data;
         } else {
-            // Fallback si created_at no existe
             const fallback = await supabaseClient.from('orders').select('*').order('id', { ascending: false });
             if (fallback.data) orders = fallback.data;
         }
@@ -260,7 +287,7 @@ async function renderBusinessOrders() {
         return bizKeywords.some(keyword => oName.includes(keyword));
     });
 
-    // Ordenamiento absoluto por momento de recepción real
+    // Ordenar de más reciente a más antiguo por fecha de creación
     myOrders.sort((a, b) => {
         const timeA = a.created_at ? new Date(a.created_at).getTime() : (parseInt(a.id, 10) || 0);
         const timeB = b.created_at ? new Date(b.created_at).getTime() : (parseInt(b.id, 10) || 0);
@@ -270,11 +297,18 @@ async function renderBusinessOrders() {
     currentBusinessOrders = myOrders; 
     
     let totalMoney = 0;
-    let pendingOrdersCount = 0;
+    let pendingOrders = [];
+    let completedOrders = [];
+
     myOrders.forEach(o => {
         const orderVal = parseFloat(o.total) || 0;
-        if (o.status === 'Pagado Online') totalMoney += orderVal;
-        if (o.status && (o.status.includes('Pendiente') || o.status === 'Pagado Online')) pendingOrdersCount++;
+        if (o.status !== 'Cancelado') totalMoney += orderVal;
+        
+        if (o.status === 'Completado') {
+            completedOrders.push(o);
+        } else {
+            pendingOrders.push(o);
+        }
     });
 
     let html = '';
@@ -308,7 +342,7 @@ async function renderBusinessOrders() {
             <div class="grid grid-cols-2 gap-3">
                 <div class="p-4 rounded-3xl bg-neutral-900 border border-amber-500/20 text-left shadow-lg">
                     <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-widest">Licencias Vendidas</span>
-                    <h3 class="text-2xl font-black text-white mt-1">${pendingOrdersCount}</h3>
+                    <h3 class="text-2xl font-black text-white mt-1">${myOrders.length}</h3>
                 </div>
                 <div class="p-4 rounded-3xl bg-neutral-900 border border-amber-500/20 text-left shadow-lg">
                     <span class="text-[9px] text-amber-400/80 font-mono uppercase tracking-widest">Royalties Acumulados</span>
@@ -331,8 +365,8 @@ async function renderBusinessOrders() {
         html += `
             <div class="grid grid-cols-2 gap-3">
                 <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
-                    <span class="text-[10px] text-neutral-400 font-mono uppercase">Citas Pendientes</span>
-                    <h3 class="text-xl font-extrabold text-black mt-1">${pendingOrdersCount}</h3>
+                    <span class="text-[10px] text-neutral-400 font-mono uppercase">Citas Activas</span>
+                    <h3 class="text-xl font-extrabold text-black mt-1">${pendingOrders.length}</h3>
                 </div>
                 <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
                     <span class="text-[10px] text-neutral-400 font-mono uppercase">Caja Acumulada</span>
@@ -356,8 +390,8 @@ async function renderBusinessOrders() {
                     <h3 class="text-lg font-extrabold text-black">4</h3>
                 </div>
                 <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
-                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Cocina</span>
-                    <h3 class="text-lg font-extrabold text-black">${pendingOrdersCount}</h3>
+                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Pendientes</span>
+                    <h3 class="text-lg font-extrabold text-black">${pendingOrders.length}</h3>
                 </div>
                 <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
                     <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Caja</span>
@@ -391,8 +425,8 @@ async function renderBusinessOrders() {
 
             <div class="grid grid-cols-2 gap-3">
                 <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
-                    <span class="text-[10px] text-neutral-400 font-mono uppercase">Pedidos</span>
-                    <h3 class="text-xl font-extrabold text-black mt-1">${pendingOrdersCount}</h3>
+                    <span class="text-[10px] text-neutral-400 font-mono uppercase">Pendientes</span>
+                    <h3 class="text-xl font-extrabold text-black mt-1">${pendingOrders.length}</h3>
                 </div>
                 <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
                     <span class="text-[10px] text-neutral-400 font-mono uppercase">Caja</span>
@@ -407,40 +441,73 @@ async function renderBusinessOrders() {
         `;
     }
 
+    // --- SELECTOR DE PESTAÑAS: PENDIENTES VS COMPLETADOS ---
+    const isPendingTab = activeOrdersTab === 'pending';
+    const displayList = isPendingTab ? pendingOrders : completedOrders;
+
     html += `
-        <div class="space-y-2 pt-2">
+        <div class="space-y-3 pt-3">
             <div class="flex justify-between items-center px-1">
-                <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Último Pedido</h3>
+                <!-- Selector de Filtro -->
+                <div class="flex items-center space-x-2 bg-neutral-100 p-1 rounded-2xl border border-neutral-200/60 shadow-inner">
+                    <button onclick="setOrdersTab('pending')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${isPendingTab ? 'bg-white text-black shadow-sm' : 'text-neutral-500 hover:text-black'} flex items-center space-x-1.5">
+                        <span>Pendientes</span>
+                        <span class="w-4 h-4 rounded-full bg-black text-white text-[9px] flex items-center justify-center font-mono">${pendingOrders.length}</span>
+                    </button>
+                    <button onclick="setOrdersTab('completed')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${!isPendingTab ? 'bg-white text-black shadow-sm' : 'text-neutral-500 hover:text-black'} flex items-center space-x-1.5">
+                        <span>Completados</span>
+                        <span class="w-4 h-4 rounded-full bg-neutral-200 text-neutral-700 text-[9px] flex items-center justify-center font-mono">${completedOrders.length}</span>
+                    </button>
+                </div>
                 <button onclick="openHistoryModal()" class="text-[10px] font-bold text-black hover:underline">Ver historial</button>
             </div>
+
             <div class="space-y-2">
     `;
 
-    if (myOrders.length === 0) {
-        html += '<p class="text-xs text-neutral-400 text-center py-4">No hay actividad reciente registrada.</p>';
+    if (displayList.length === 0) {
+        const emptyMsg = isPendingTab ? "No tienes pedidos pendientes de entrega." : "Aún no hay pedidos marcados como completados.";
+        html += `<p class="text-xs text-neutral-400 text-center py-6 bg-neutral-50/60 rounded-3xl border border-neutral-100">${emptyMsg}</p>`;
     } else {
-        const o = myOrders[0]; 
-        const isPaid = o.status === 'Pagado Online';
-        const iconBg = isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600';
-        const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
-        const totalVal = parseFloat(o.total) || 0;
-        
-        html += `
-            <div class="p-4 rounded-2xl bg-white border border-neutral-200/80 shadow-sm flex justify-between items-center">
-                <div class="flex items-center space-x-3 overflow-hidden">
-                    <div class="w-8 h-8 rounded-full ${iconBg} flex items-center justify-center shrink-0"><i data-lucide="${iconName}" class="w-4 h-4"></i></div>
-                    <div class="overflow-hidden">
-                        <span class="text-xs font-bold block text-black truncate">${o.items}</span>
-                        <span class="text-[9px] text-neutral-500 font-mono">Día: ${o.date} • ${o.time}</span>
-                        <span class="text-[9px] text-neutral-400 block mt-0.5 truncate">Cliente: ${o.customer}</span>
+        displayList.forEach(o => {
+            const isCompleted = o.status === 'Completado';
+            const isPaid = o.status === 'Pagado Online';
+            const iconBg = isCompleted ? 'bg-neutral-100 text-neutral-500' : (isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600');
+            const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
+            const totalVal = parseFloat(o.total) || 0;
+            
+            html += `
+                <div class="p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex justify-between items-center transition hover:border-black/20">
+                    <div class="flex items-center space-x-3 overflow-hidden flex-1 mr-2">
+                        <div class="w-9 h-9 rounded-2xl ${iconBg} flex items-center justify-center shrink-0">
+                            <i data-lucide="${iconName}" class="w-4 h-4"></i>
+                        </div>
+                        <div class="overflow-hidden">
+                            <span class="text-xs font-bold block text-black truncate">${o.items}</span>
+                            <span class="text-[9px] text-neutral-500 font-mono block">Día: ${o.date} • ${o.time}</span>
+                            <span class="text-[9px] text-neutral-400 block truncate">Cliente: ${o.customer}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-3 shrink-0">
+                        <div class="text-right">
+                            <span class="block text-sm font-bold text-black">${totalVal.toFixed(2)} €</span>
+                            <span class="block text-[9px] ${isCompleted ? 'text-neutral-400' : (isPaid ? 'text-emerald-600' : 'text-amber-600')} font-bold">${o.status}</span>
+                        </div>
+
+                        ${!isCompleted ? `
+                            <button onclick="completeBusinessOrder('${o.id}')" title="Marcar como Completado" class="w-9 h-9 rounded-2xl bg-black text-white hover:bg-neutral-800 flex items-center justify-center active:scale-90 transition shadow-md shrink-0">
+                                <i data-lucide="check" class="w-4 h-4"></i>
+                            </button>
+                        ` : `
+                            <div class="w-9 h-9 rounded-2xl bg-neutral-100 text-neutral-400 flex items-center justify-center shrink-0">
+                                <i data-lucide="check-check" class="w-4 h-4"></i>
+                            </div>
+                        `}
                     </div>
                 </div>
-                <div class="text-right shrink-0 ml-2">
-                    <span class="block text-sm font-bold text-black">${totalVal.toFixed(2)} €</span>
-                    <span class="block text-[9px] ${isPaid ? 'text-emerald-600' : 'text-amber-600'} font-bold">${o.status}</span>
-                </div>
-            </div>
-        `;
+            `;
+        });
     }
     
     html += `</div></div>`;
