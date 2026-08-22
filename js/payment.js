@@ -1,7 +1,4 @@
 window.rawAmountString = window.rawAmountString || "000";
-let holdTimer = null;
-let holdProgress = 0;
-let isHolding = false;
 
 function appendNum(num) {
     if (window.rawAmountString.length >= 8) return;
@@ -35,20 +32,23 @@ window.updateAmountDisplay = function() {
     display.innerText = formatted;
 };
 
-// --- GESTOR TÁCTIL INDESTRUCTIBLE ---
+// --- MOTOR TÁCTIL INDESTRUCTIBLE ---
 function initHoldButton() {
     const btnContainer = document.getElementById('holdButtonContainer');
     if (!btnContainer) return;
 
-    btnContainer.style.touchAction = 'none'; // Previene que el navegador robe el toque para scroll
+    let holdTimer = null;
+    let holdProgress = 0;
+    let isHolding = false;
 
     const startHold = (e) => {
-        // Validamos precio usando nuestras variables blindadas
-        const isCart = typeof window.isCartCheckout !== 'undefined' ? window.isCartCheckout : false;
+        if (e.cancelable) e.preventDefault(); // Bloquear scroll en móvil
+        
+        const isCart = window.appState && window.appState.isCartCheckout;
         const val = parseInt(window.rawAmountString, 10) || 0;
         
         if (val <= 0 && !isCart) {
-            alert("Añade un importe válido o productos a la cesta para continuar.");
+            alert("Añade un importe o productos a la cesta para continuar.");
             return;
         }
 
@@ -59,14 +59,14 @@ function initHoldButton() {
         clearInterval(holdTimer);
         holdTimer = setInterval(() => {
             if (!isHolding) return;
-            holdProgress += 4; // Velocidad de barra
+            holdProgress += 4;
             if (progressBar) progressBar.style.width = holdProgress + '%';
 
             if (holdProgress >= 100) {
                 clearInterval(holdTimer);
                 isHolding = false;
                 if (progressBar) progressBar.style.width = '0%';
-                executeFullPayment(false); // Lanza el proceso final
+                window.executeFullPayment(false); // Llamada al pago
             }
         }, 30);
     };
@@ -80,9 +80,10 @@ function initHoldButton() {
         if (progressBar) progressBar.style.width = '0%';
     };
 
-    btnContainer.addEventListener('touchstart', startHold, { passive: true });
-    btnContainer.addEventListener('touchend', stopHold, { passive: true });
-    btnContainer.addEventListener('touchcancel', stopHold, { passive: true });
+    // Listeners universales (Móvil y PC)
+    btnContainer.addEventListener('touchstart', startHold, { passive: false });
+    btnContainer.addEventListener('touchend', stopHold);
+    btnContainer.addEventListener('touchcancel', stopHold);
     
     btnContainer.addEventListener('mousedown', startHold);
     window.addEventListener('mouseup', stopHold);
@@ -91,19 +92,19 @@ function initHoldButton() {
 
 document.addEventListener('DOMContentLoaded', initHoldButton);
 
-// --- EJECUCIÓN BLINDADA Y WHATSAPP AUTOMÁTICO ---
-async function executeFullPayment(isReservation = false) {
+// --- EJECUCIÓN DEL PAGO Y REDIRECCIÓN A WHATSAPP ---
+window.executeFullPayment = async function(isReservation = false) {
     try {
         const modal = document.getElementById('customModal');
         const modalContent = document.getElementById('modalContent');
         const modalBody = document.getElementById('modalBody');
 
-        // Leer variables globales con seguridad (si no existen, no peta, usa valor por defecto)
-        let isCart = typeof window.isCartCheckout !== 'undefined' ? window.isCartCheckout : false;
-        let cTotal = typeof window.cartTotalValue !== 'undefined' ? window.cartTotalValue : 0;
-        let cItems = typeof window.cartItemsList !== 'undefined' ? window.cartItemsList : [];
-        let pDetails = typeof window.pendingOrderDetails !== 'undefined' ? window.pendingOrderDetails : null;
-        let tBusiness = window.activePayee || window.activeBusinessName || 'Comercio Local';
+        // Leer datos del carrito o del teclado
+        let isCart = window.appState && window.appState.isCartCheckout;
+        let cTotal = window.appState ? window.appState.cartTotalValue : 0;
+        let cItems = window.appState ? window.appState.cartItemsList : [];
+        let pDetails = window.appState ? window.appState.pendingOrderDetails : null;
+        let tBusiness = window.activePayee || (window.appState && window.appState.activeBusinessName) || 'Comercio Local';
 
         let totalVal = isCart ? cTotal : (parseInt(window.rawAmountString || "0", 10) / 100);
             
@@ -119,7 +120,7 @@ async function executeFullPayment(isReservation = false) {
         let orderTime = pDetails?.time || "Inmediato";
         let statusText = isReservation ? 'Pendiente (Pago en local)' : 'Pagado Online';
 
-        // 1. Guardar en Supabase (Solo si Supabase está cargado)
+        // 1. Guardar en Supabase
         try {
             if (typeof supabaseClient !== 'undefined') {
                 await supabaseClient.from('orders').insert([{
@@ -197,7 +198,7 @@ async function executeFullPayment(isReservation = false) {
                         </a>
                     ` : '<p class="text-[10px] text-neutral-400">Este comercio no tiene WhatsApp asociado.</p>'}
 
-                    <button onclick="finishPaymentFlow()" class="w-full py-3 bg-black text-white font-semibold rounded-2xl text-xs active:scale-95 transition">
+                    <button onclick="window.finishPaymentFlow()" class="w-full py-3 bg-black text-white font-semibold rounded-2xl text-xs active:scale-95 transition">
                         Volver al Inicio
                     </button>
                 </div>
@@ -213,20 +214,20 @@ async function executeFullPayment(isReservation = false) {
             }, 10);
         }
 
-        // 5. REDIRECCIÓN AUTOMÁTICA A WHATSAPP (Lo que habías pedido)
+        // 5. REDIRECCIÓN AUTOMÁTICA A WHATSAPP
         if (waUrl) {
             setTimeout(() => {
                 window.location.href = waUrl;
-            }, 1200); // Salta al WhatsApp en 1 segundo y pico para que te dé tiempo a ver el tick verde
+            }, 1200);
         }
 
     } catch (criticalError) {
-        console.error("Fallo crítico en el proceso de confirmación:", criticalError);
+        console.error("Fallo crítico en la confirmación:", criticalError);
         alert("Ocurrió un error. Comprueba tu conexión.");
     }
-}
+};
 
-function finishPaymentFlow() {
+window.finishPaymentFlow = function() {
     const modal = document.getElementById('customModal');
     const modalContent = document.getElementById('modalContent');
     
@@ -238,17 +239,19 @@ function finishPaymentFlow() {
 
     // Resetear todo al estado de fábrica
     window.rawAmountString = "000";
-    window.cartItemsList = [];
-    window.cartTotalValue = 0;
-    window.cartItemCount = 0;
-    window.isCartCheckout = false;
-    window.pendingOrderDetails = null;
+    if (window.appState) {
+        window.appState.cartItemsList = [];
+        window.appState.cartTotalValue = 0;
+        window.appState.cartItemCount = 0;
+        window.appState.isCartCheckout = false;
+        window.appState.pendingOrderDetails = null;
+    }
 
     const progressBar = document.getElementById('progressBar');
     if (progressBar) progressBar.style.width = '0%';
 
     if (typeof updateCartDisplay === 'function') updateCartDisplay();
-    if (typeof updateAmountDisplay === 'function') updateAmountDisplay();
+    window.updateAmountDisplay();
 
-    switchTab('home');
-}
+    if (typeof switchTab === 'function') switchTab('home');
+};
