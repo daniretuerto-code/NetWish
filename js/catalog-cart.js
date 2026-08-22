@@ -324,15 +324,27 @@ function openCartSummary() {
         container.classList.remove('hidden', 'opacity-0');
     }
 
-    // Ocultar barra flotante al entrar al checkout
-    const cartBar = document.getElementById('publicBusinessCartBar');
-    if (cartBar) {
-        cartBar.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
-        cartBar.classList.add('translate-y-64', 'opacity-0', 'pointer-events-none');
+    // Ocultar comercio y abrir cesta en primer plano
+    const pubBizView = document.getElementById('view-public-business');
+    if (pubBizView) pubBizView.classList.add('hidden');
+
+    const cartView = document.getElementById('view-cart');
+    if (cartView) {
+        cartView.classList.remove('hidden');
+        cartView.scrollTop = 0;
     }
-    
-    if (typeof swipeAnim !== 'undefined') swipeAnim = 'slide-in-right';
-    switchTab('cart');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeCartSummary() {
+    const cartView = document.getElementById('view-cart');
+    if (cartView) cartView.classList.add('hidden');
+
+    const pubBizView = document.getElementById('view-public-business');
+    if (pubBizView) pubBizView.classList.remove('hidden');
+
+    updateCartDisplay();
 }
 
 function processCartChoice(action) {
@@ -353,13 +365,20 @@ function processCartChoice(action) {
     pendingOrderDetails = { date, time, action };
     isCartCheckout = true;
     
+    // Ocultar la vista de cesta
+    const cartView = document.getElementById('view-cart');
+    if (cartView) cartView.classList.add('hidden');
+
     if (action === 'pay') {
         rawAmountString = Math.round(cartTotalValue * 100).toString(); 
-        updateAmountDisplay();
-        document.getElementById('payeeNameDisplay').innerText = activePayee;
-        document.getElementById('payeeInitialsBubble').innerText = activePayee.substring(0, 2).toUpperCase();
+        if (typeof updateAmountDisplay === 'function') updateAmountDisplay();
         
-        if (typeof swipeAnim !== 'undefined') swipeAnim = 'slide-in-right';
+        const payeeNameEl = document.getElementById('payeeNameDisplay');
+        if (payeeNameEl) payeeNameEl.innerText = activePayee;
+        
+        const bubbleEl = document.getElementById('payeeInitialsBubble');
+        if (bubbleEl) bubbleEl.innerText = activePayee.substring(0, 2).toUpperCase();
+        
         switchTab('payment');
     } else {
         if (typeof executeFullPayment === 'function') executeFullPayment(true);
