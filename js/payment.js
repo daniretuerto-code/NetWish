@@ -1,8 +1,7 @@
-// Variables globales de pago
-var rawAmountString = "000";
-var holdTimer = null;
-var holdProgress = 0;
-var isHolding = false;
+let rawAmountString = "000";
+let holdTimer = null;
+let holdProgress = 0;
+let isHolding = false;
 
 function appendNum(num) {
     if (rawAmountString.length >= 8) return;
@@ -42,11 +41,11 @@ function initHoldButton() {
     if (!btnContainer) return;
 
     const startHold = (e) => {
-        // Evita comportamientos nativos raros en Safari/Chrome de iOS/Android
+        // Solo bloquear gestos por defecto si no es scroll (evita que la pantalla se vuelva loca)
         if (e.cancelable) e.preventDefault(); 
         
         const val = parseInt(rawAmountString, 10) || 0;
-        if (val <= 0) {
+        if (val <= 0 && !isCartCheckout) {
             alert("Añade un importe válido o selecciona un producto para continuar.");
             return;
         }
@@ -79,7 +78,7 @@ function initHoldButton() {
         if (progressBar) progressBar.style.width = '0%';
     };
 
-    // Múltiples escuchadores para garantizar compatibilidad con pantallas táctiles y ratón
+    // Múltiples escuchadores para garantizar compatibilidad total (Móviles / PC)
     btnContainer.addEventListener('touchstart', startHold, { passive: false });
     btnContainer.addEventListener('touchend', stopHold);
     btnContainer.addEventListener('touchcancel', stopHold);
@@ -98,28 +97,21 @@ async function executeFullPayment(isReservation = false) {
     const modalBody = document.getElementById('modalBody');
 
     // Recuperamos los datos de compra
-    let totalVal = typeof isCartCheckout !== 'undefined' && isCartCheckout 
-        ? cartTotalValue 
-        : (parseInt(rawAmountString, 10) / 100);
+    let totalVal = isCartCheckout ? cartTotalValue : (parseInt(rawAmountString, 10) / 100);
         
-    let itemsDesc = typeof isCartCheckout !== 'undefined' && isCartCheckout && cartItemsList.length > 0
+    let itemsDesc = isCartCheckout && cartItemsList.length > 0
         ? cartItemsList.map(i => `${i.qty}x ${i.name}`).join(', ') 
         : 'Pago Directo en Terminal';
         
     let customerName = currentUser 
-        ? (currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email || 'Cliente Anónimo') 
-        : 'Cliente Anónimo';
+        ? (currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email || 'Cliente') 
+        : 'Cliente';
 
-    let orderDate = (typeof pendingOrderDetails !== 'undefined' && pendingOrderDetails?.date) 
-        ? pendingOrderDetails.date 
-        : new Date().toISOString().split('T')[0];
-        
-    let orderTime = (typeof pendingOrderDetails !== 'undefined' && pendingOrderDetails?.time) 
-        ? pendingOrderDetails.time 
-        : "Inmediato";
+    let orderDate = pendingOrderDetails?.date || new Date().toISOString().split('T')[0];
+    let orderTime = pendingOrderDetails?.time || "Inmediato";
         
     let statusText = isReservation ? 'Pendiente (Pago en local)' : 'Pagado Online';
-    let targetBusiness = (typeof activePayee !== 'undefined' && activePayee) ? activePayee : 'Comercio Local';
+    let targetBusiness = window.activePayee || 'Comercio Local';
 
     // 1. Guardar el pedido en Supabase Orders
     try {
@@ -228,13 +220,13 @@ function finishPaymentFlow() {
         setTimeout(() => modal.classList.add('hidden'), 300);
     }
 
-    // Limpiar formulario y cesta
+    // Limpiar formulario y variables de la cesta compartidas
     rawAmountString = "000";
-    if (typeof cartItemsList !== 'undefined') cartItemsList = [];
-    if (typeof cartTotalValue !== 'undefined') cartTotalValue = 0;
-    if (typeof cartItemCount !== 'undefined') cartItemCount = 0;
-    if (typeof isCartCheckout !== 'undefined') isCartCheckout = false;
-    if (typeof pendingOrderDetails !== 'undefined') pendingOrderDetails = null;
+    cartItemsList = [];
+    cartTotalValue = 0;
+    cartItemCount = 0;
+    isCartCheckout = false;
+    pendingOrderDetails = null;
 
     const progressBar = document.getElementById('progressBar');
     if (progressBar) progressBar.style.width = '0%';

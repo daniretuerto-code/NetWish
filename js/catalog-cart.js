@@ -1,21 +1,15 @@
-// Variables globales absolutas
-var activeBusinessName = "";
-var activeBusinessCategory = "";
-var isScheduleEnabled = true;
-var currentPublicCatalogItems = [];
-var currentlyPlayingAudio = null;
-var currentPlayingBtnId = null;
-
-var cartItemsList = [];
-var cartTotalValue = 0;
-var cartItemCount = 0;
-var isCartCheckout = false;
-var pendingOrderDetails = null;
+// Solo declaramos las exclusivas de este archivo (las del carrito ya están en tu config.js)
+let activeBusinessName = "";
+let activeBusinessCategory = "";
+let isScheduleEnabled = true;
+let currentPublicCatalogItems = [];
+let currentlyPlayingAudio = null;
+let currentPlayingBtnId = null;
 
 function openPublicBusiness(safeName, safeType) {
     activeBusinessName = decodeURIComponent(safeName || '');
     activeBusinessCategory = decodeURIComponent(safeType || '').toLowerCase();
-    activePayee = activeBusinessName;
+    window.activePayee = activeBusinessName;
     
     stopCurrentAudio();
 
@@ -372,16 +366,16 @@ function processCartChoice(action) {
     if (cartView) cartView.classList.add('hidden');
 
     if (action === 'pay') {
-        // Enlazar precio al teclado numérico y actualizar visualmente la pantalla de pago
+        // Asignamos la variable real compartida con payment.js para reflejar el precio instantáneamente
         rawAmountString = Math.round(cartTotalValue * 100).toString(); 
         if (typeof updateAmountDisplay === 'function') updateAmountDisplay();
         
         const payeeNameEl = document.getElementById('payeeNameDisplay');
-        if (payeeNameEl) payeeNameEl.innerText = activePayee || activeBusinessName;
+        if (payeeNameEl) payeeNameEl.innerText = window.activePayee || activeBusinessName;
         
         const bubbleEl = document.getElementById('payeeInitialsBubble');
-        if (bubbleEl && (activePayee || activeBusinessName)) {
-            bubbleEl.innerText = (activePayee || activeBusinessName).substring(0, 2).toUpperCase();
+        if (bubbleEl && (window.activePayee || activeBusinessName)) {
+            bubbleEl.innerText = (window.activePayee || activeBusinessName).substring(0, 2).toUpperCase();
         }
         
         switchTab('payment');
