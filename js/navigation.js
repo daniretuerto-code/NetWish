@@ -70,6 +70,9 @@ function switchTab(tabId) {
             payView.classList.remove('hidden');
             payView.scrollTop = 0;
         }
+        // Ocultar barra inferior en modo pago para maximizar espacio
+        if (personalNav) personalNav.classList.add('hidden');
+        if (bizNav) bizNav.classList.add('hidden');
     } else if (tabId === 'cart') {
         const cartView = document.getElementById('view-cart');
         if (cartView) {
@@ -93,6 +96,21 @@ function switchTab(tabId) {
     }
 }
 
+// --- CIERRE DE PANTALLA DE PAGO ---
+function closePaymentView() {
+    const payView = document.getElementById('view-payment');
+    if (payView) payView.classList.add('hidden');
+
+    if (isCartCheckout) {
+        // Si venía de una compra en catálogo, volver a la cesta
+        const cartView = document.getElementById('view-cart');
+        if (cartView) cartView.classList.remove('hidden');
+    } else {
+        // Restaurar barra de navegación
+        switchTab(currentBusiness ? 'business-dashboard' : 'explore');
+    }
+}
+
 // --- ACTUALIZACIÓN DINÁMICA DE LA CABECERA SEGÚN LA PESTAÑA ---
 function updateHeaderLayout(currentActiveTab) {
     const header = document.getElementById('mainAppHeader');
@@ -104,14 +122,12 @@ function updateHeaderLayout(currentActiveTab) {
     const isProfileTab = currentActiveTab === 'profile' || currentActiveTab === 'business-profile';
 
     if (isProfileTab) {
-        // En Perfil: Logo centrado y avatar oculto sin margen derecho
         header.classList.remove('justify-between');
         header.classList.add('justify-center');
         headerAvatar.classList.add('hidden');
         headerAvatar.style.display = 'none';
         headerLogo.classList.add('text-center', 'mx-auto');
     } else {
-        // En otras vistas: Logo alineado a la izquierda y avatar visible
         header.classList.remove('justify-center');
         header.classList.add('justify-between');
         headerAvatar.classList.remove('hidden');
@@ -174,7 +190,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const userWrapper = document.getElementById('userScrollWrapper');
     const bizWrapper = document.getElementById('bizScrollWrapper');
 
-    // Sincronización del deslizamiento horizontal para usuarios
     if (userWrapper) {
         userWrapper.addEventListener('scroll', () => {
             const index = Math.round(userWrapper.scrollLeft / userWrapper.clientWidth);
@@ -187,7 +202,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, { passive: true });
     }
 
-    // Sincronización del deslizamiento horizontal para comercios (4 pestañas)
     if (bizWrapper) {
         bizWrapper.addEventListener('scroll', () => {
             const index = Math.round(bizWrapper.scrollLeft / bizWrapper.clientWidth);
