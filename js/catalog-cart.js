@@ -1,28 +1,34 @@
-// Solo declaramos las exclusivas de este archivo (las del carrito ya están en tu config.js)
-let activeBusinessName = "";
-let activeBusinessCategory = "";
-let isScheduleEnabled = true;
-let currentPublicCatalogItems = [];
-let currentlyPlayingAudio = null;
-let currentPlayingBtnId = null;
+// Variables globales ancladas a 'window' para que ningún archivo las pierda
+window.activeBusinessName = "";
+window.activeBusinessCategory = "";
+window.isScheduleEnabled = true;
+window.currentPublicCatalogItems = [];
+window.currentlyPlayingAudio = null;
+window.currentPlayingBtnId = null;
+
+window.cartItemsList = [];
+window.cartTotalValue = 0;
+window.cartItemCount = 0;
+window.isCartCheckout = false;
+window.pendingOrderDetails = null;
 
 function openPublicBusiness(safeName, safeType) {
-    activeBusinessName = decodeURIComponent(safeName || '');
-    activeBusinessCategory = decodeURIComponent(safeType || '').toLowerCase();
-    window.activePayee = activeBusinessName;
+    window.activeBusinessName = decodeURIComponent(safeName || '');
+    window.activeBusinessCategory = decodeURIComponent(safeType || '').toLowerCase();
+    window.activePayee = window.activeBusinessName;
     
     stopCurrentAudio();
 
-    document.getElementById('publicBizName').innerText = activeBusinessName;
+    document.getElementById('publicBizName').innerText = window.activeBusinessName;
     const imgEl = document.getElementById('publicBizImage');
 
-    if (activeBusinessCategory.includes('disco') || activeBusinessCategory.includes('music') || activeBusinessCategory.includes('produ') || activeBusinessCategory.includes('estudio')) {
+    if (window.activeBusinessCategory.includes('disco') || window.activeBusinessCategory.includes('music') || window.activeBusinessCategory.includes('produ')) {
         imgEl.src = "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=800&q=80";
         document.getElementById('publicBizTag').innerText = "RECORD LABEL";
-    } else if (activeBusinessCategory.includes('pan') || activeBusinessCategory.includes('comercio')) {
+    } else if (window.activeBusinessCategory.includes('pan') || window.activeBusinessCategory.includes('comercio')) {
         imgEl.src = "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80";
         document.getElementById('publicBizTag').innerText = "Comercio Local";
-    } else if (activeBusinessCategory.includes('pel')) {
+    } else if (window.activeBusinessCategory.includes('pel')) {
         imgEl.src = "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=800&q=80";
         document.getElementById('publicBizTag').innerText = "Peluquería";
     } else {
@@ -30,10 +36,10 @@ function openPublicBusiness(safeName, safeType) {
         document.getElementById('publicBizTag').innerText = "Comercio";
     }
 
-    cartTotalValue = 0; 
-    cartItemCount = 0; 
-    cartItemsList = []; 
-    isCartCheckout = false;
+    window.cartTotalValue = 0; 
+    window.cartItemCount = 0; 
+    window.cartItemsList = []; 
+    window.isCartCheckout = false;
     
     updateCartDisplay();
     renderPublicCatalogItems();
@@ -59,7 +65,7 @@ async function renderPublicCatalogItems() {
         const { data, error } = await supabaseClient.from('products').select('*');
         if (error) throw error;
         
-        const cleanActiveName = activeBusinessName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const cleanActiveName = window.activeBusinessName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const activeTokens = cleanActiveName.split(/\s+/).filter(t => t.length > 2);
 
         items = (data || []).filter(item => {
@@ -72,7 +78,7 @@ async function renderPublicCatalogItems() {
         console.error("Error consultando Supabase:", err);
     }
 
-    currentPublicCatalogItems = items;
+    window.currentPublicCatalogItems = items;
 
     if (items.length === 0) {
         catalogEl.innerHTML = `
@@ -90,9 +96,9 @@ async function renderPublicCatalogItems() {
     items.forEach(item => {
         const price = parseFloat(item.price) || 0;
         const itemIdStr = String(item.id);
-        const existingInCart = cartItemsList.find(i => String(i.id) === itemIdStr);
+        const existingInCart = window.cartItemsList.find(i => String(i.id) === itemIdStr);
         const qty = existingInCart ? existingInCart.qty : 0;
-        const isMusic = activeBusinessCategory.includes('disco') || activeBusinessCategory.includes('music') || activeBusinessCategory.includes('produ');
+        const isMusic = window.activeBusinessCategory.includes('disco') || window.activeBusinessCategory.includes('music') || window.activeBusinessCategory.includes('produ');
         const hasAudio = Boolean(item.audio_url);
 
         const safeItemId = encodeURIComponent(itemIdStr);
@@ -141,8 +147,8 @@ function togglePlayPreview(encodedUrl, iconId) {
 
     const iconEl = document.getElementById(iconId);
 
-    if (currentlyPlayingAudio && currentlyPlayingAudio.src === url && !currentlyPlayingAudio.paused) {
-        currentlyPlayingAudio.pause();
+    if (window.currentlyPlayingAudio && window.currentlyPlayingAudio.src === url && !window.currentlyPlayingAudio.paused) {
+        window.currentlyPlayingAudio.pause();
         if (iconEl) {
             iconEl.setAttribute('data-lucide', 'play');
             iconEl.classList.add('ml-0.5');
@@ -153,8 +159,8 @@ function togglePlayPreview(encodedUrl, iconId) {
 
     stopCurrentAudio();
 
-    currentlyPlayingAudio = new Audio(url);
-    currentPlayingBtnId = iconId;
+    window.currentlyPlayingAudio = new Audio(url);
+    window.currentPlayingBtnId = iconId;
 
     if (iconEl) {
         iconEl.setAttribute('data-lucide', 'pause');
@@ -162,29 +168,29 @@ function togglePlayPreview(encodedUrl, iconId) {
         lucide.createIcons();
     }
 
-    currentlyPlayingAudio.play().catch(e => {
+    window.currentlyPlayingAudio.play().catch(e => {
         console.error("Error reproduciendo audio:", e);
         stopCurrentAudio();
     });
 
-    currentlyPlayingAudio.onended = () => {
+    window.currentlyPlayingAudio.onended = () => {
         stopCurrentAudio();
     };
 }
 
 function stopCurrentAudio() {
-    if (currentlyPlayingAudio) {
-        currentlyPlayingAudio.pause();
-        currentlyPlayingAudio = null;
+    if (window.currentlyPlayingAudio) {
+        window.currentlyPlayingAudio.pause();
+        window.currentlyPlayingAudio = null;
     }
-    if (currentPlayingBtnId) {
-        const iconEl = document.getElementById(currentPlayingBtnId);
+    if (window.currentPlayingBtnId) {
+        const iconEl = document.getElementById(window.currentPlayingBtnId);
         if (iconEl) {
             iconEl.setAttribute('data-lucide', 'play');
             iconEl.classList.add('ml-0.5');
             lucide.createIcons();
         }
-        currentPlayingBtnId = null;
+        window.currentPlayingBtnId = null;
     }
 }
 
@@ -211,37 +217,37 @@ function renderItemButtonHTML(rawId, safeItemId, safeItemName, price, qty) {
 }
 
 function changeItemQuantity(encodedId, encodedName, price, delta) {
-    if (!currentUser) { 
+    if (typeof currentUser === 'undefined' || !currentUser) { 
         if (typeof openAuthModal === 'function') openAuthModal('login'); 
         return; 
     }
 
     const id = decodeURIComponent(encodedId);
     const name = decodeURIComponent(encodedName);
-    const existingIndex = cartItemsList.findIndex(i => String(i.id) === String(id));
+    const existingIndex = window.cartItemsList.findIndex(i => String(i.id) === String(id));
     let newQty = 0;
 
     if (existingIndex >= 0) {
-        cartItemsList[existingIndex].qty += delta;
-        newQty = cartItemsList[existingIndex].qty;
-        if (cartItemsList[existingIndex].qty <= 0) {
-            cartItemsList.splice(existingIndex, 1);
+        window.cartItemsList[existingIndex].qty += delta;
+        newQty = window.cartItemsList[existingIndex].qty;
+        if (window.cartItemsList[existingIndex].qty <= 0) {
+            window.cartItemsList.splice(existingIndex, 1);
             newQty = 0;
         }
     } else if (delta > 0) {
-        cartItemsList.push({ id: id, name: name, price: price, qty: 1 });
+        window.cartItemsList.push({ id: id, name: name, price: price, qty: 1 });
         newQty = 1;
     }
 
-    cartTotalValue = cartItemsList.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
-    cartItemCount = cartItemsList.reduce((acc, curr) => acc + curr.qty, 0);
+    window.cartTotalValue = window.cartItemsList.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
+    window.cartItemCount = window.cartItemsList.reduce((acc, curr) => acc + curr.qty, 0);
 
     updateCartDisplay();
 
     const btnContainer = document.getElementById(`btn-container-${id}`);
     if (btnContainer) {
         btnContainer.innerHTML = renderItemButtonHTML(id, encodedId, encodedName, price, newQty);
-        lucide.createIcons();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 }
 
@@ -249,11 +255,11 @@ function updateCartDisplay() {
     const cartBar = document.getElementById('publicBusinessCartBar');
     if (!cartBar) return;
     
-    if (cartItemCount > 0) {
+    if (window.cartItemCount > 0) {
         cartBar.classList.remove('translate-y-64', 'opacity-0', 'pointer-events-none');
         cartBar.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
-        document.getElementById('cartTotalDisplay').innerText = cartTotalValue.toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' €';
-        document.getElementById('cartCountDisplay').innerText = cartItemCount;
+        document.getElementById('cartTotalDisplay').innerText = window.cartTotalValue.toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' €';
+        document.getElementById('cartCountDisplay').innerText = window.cartItemCount;
     } else {
         cartBar.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
         cartBar.classList.add('translate-y-64', 'opacity-0', 'pointer-events-none');
@@ -261,14 +267,14 @@ function updateCartDisplay() {
 }
 
 function toggleScheduleSection() {
-    isScheduleEnabled = !isScheduleEnabled;
+    window.isScheduleEnabled = !window.isScheduleEnabled;
     const toggleBtn = document.getElementById('scheduleToggleBtn');
     const toggleKnob = document.getElementById('scheduleToggleKnob');
     const container = document.getElementById('scheduleInputsContainer');
 
     if (!toggleBtn || !toggleKnob || !container) return;
 
-    if (isScheduleEnabled) {
+    if (window.isScheduleEnabled) {
         toggleBtn.classList.remove('bg-neutral-200');
         toggleBtn.classList.add('bg-black');
         toggleKnob.classList.remove('translate-x-0');
@@ -284,12 +290,12 @@ function toggleScheduleSection() {
 }
 
 function openCartSummary() {
-    if (cartItemCount === 0) return;
+    if (window.cartItemCount === 0) return;
     
     stopCurrentAudio();
 
     let html = '';
-    cartItemsList.forEach(item => {
+    window.cartItemsList.forEach(item => {
         html += `
             <div class="flex justify-between items-center text-xs py-2.5 border-b border-neutral-100 last:border-0 text-black">
                 <div>
@@ -301,7 +307,7 @@ function openCartSummary() {
         `;
     });
     document.getElementById('cartItemsContainer').innerHTML = html;
-    document.getElementById('cartSummaryTotal').innerText = cartTotalValue.toLocaleString('es-ES', {minimumFractionDigits:2}) + ' €';
+    document.getElementById('cartSummaryTotal').innerText = window.cartTotalValue.toLocaleString('es-ES', {minimumFractionDigits:2}) + ' €';
     
     const today = new Date().toISOString().split('T')[0];
     const dateInput = document.getElementById('orderDate');
@@ -310,7 +316,7 @@ function openCartSummary() {
         dateInput.min = today;
     }
     
-    isScheduleEnabled = true;
+    window.isScheduleEnabled = true;
     const toggleBtn = document.getElementById('scheduleToggleBtn');
     const toggleKnob = document.getElementById('scheduleToggleKnob');
     const container = document.getElementById('scheduleInputsContainer');
@@ -348,7 +354,7 @@ function processCartChoice(action) {
     let date = "Inmediato / Sin Cita";
     let time = "--:--";
 
-    if (isScheduleEnabled) {
+    if (window.isScheduleEnabled) {
         const d = document.getElementById('orderDate')?.value;
         const t = document.getElementById('orderTime')?.value;
         if (!d || !t) { 
@@ -359,24 +365,25 @@ function processCartChoice(action) {
         time = t;
     }
 
-    pendingOrderDetails = { date, time, action };
-    isCartCheckout = true;
+    window.pendingOrderDetails = { date, time, action };
+    window.isCartCheckout = true; // Activa el modo de cesta validado
     
     const cartView = document.getElementById('view-cart');
     if (cartView) cartView.classList.add('hidden');
 
     if (action === 'pay') {
-        // Asignamos la variable real compartida con payment.js para reflejar el precio instantáneamente
-        rawAmountString = Math.round(cartTotalValue * 100).toString(); 
-        if (typeof updateAmountDisplay === 'function') updateAmountDisplay();
+        // Enviar precio exactamente a la variable blindada del terminal
+        window.rawAmountString = Math.round(window.cartTotalValue * 100).toString(); 
+        if (typeof window.updateAmountDisplay === 'function') {
+            window.updateAmountDisplay(); // Fuerza la actualización de pantalla
+        }
         
+        let targetName = window.activePayee || window.activeBusinessName || "Negocio Local";
         const payeeNameEl = document.getElementById('payeeNameDisplay');
-        if (payeeNameEl) payeeNameEl.innerText = window.activePayee || activeBusinessName;
+        if (payeeNameEl) payeeNameEl.innerText = targetName;
         
         const bubbleEl = document.getElementById('payeeInitialsBubble');
-        if (bubbleEl && (window.activePayee || activeBusinessName)) {
-            bubbleEl.innerText = (window.activePayee || activeBusinessName).substring(0, 2).toUpperCase();
-        }
+        if (bubbleEl) bubbleEl.innerText = targetName.substring(0, 2).toUpperCase();
         
         switchTab('payment');
     } else {
