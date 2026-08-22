@@ -324,7 +324,6 @@ function openCartSummary() {
         container.classList.remove('hidden', 'opacity-0');
     }
 
-    // Ocultar comercio y abrir cesta en primer plano
     const pubBizView = document.getElementById('view-public-business');
     if (pubBizView) pubBizView.classList.add('hidden');
 
@@ -365,13 +364,16 @@ function processCartChoice(action) {
     pendingOrderDetails = { date, time, action };
     isCartCheckout = true;
     
-    // Ocultar la vista de cesta
     const cartView = document.getElementById('view-cart');
     if (cartView) cartView.classList.add('hidden');
 
     if (action === 'pay') {
-        rawAmountString = Math.round(cartTotalValue * 100).toString(); 
-        if (typeof updateAmountDisplay === 'function') updateAmountDisplay();
+        // Enlazar de forma segura la variable global de precio
+        window.rawAmountString = Math.round(cartTotalValue * 100).toString(); 
+        
+        if (typeof window.updateAmountDisplay === 'function') {
+            window.updateAmountDisplay();
+        }
         
         const payeeNameEl = document.getElementById('payeeNameDisplay');
         if (payeeNameEl) payeeNameEl.innerText = activePayee;

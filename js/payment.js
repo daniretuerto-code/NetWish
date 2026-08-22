@@ -1,60 +1,56 @@
-let rawAmountString = "000";
+// Aseguramos que la variable de monto sea global para que `catalog-cart.js` pueda sobreescribirla
+window.rawAmountString = "000";
 let holdTimer = null;
 let holdProgress = 0;
 let isHolding = false;
 
 function appendNum(num) {
-    if (rawAmountString.length >= 8) return;
-    if (rawAmountString === "000" || rawAmountString === "0") {
-        rawAmountString = num;
+    if (window.rawAmountString.length >= 8) return;
+    if (window.rawAmountString === "000" || window.rawAmountString === "0") {
+        window.rawAmountString = num;
     } else {
-        rawAmountString += num;
+        window.rawAmountString += num;
     }
-    updateAmountDisplay();
+    window.updateAmountDisplay();
 }
 
 function clearNum() {
-    if (rawAmountString.length > 1) {
-        rawAmountString = rawAmountString.slice(0, -1);
+    if (window.rawAmountString.length > 1) {
+        window.rawAmountString = window.rawAmountString.slice(0, -1);
     } else {
-        rawAmountString = "0";
+        window.rawAmountString = "0";
     }
-    updateAmountDisplay();
+    window.updateAmountDisplay();
 }
 
-function updateAmountDisplay() {
+// Hacemos que la función también sea estrictamente global
+window.updateAmountDisplay = function() {
     const display = document.getElementById('payAmountDisplay');
     if (!display) return;
     
-    let val = parseInt(rawAmountString, 10) || 0;
+    let val = parseInt(window.rawAmountString, 10) || 0;
     let formatted = (val / 100).toLocaleString('es-ES', { 
         minimumFractionDigits: 2, 
         maximumFractionDigits: 2 
     });
     
     display.innerText = formatted;
-}
+};
 
-// --- GESTOR ROBUSTO DE EVENTOS DE RETENCIÓN (HOLD CONFIRM) ---
+// --- GESTOR ROBUSTO TÁCTIL Y DE RATÓN PARA MANTENER PARA CONFIRMAR ---
 function initHoldButton() {
     const btnContainer = document.getElementById('holdButtonContainer');
     if (!btnContainer) return;
 
-    // Limpieza de listeners previos
-    btnContainer.onpointerdown = null;
-    btnContainer.onpointerup = null;
-    btnContainer.onpointercancel = null;
-
-    btnContainer.addEventListener('pointerdown', (e) => {
-        const val = parseInt(rawAmountString, 10) || 0;
+    const startHold = (e) => {
+        // Prevenir scroll o selección de texto nativa
+        if (e.cancelable) e.preventDefault(); 
+        
+        const val = parseInt(window.rawAmountString, 10) || 0;
         if (val <= 0) {
             alert("Introduce un importe válido para continuar.");
             return;
         }
-
-        try {
-            btnContainer.setPointerCapture(e.pointerId);
-        } catch (err) {}
 
         isHolding = true;
         holdProgress = 0;
@@ -73,7 +69,7 @@ function initHoldButton() {
                 executeFullPayment(false);
             }
         }, 30);
-    });
+    };
 
     const stopHold = (e) => {
         if (!isHolding) return;
@@ -84,8 +80,12 @@ function initHoldButton() {
         if (progressBar) progressBar.style.width = '0%';
     };
 
-    btnContainer.addEventListener('pointerup', stopHold);
-    btnContainer.addEventListener('pointercancel', stopHold);
+    // Listeners universales e infalibles para móviles y PC
+    btnContainer.addEventListener('mousedown', startHold);
+    btnContainer.addEventListener('touchstart', startHold, { passive: false });
+    
+    window.addEventListener('mouseup', stopHold);
+    window.addEventListener('touchend', stopHold);
 }
 
 document.addEventListener('DOMContentLoaded', initHoldButton);
@@ -96,7 +96,7 @@ async function executeFullPayment(isReservation = false) {
     const modalContent = document.getElementById('modalContent');
     const modalBody = document.getElementById('modalBody');
 
-    let totalVal = isCartCheckout ? cartTotalValue : (parseInt(rawAmountString, 10) / 100);
+    let totalVal = isCartCheckout ? cartTotalValue : (parseInt(window.rawAmountString, 10) / 100);
     let itemsDesc = isCartCheckout 
         ? cartItemsList.map(i => `${i.qty}x ${i.name}`).join(', ') 
         : 'Pago Directo Terminal';
@@ -216,7 +216,7 @@ function finishPaymentFlow() {
         setTimeout(() => modal.classList.add('hidden'), 300);
     }
 
-    rawAmountString = "000";
+    window.rawAmountString = "000";
     cartItemsList = [];
     cartTotalValue = 0;
     cartItemCount = 0;
