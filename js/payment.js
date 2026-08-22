@@ -35,56 +35,62 @@ function updateAmountDisplay() {
     display.innerText = formatted;
 }
 
-// --- CONTROLADOR DEL BOTÓN MANTENER PARA CONFIRMAR ---
-function handleHoldStart(e) {
-    if (e) e.preventDefault();
-    const val = parseInt(rawAmountString, 10) || 0;
-    if (val <= 0) {
-        alert("Introduce un importe válido para continuar.");
-        return;
-    }
-
-    isHolding = true;
-    holdProgress = 0;
-    const progressBar = document.getElementById('progressBar');
-
-    clearInterval(holdTimer);
-    holdTimer = setInterval(() => {
-        if (!isHolding) return;
-        holdProgress += 4;
-        if (progressBar) progressBar.style.width = holdProgress + '%';
-
-        if (holdProgress >= 100) {
-            clearInterval(holdTimer);
-            isHolding = false;
-            executeFullPayment(false);
-        }
-    }, 30);
-}
-
-function handleHoldEnd() {
-    if (!isHolding) return;
-    isHolding = false;
-    clearInterval(holdTimer);
-    holdProgress = 0;
-    const progressBar = document.getElementById('progressBar');
-    if (progressBar) progressBar.style.width = '0%';
-}
-
-// Inicialización de eventos táctiles y de puntero
-function setupHoldButtonEvents() {
+// --- GESTOR ROBUSTO DE EVENTOS DE RETENCIÓN (HOLD CONFIRM) ---
+function initHoldButton() {
     const btnContainer = document.getElementById('holdButtonContainer');
     if (!btnContainer) return;
 
-    btnContainer.onpointerdown = handleHoldStart;
-    btnContainer.onpointerup = handleHoldEnd;
-    btnContainer.onpointerleave = handleHoldEnd;
-    btnContainer.onpointercancel = handleHoldEnd;
+    // Limpieza de listeners previos
+    btnContainer.onpointerdown = null;
+    btnContainer.onpointerup = null;
+    btnContainer.onpointercancel = null;
+
+    btnContainer.addEventListener('pointerdown', (e) => {
+        const val = parseInt(rawAmountString, 10) || 0;
+        if (val <= 0) {
+            alert("Introduce un importe válido para continuar.");
+            return;
+        }
+
+        try {
+            btnContainer.setPointerCapture(e.pointerId);
+        } catch (err) {}
+
+        isHolding = true;
+        holdProgress = 0;
+        const progressBar = document.getElementById('progressBar');
+
+        clearInterval(holdTimer);
+        holdTimer = setInterval(() => {
+            if (!isHolding) return;
+            holdProgress += 4;
+            if (progressBar) progressBar.style.width = holdProgress + '%';
+
+            if (holdProgress >= 100) {
+                clearInterval(holdTimer);
+                isHolding = false;
+                if (progressBar) progressBar.style.width = '0%';
+                executeFullPayment(false);
+            }
+        }, 30);
+    });
+
+    const stopHold = (e) => {
+        if (!isHolding) return;
+        isHolding = false;
+        clearInterval(holdTimer);
+        holdProgress = 0;
+        const progressBar = document.getElementById('progressBar');
+        if (progressBar) progressBar.style.width = '0%';
+    };
+
+    btnContainer.addEventListener('pointerup', stopHold);
+    btnContainer.addEventListener('pointercancel', stopHold);
 }
 
-document.addEventListener('DOMContentLoaded', setupHoldButtonEvents);
+document.addEventListener('DOMContentLoaded', initHoldButton);
 
-// --- EJECUCIÓN DEL PAGO / REGISTRO DEL PEDIDO ---
+// --- EJECUCIÓN DEL PAGO Y NOTIFICACIÓN DIRECTA POR WHATSAPP ---
 async function executeFullPayment(isReservation = false) {
     const modal = document.getElementById('customModal');
     const modalContent = document.getElementById('modalContent');
@@ -103,7 +109,7 @@ async function executeFullPayment(isReservation = false) {
     let orderTime = pendingOrderDetails?.time || "Inmediato";
     let statusText = isReservation ? 'Pendiente (Pago en local)' : 'Pagado Online';
 
-    // Inserción en Supabase
+    // Inserción de orden en Supabase
     try {
         const { error } = await supabaseClient
             .from('orders')
@@ -122,7 +128,7 @@ async function executeFullPayment(isReservation = false) {
         console.warn("Fallo inserción orden:", err);
     }
 
-    // Consulta de teléfono del comercio para WhatsApp
+    // Consulta de teléfono asociado al comercio
     let bizPhone = null;
     try {
         const { data } = await supabaseClient
@@ -135,10 +141,10 @@ async function executeFullPayment(isReservation = false) {
             bizPhone = data.phone || data.telefono;
         }
     } catch (e) {
-        console.warn("Consulta teléfono:", e);
+        console.warn("Consulta teléfono comercio:", e);
     }
 
-    // Preparación del enlace de WhatsApp
+    // Generar URL de WhatsApp si existe teléfono
     let waUrl = "";
     if (bizPhone) {
         let cleanPhone = bizPhone.replace(/\D/g, '');
@@ -158,7 +164,7 @@ async function executeFullPayment(isReservation = false) {
         waUrl = `https://wa.me/${cleanPhone}?text=${msgText}`;
     }
 
-    // Modal de confirmación
+    // Modal de confirmación de pedido
     if (modalBody) {
         modalBody.innerHTML = `
             <div class="text-center space-y-4 py-3">
