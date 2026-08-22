@@ -1,35 +1,34 @@
-// Variables globales explícitas para evitar bloqueos entre archivos
-window.activeBusinessName = "";
-window.activeBusinessCategory = "";
-window.isScheduleEnabled = true;
-window.currentPublicCatalogItems = [];
-window.currentlyPlayingAudio = null;
-window.currentPlayingBtnId = null;
+// Variables globales absolutas
+var activeBusinessName = "";
+var activeBusinessCategory = "";
+var isScheduleEnabled = true;
+var currentPublicCatalogItems = [];
+var currentlyPlayingAudio = null;
+var currentPlayingBtnId = null;
 
-// Variables globales del carrito
-window.cartItemsList = [];
-window.cartTotalValue = 0;
-window.cartItemCount = 0;
-window.isCartCheckout = false;
-window.pendingOrderDetails = null;
+var cartItemsList = [];
+var cartTotalValue = 0;
+var cartItemCount = 0;
+var isCartCheckout = false;
+var pendingOrderDetails = null;
 
 function openPublicBusiness(safeName, safeType) {
-    window.activeBusinessName = decodeURIComponent(safeName || '');
-    window.activeBusinessCategory = decodeURIComponent(safeType || '').toLowerCase();
-    window.activePayee = window.activeBusinessName;
+    activeBusinessName = decodeURIComponent(safeName || '');
+    activeBusinessCategory = decodeURIComponent(safeType || '').toLowerCase();
+    activePayee = activeBusinessName;
     
     stopCurrentAudio();
 
-    document.getElementById('publicBizName').innerText = window.activeBusinessName;
+    document.getElementById('publicBizName').innerText = activeBusinessName;
     const imgEl = document.getElementById('publicBizImage');
 
-    if (window.activeBusinessCategory.includes('disco') || window.activeBusinessCategory.includes('music') || window.activeBusinessCategory.includes('produ')) {
+    if (activeBusinessCategory.includes('disco') || activeBusinessCategory.includes('music') || activeBusinessCategory.includes('produ') || activeBusinessCategory.includes('estudio')) {
         imgEl.src = "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=800&q=80";
         document.getElementById('publicBizTag').innerText = "RECORD LABEL";
-    } else if (window.activeBusinessCategory.includes('pan') || window.activeBusinessCategory.includes('comercio')) {
+    } else if (activeBusinessCategory.includes('pan') || activeBusinessCategory.includes('comercio')) {
         imgEl.src = "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80";
         document.getElementById('publicBizTag').innerText = "Comercio Local";
-    } else if (window.activeBusinessCategory.includes('pel')) {
+    } else if (activeBusinessCategory.includes('pel')) {
         imgEl.src = "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=800&q=80";
         document.getElementById('publicBizTag').innerText = "Peluquería";
     } else {
@@ -37,10 +36,10 @@ function openPublicBusiness(safeName, safeType) {
         document.getElementById('publicBizTag').innerText = "Comercio";
     }
 
-    window.cartTotalValue = 0; 
-    window.cartItemCount = 0; 
-    window.cartItemsList = []; 
-    window.isCartCheckout = false;
+    cartTotalValue = 0; 
+    cartItemCount = 0; 
+    cartItemsList = []; 
+    isCartCheckout = false;
     
     updateCartDisplay();
     renderPublicCatalogItems();
@@ -66,7 +65,7 @@ async function renderPublicCatalogItems() {
         const { data, error } = await supabaseClient.from('products').select('*');
         if (error) throw error;
         
-        const cleanActiveName = window.activeBusinessName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const cleanActiveName = activeBusinessName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const activeTokens = cleanActiveName.split(/\s+/).filter(t => t.length > 2);
 
         items = (data || []).filter(item => {
@@ -79,7 +78,7 @@ async function renderPublicCatalogItems() {
         console.error("Error consultando Supabase:", err);
     }
 
-    window.currentPublicCatalogItems = items;
+    currentPublicCatalogItems = items;
 
     if (items.length === 0) {
         catalogEl.innerHTML = `
@@ -97,9 +96,9 @@ async function renderPublicCatalogItems() {
     items.forEach(item => {
         const price = parseFloat(item.price) || 0;
         const itemIdStr = String(item.id);
-        const existingInCart = window.cartItemsList.find(i => String(i.id) === itemIdStr);
+        const existingInCart = cartItemsList.find(i => String(i.id) === itemIdStr);
         const qty = existingInCart ? existingInCart.qty : 0;
-        const isMusic = window.activeBusinessCategory.includes('disco') || window.activeBusinessCategory.includes('music') || window.activeBusinessCategory.includes('produ');
+        const isMusic = activeBusinessCategory.includes('disco') || activeBusinessCategory.includes('music') || activeBusinessCategory.includes('produ');
         const hasAudio = Boolean(item.audio_url);
 
         const safeItemId = encodeURIComponent(itemIdStr);
@@ -148,8 +147,8 @@ function togglePlayPreview(encodedUrl, iconId) {
 
     const iconEl = document.getElementById(iconId);
 
-    if (window.currentlyPlayingAudio && window.currentlyPlayingAudio.src === url && !window.currentlyPlayingAudio.paused) {
-        window.currentlyPlayingAudio.pause();
+    if (currentlyPlayingAudio && currentlyPlayingAudio.src === url && !currentlyPlayingAudio.paused) {
+        currentlyPlayingAudio.pause();
         if (iconEl) {
             iconEl.setAttribute('data-lucide', 'play');
             iconEl.classList.add('ml-0.5');
@@ -160,8 +159,8 @@ function togglePlayPreview(encodedUrl, iconId) {
 
     stopCurrentAudio();
 
-    window.currentlyPlayingAudio = new Audio(url);
-    window.currentPlayingBtnId = iconId;
+    currentlyPlayingAudio = new Audio(url);
+    currentPlayingBtnId = iconId;
 
     if (iconEl) {
         iconEl.setAttribute('data-lucide', 'pause');
@@ -169,29 +168,29 @@ function togglePlayPreview(encodedUrl, iconId) {
         lucide.createIcons();
     }
 
-    window.currentlyPlayingAudio.play().catch(e => {
+    currentlyPlayingAudio.play().catch(e => {
         console.error("Error reproduciendo audio:", e);
         stopCurrentAudio();
     });
 
-    window.currentlyPlayingAudio.onended = () => {
+    currentlyPlayingAudio.onended = () => {
         stopCurrentAudio();
     };
 }
 
 function stopCurrentAudio() {
-    if (window.currentlyPlayingAudio) {
-        window.currentlyPlayingAudio.pause();
-        window.currentlyPlayingAudio = null;
+    if (currentlyPlayingAudio) {
+        currentlyPlayingAudio.pause();
+        currentlyPlayingAudio = null;
     }
-    if (window.currentPlayingBtnId) {
-        const iconEl = document.getElementById(window.currentPlayingBtnId);
+    if (currentPlayingBtnId) {
+        const iconEl = document.getElementById(currentPlayingBtnId);
         if (iconEl) {
             iconEl.setAttribute('data-lucide', 'play');
             iconEl.classList.add('ml-0.5');
             lucide.createIcons();
         }
-        window.currentPlayingBtnId = null;
+        currentPlayingBtnId = null;
     }
 }
 
@@ -225,23 +224,23 @@ function changeItemQuantity(encodedId, encodedName, price, delta) {
 
     const id = decodeURIComponent(encodedId);
     const name = decodeURIComponent(encodedName);
-    const existingIndex = window.cartItemsList.findIndex(i => String(i.id) === String(id));
+    const existingIndex = cartItemsList.findIndex(i => String(i.id) === String(id));
     let newQty = 0;
 
     if (existingIndex >= 0) {
-        window.cartItemsList[existingIndex].qty += delta;
-        newQty = window.cartItemsList[existingIndex].qty;
-        if (window.cartItemsList[existingIndex].qty <= 0) {
-            window.cartItemsList.splice(existingIndex, 1);
+        cartItemsList[existingIndex].qty += delta;
+        newQty = cartItemsList[existingIndex].qty;
+        if (cartItemsList[existingIndex].qty <= 0) {
+            cartItemsList.splice(existingIndex, 1);
             newQty = 0;
         }
     } else if (delta > 0) {
-        window.cartItemsList.push({ id: id, name: name, price: price, qty: 1 });
+        cartItemsList.push({ id: id, name: name, price: price, qty: 1 });
         newQty = 1;
     }
 
-    window.cartTotalValue = window.cartItemsList.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
-    window.cartItemCount = window.cartItemsList.reduce((acc, curr) => acc + curr.qty, 0);
+    cartTotalValue = cartItemsList.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
+    cartItemCount = cartItemsList.reduce((acc, curr) => acc + curr.qty, 0);
 
     updateCartDisplay();
 
@@ -256,11 +255,11 @@ function updateCartDisplay() {
     const cartBar = document.getElementById('publicBusinessCartBar');
     if (!cartBar) return;
     
-    if (window.cartItemCount > 0) {
+    if (cartItemCount > 0) {
         cartBar.classList.remove('translate-y-64', 'opacity-0', 'pointer-events-none');
         cartBar.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
-        document.getElementById('cartTotalDisplay').innerText = window.cartTotalValue.toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' €';
-        document.getElementById('cartCountDisplay').innerText = window.cartItemCount;
+        document.getElementById('cartTotalDisplay').innerText = cartTotalValue.toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' €';
+        document.getElementById('cartCountDisplay').innerText = cartItemCount;
     } else {
         cartBar.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
         cartBar.classList.add('translate-y-64', 'opacity-0', 'pointer-events-none');
@@ -268,14 +267,14 @@ function updateCartDisplay() {
 }
 
 function toggleScheduleSection() {
-    window.isScheduleEnabled = !window.isScheduleEnabled;
+    isScheduleEnabled = !isScheduleEnabled;
     const toggleBtn = document.getElementById('scheduleToggleBtn');
     const toggleKnob = document.getElementById('scheduleToggleKnob');
     const container = document.getElementById('scheduleInputsContainer');
 
     if (!toggleBtn || !toggleKnob || !container) return;
 
-    if (window.isScheduleEnabled) {
+    if (isScheduleEnabled) {
         toggleBtn.classList.remove('bg-neutral-200');
         toggleBtn.classList.add('bg-black');
         toggleKnob.classList.remove('translate-x-0');
@@ -291,12 +290,12 @@ function toggleScheduleSection() {
 }
 
 function openCartSummary() {
-    if (window.cartItemCount === 0) return;
+    if (cartItemCount === 0) return;
     
     stopCurrentAudio();
 
     let html = '';
-    window.cartItemsList.forEach(item => {
+    cartItemsList.forEach(item => {
         html += `
             <div class="flex justify-between items-center text-xs py-2.5 border-b border-neutral-100 last:border-0 text-black">
                 <div>
@@ -308,7 +307,7 @@ function openCartSummary() {
         `;
     });
     document.getElementById('cartItemsContainer').innerHTML = html;
-    document.getElementById('cartSummaryTotal').innerText = window.cartTotalValue.toLocaleString('es-ES', {minimumFractionDigits:2}) + ' €';
+    document.getElementById('cartSummaryTotal').innerText = cartTotalValue.toLocaleString('es-ES', {minimumFractionDigits:2}) + ' €';
     
     const today = new Date().toISOString().split('T')[0];
     const dateInput = document.getElementById('orderDate');
@@ -317,7 +316,7 @@ function openCartSummary() {
         dateInput.min = today;
     }
     
-    window.isScheduleEnabled = true;
+    isScheduleEnabled = true;
     const toggleBtn = document.getElementById('scheduleToggleBtn');
     const toggleKnob = document.getElementById('scheduleToggleKnob');
     const container = document.getElementById('scheduleInputsContainer');
@@ -351,12 +350,11 @@ function closeCartSummary() {
     updateCartDisplay();
 }
 
-// ESTA ES LA FUNCIÓN CLAVE QUE LANZA EL PAGO Y ACTUALIZA LA VARIABLE COMPARTIDA
 function processCartChoice(action) {
     let date = "Inmediato / Sin Cita";
     let time = "--:--";
 
-    if (window.isScheduleEnabled) {
+    if (isScheduleEnabled) {
         const d = document.getElementById('orderDate')?.value;
         const t = document.getElementById('orderTime')?.value;
         if (!d || !t) { 
@@ -367,26 +365,23 @@ function processCartChoice(action) {
         time = t;
     }
 
-    window.pendingOrderDetails = { date, time, action };
-    window.isCartCheckout = true;
+    pendingOrderDetails = { date, time, action };
+    isCartCheckout = true;
     
     const cartView = document.getElementById('view-cart');
     if (cartView) cartView.classList.add('hidden');
 
     if (action === 'pay') {
-        // Enlazar precio al teclado numérico de la pantalla de pago
-        window.rawAmountString = Math.round(window.cartTotalValue * 100).toString(); 
-        
-        if (typeof window.updateAmountDisplay === 'function') {
-            window.updateAmountDisplay();
-        }
+        // Enlazar precio al teclado numérico y actualizar visualmente la pantalla de pago
+        rawAmountString = Math.round(cartTotalValue * 100).toString(); 
+        if (typeof updateAmountDisplay === 'function') updateAmountDisplay();
         
         const payeeNameEl = document.getElementById('payeeNameDisplay');
-        if (payeeNameEl) payeeNameEl.innerText = window.activePayee || window.activeBusinessName;
+        if (payeeNameEl) payeeNameEl.innerText = activePayee || activeBusinessName;
         
         const bubbleEl = document.getElementById('payeeInitialsBubble');
-        if (bubbleEl && (window.activePayee || window.activeBusinessName)) {
-            bubbleEl.innerText = (window.activePayee || window.activeBusinessName).substring(0, 2).toUpperCase();
+        if (bubbleEl && (activePayee || activeBusinessName)) {
+            bubbleEl.innerText = (activePayee || activeBusinessName).substring(0, 2).toUpperCase();
         }
         
         switchTab('payment');

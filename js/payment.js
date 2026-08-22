@@ -1,39 +1,40 @@
-window.rawAmountString = "000";
-let holdTimer = null;
-let holdProgress = 0;
-let isHolding = false;
+// Variables globales de pago
+var rawAmountString = "000";
+var holdTimer = null;
+var holdProgress = 0;
+var isHolding = false;
 
 function appendNum(num) {
-    if (window.rawAmountString.length >= 8) return;
-    if (window.rawAmountString === "000" || window.rawAmountString === "0") {
-        window.rawAmountString = num;
+    if (rawAmountString.length >= 8) return;
+    if (rawAmountString === "000" || rawAmountString === "0") {
+        rawAmountString = num;
     } else {
-        window.rawAmountString += num;
+        rawAmountString += num;
     }
-    window.updateAmountDisplay();
+    updateAmountDisplay();
 }
 
 function clearNum() {
-    if (window.rawAmountString.length > 1) {
-        window.rawAmountString = window.rawAmountString.slice(0, -1);
+    if (rawAmountString.length > 1) {
+        rawAmountString = rawAmountString.slice(0, -1);
     } else {
-        window.rawAmountString = "0";
+        rawAmountString = "0";
     }
-    window.updateAmountDisplay();
+    updateAmountDisplay();
 }
 
-window.updateAmountDisplay = function() {
+function updateAmountDisplay() {
     const display = document.getElementById('payAmountDisplay');
     if (!display) return;
     
-    let val = parseInt(window.rawAmountString, 10) || 0;
+    let val = parseInt(rawAmountString, 10) || 0;
     let formatted = (val / 100).toLocaleString('es-ES', { 
         minimumFractionDigits: 2, 
         maximumFractionDigits: 2 
     });
     
     display.innerText = formatted;
-};
+}
 
 // --- GESTOR TÁCTIL UNIVERSAL A PRUEBA DE FALLOS ---
 function initHoldButton() {
@@ -41,10 +42,12 @@ function initHoldButton() {
     if (!btnContainer) return;
 
     const startHold = (e) => {
-        // No evitamos por defecto agresivamente para no bloquear scroll si el usuario falla el toque
-        const val = parseInt(window.rawAmountString, 10) || 0;
+        // Evita comportamientos nativos raros en Safari/Chrome de iOS/Android
+        if (e.cancelable) e.preventDefault(); 
+        
+        const val = parseInt(rawAmountString, 10) || 0;
         if (val <= 0) {
-            alert("Introduce un importe o añade productos al carrito para continuar.");
+            alert("Añade un importe válido o selecciona un producto para continuar.");
             return;
         }
 
@@ -55,14 +58,14 @@ function initHoldButton() {
         clearInterval(holdTimer);
         holdTimer = setInterval(() => {
             if (!isHolding) return;
-            holdProgress += 4; // Velocidad de llenado
+            holdProgress += 4; // Velocidad de carga de la barra
             if (progressBar) progressBar.style.width = holdProgress + '%';
 
             if (holdProgress >= 100) {
                 clearInterval(holdTimer);
                 isHolding = false;
                 if (progressBar) progressBar.style.width = '0%';
-                executeFullPayment(false);
+                executeFullPayment(false); // Ejecuta el pago y abre WhatsApp
             }
         }, 30);
     };
@@ -76,13 +79,14 @@ function initHoldButton() {
         if (progressBar) progressBar.style.width = '0%';
     };
 
-    // Combinación letal táctil + ratón
-    btnContainer.addEventListener('touchstart', startHold, { passive: true });
-    btnContainer.addEventListener('touchend', stopHold, { passive: true });
-    btnContainer.addEventListener('touchcancel', stopHold, { passive: true });
+    // Múltiples escuchadores para garantizar compatibilidad con pantallas táctiles y ratón
+    btnContainer.addEventListener('touchstart', startHold, { passive: false });
+    btnContainer.addEventListener('touchend', stopHold);
+    btnContainer.addEventListener('touchcancel', stopHold);
     
     btnContainer.addEventListener('mousedown', startHold);
     window.addEventListener('mouseup', stopHold);
+    btnContainer.addEventListener('mouseleave', stopHold);
 }
 
 document.addEventListener('DOMContentLoaded', initHoldButton);
@@ -93,23 +97,31 @@ async function executeFullPayment(isReservation = false) {
     const modalContent = document.getElementById('modalContent');
     const modalBody = document.getElementById('modalBody');
 
-    // Recuperar variables globales blindadas
-    let totalVal = window.isCartCheckout ? window.cartTotalValue : (parseInt(window.rawAmountString, 10) / 100);
-    
-    let itemsDesc = window.isCartCheckout && window.cartItemsList.length > 0
-        ? window.cartItemsList.map(i => `${i.qty}x ${i.name}`).join(', ') 
-        : 'Pago Directo Terminal / Sin Detalle';
+    // Recuperamos los datos de compra
+    let totalVal = typeof isCartCheckout !== 'undefined' && isCartCheckout 
+        ? cartTotalValue 
+        : (parseInt(rawAmountString, 10) / 100);
+        
+    let itemsDesc = typeof isCartCheckout !== 'undefined' && isCartCheckout && cartItemsList.length > 0
+        ? cartItemsList.map(i => `${i.qty}x ${i.name}`).join(', ') 
+        : 'Pago Directo en Terminal';
         
     let customerName = currentUser 
-        ? (currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email || 'Cliente') 
+        ? (currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email || 'Cliente Anónimo') 
         : 'Cliente Anónimo';
 
-    let orderDate = window.pendingOrderDetails?.date || new Date().toISOString().split('T')[0];
-    let orderTime = window.pendingOrderDetails?.time || "Inmediato";
+    let orderDate = (typeof pendingOrderDetails !== 'undefined' && pendingOrderDetails?.date) 
+        ? pendingOrderDetails.date 
+        : new Date().toISOString().split('T')[0];
+        
+    let orderTime = (typeof pendingOrderDetails !== 'undefined' && pendingOrderDetails?.time) 
+        ? pendingOrderDetails.time 
+        : "Inmediato";
+        
     let statusText = isReservation ? 'Pendiente (Pago en local)' : 'Pagado Online';
-    let targetBusiness = window.activePayee || window.activeBusinessName || 'Comercio Desconocido';
+    let targetBusiness = (typeof activePayee !== 'undefined' && activePayee) ? activePayee : 'Comercio Local';
 
-    // 1. Guardar en Supabase
+    // 1. Guardar el pedido en Supabase Orders
     try {
         const { error } = await supabaseClient
             .from('orders')
@@ -128,7 +140,7 @@ async function executeFullPayment(isReservation = false) {
         console.warn("Fallo inserción orden:", err);
     }
 
-    // 2. Buscar el teléfono del negocio en la BD
+    // 2. Buscar el teléfono del negocio en la Base de Datos
     let bizPhone = null;
     try {
         const { data } = await supabaseClient
@@ -144,12 +156,12 @@ async function executeFullPayment(isReservation = false) {
         console.warn("Consulta teléfono comercio falló:", e);
     }
 
-    // 3. Crear el Link de WhatsApp
+    // 3. Crear el Enlace Directo a WhatsApp
     let waUrl = "";
     if (bizPhone) {
         let cleanPhone = bizPhone.replace(/\D/g, '');
         if (!cleanPhone.startsWith('34') && cleanPhone.length === 9) {
-            cleanPhone = '34' + cleanPhone; // Forzar prefijo de España
+            cleanPhone = '34' + cleanPhone; // Forzar prefijo de España +34
         }
 
         const msgText = encodeURIComponent(
@@ -164,7 +176,7 @@ async function executeFullPayment(isReservation = false) {
         waUrl = `https://wa.me/${cleanPhone}?text=${msgText}`;
     }
 
-    // 4. Mostrar confirmación en pantalla
+    // 4. Mostrar confirmación en pantalla con el Botón de WhatsApp
     if (modalBody) {
         modalBody.innerHTML = `
             <div class="text-center space-y-4 py-3">
@@ -183,7 +195,7 @@ async function executeFullPayment(isReservation = false) {
                 </div>
 
                 ${waUrl ? `
-                    <a href="${waUrl}" target="_blank" class="w-full py-3.5 bg-emerald-600 text-white font-bold rounded-2xl text-xs shadow-md flex items-center justify-center space-x-2 active:scale-95 transition">
+                    <a href="${waUrl}" target="_blank" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl text-xs shadow-md flex items-center justify-center space-x-2 active:scale-95 transition">
                         <i data-lucide="message-circle" class="w-4 h-4"></i>
                         <span>Avisar por WhatsApp</span>
                     </a>
@@ -216,13 +228,13 @@ function finishPaymentFlow() {
         setTimeout(() => modal.classList.add('hidden'), 300);
     }
 
-    // Resetear todas las variables a su estado original
-    window.rawAmountString = "000";
-    window.cartItemsList = [];
-    window.cartTotalValue = 0;
-    window.cartItemCount = 0;
-    window.isCartCheckout = false;
-    window.pendingOrderDetails = null;
+    // Limpiar formulario y cesta
+    rawAmountString = "000";
+    if (typeof cartItemsList !== 'undefined') cartItemsList = [];
+    if (typeof cartTotalValue !== 'undefined') cartTotalValue = 0;
+    if (typeof cartItemCount !== 'undefined') cartItemCount = 0;
+    if (typeof isCartCheckout !== 'undefined') isCartCheckout = false;
+    if (typeof pendingOrderDetails !== 'undefined') pendingOrderDetails = null;
 
     const progressBar = document.getElementById('progressBar');
     if (progressBar) progressBar.style.width = '0%';
