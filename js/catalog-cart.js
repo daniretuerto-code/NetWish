@@ -1,4 +1,3 @@
-// Usamos el objeto 'window' para no chocar con ninguna otra variable de tu proyecto
 window.appState = window.appState || {};
 window.appState.activeBusinessName = "";
 window.appState.activeBusinessCategory = "";
@@ -369,9 +368,8 @@ function processCartChoice(action) {
     if (cartView) cartView.classList.add('hidden');
 
     if (action === 'pay') {
-        // Le pasamos el precio directamente al motor de pagos global
+        // Enlazar precio al teclado numérico
         window.rawAmountString = Math.round(window.appState.cartTotalValue * 100).toString(); 
-        
         if (typeof window.updateAmountDisplay === 'function') {
             window.updateAmountDisplay();
         }

@@ -113,7 +113,7 @@ window.executeFullPayment = async function(isReservation = false) {
             : 'Pago Directo Terminal';
             
         let customerName = (typeof currentUser !== 'undefined' && currentUser) 
-            ? (currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email || 'Cliente') 
+            ? (currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email || 'Cliente Anónimo') 
             : 'Cliente Anónimo';
 
         let orderDate = pDetails?.date || new Date().toISOString().split('T')[0];
@@ -137,17 +137,20 @@ window.executeFullPayment = async function(isReservation = false) {
             console.warn("Fallo guardando en BD:", err);
         }
 
-        // 2. Buscar Teléfono del Negocio
+        // 2. Buscar Teléfono del Negocio (Corrección de consulta: select('*') evita errores si falta 'phone')
         let bizPhone = null;
         try {
             if (typeof supabaseClient !== 'undefined') {
-                const { data } = await supabaseClient
+                const { data, error } = await supabaseClient
                     .from('businesses')
-                    .select('phone, telefono')
+                    .select('*')
                     .ilike('name', `%${tBusiness}%`)
                     .maybeSingle();
 
-                if (data) bizPhone = data.phone || data.telefono;
+                if (error) throw error;
+                if (data) {
+                    bizPhone = data.telefono || data.phone || null;
+                }
             }
         } catch (e) {
             console.warn("Fallo buscando teléfono:", e);
@@ -156,7 +159,7 @@ window.executeFullPayment = async function(isReservation = false) {
         // 3. Crear el enlace de WhatsApp
         let waUrl = "";
         if (bizPhone) {
-            let cleanPhone = bizPhone.replace(/\D/g, '');
+            let cleanPhone = String(bizPhone).replace(/\D/g, '');
             if (!cleanPhone.startsWith('34') && cleanPhone.length === 9) {
                 cleanPhone = '34' + cleanPhone; 
             }
