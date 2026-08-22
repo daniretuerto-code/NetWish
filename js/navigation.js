@@ -70,7 +70,6 @@ function switchTab(tabId) {
             payView.classList.remove('hidden');
             payView.scrollTop = 0;
         }
-        // Ocultar barra inferior en modo pago para maximizar espacio
         if (personalNav) personalNav.classList.add('hidden');
         if (bizNav) bizNav.classList.add('hidden');
     } else if (tabId === 'cart') {
@@ -87,7 +86,7 @@ function switchTab(tabId) {
         }
     }
 
-    // 4. Adaptación de la cabecera (Centrado de logo y ocultación del avatar en perfil)
+    // 4. Adaptación de la cabecera
     updateHeaderLayout(tabId);
 
     // 5. Refresco dinámico de iconos Lucide
@@ -102,11 +101,9 @@ function closePaymentView() {
     if (payView) payView.classList.add('hidden');
 
     if (isCartCheckout) {
-        // Si venía de una compra en catálogo, volver a la cesta
         const cartView = document.getElementById('view-cart');
         if (cartView) cartView.classList.remove('hidden');
     } else {
-        // Restaurar barra de navegación
         switchTab(currentBusiness ? 'business-dashboard' : 'explore');
     }
 }
@@ -185,10 +182,11 @@ function updateActiveBizNavButton(activeId) {
     });
 }
 
-// --- ESCUCHADORES DE SCROLL SNAP E INERCIA TÁCTIL ---
+// --- ESCUCHADORES DE SCROLL SNAP E INERCIA TÁCTIL (INCLUYE SWIPE BACK) ---
 document.addEventListener('DOMContentLoaded', () => {
     const userWrapper = document.getElementById('userScrollWrapper');
     const bizWrapper = document.getElementById('bizScrollWrapper');
+    const pubBizView = document.getElementById('view-public-business');
 
     if (userWrapper) {
         userWrapper.addEventListener('scroll', () => {
@@ -214,6 +212,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }, { passive: true });
     }
 
+    // Detector de gesto Swipe Back en la vista del negocio
+    if (pubBizView) {
+        let startX = 0;
+        let startY = 0;
+
+        pubBizView.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+        }, { passive: true });
+
+        pubBizView.addEventListener('touchend', (e) => {
+            const endX = e.changedTouches[0].clientX;
+            const endY = e.changedTouches[0].clientY;
+            const diffX = endX - startX;
+            const diffY = Math.abs(endY - startY);
+
+            // Si el usuario desliza de izquierda a derecha (más de 65px horizontal y menos de 75px vertical)
+            if (startX < 80 && diffX > 65 && diffY < 75) {
+                goBackFromBusiness();
+            }
+        }, { passive: true });
+    }
+
     updateHeaderLayout(activeTab || 'home');
 });
 
@@ -235,7 +256,7 @@ function goBackFromBusiness() {
     switchTab('explore');
 }
 
-// --- ACTUALIZACIÓN REACTIVA DEL AVATAR DEL HEADER (FOTO GOOGLE / BIZ / TEXTO) ---
+// --- ACTUALIZACIÓN REACTIVA DEL AVATAR DEL HEADER ---
 function updateHeaderAvatar() {
     const avatarBtn = document.getElementById('headerAvatar');
     if (!avatarBtn) return;
