@@ -22,7 +22,7 @@ function switchTab(tabId) {
         });
     }
 
-    // 2. Comprobación y alternancia de wrappers según el modo (Comercio o Usuario)
+    // 2. Alternancia de wrappers y barras según el modo
     if (currentBusiness) {
         if (personalNav) personalNav.classList.add('hidden');
         if (bizNav) bizNav.classList.remove('hidden');
@@ -57,7 +57,7 @@ function switchTab(tabId) {
         }
     }
 
-    // 3. Manejo de vistas modulares y submenús flotantes
+    // 3. Manejo de vistas flotantes
     if (tabId === 'category') {
         const catView = document.getElementById('view-category');
         if (catView) {
@@ -89,7 +89,7 @@ function switchTab(tabId) {
     // 4. Adaptación de la cabecera
     updateHeaderLayout(tabId);
 
-    // 5. Refresco dinámico de iconos Lucide
+    // 5. Refresco de iconos
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
     }
@@ -182,7 +182,7 @@ function updateActiveBizNavButton(activeId) {
     });
 }
 
-// --- ESCUCHADORES DE SCROLL SNAP E INERCIA TÁCTIL (INCLUYE SWIPE BACK) ---
+// --- ESCUCHADORES DE SCROLL SNAP E INERCIA TÁCTIL (INCLUYE SWIPE BACK GLOBAL) ---
 document.addEventListener('DOMContentLoaded', () => {
     const userWrapper = document.getElementById('userScrollWrapper');
     const bizWrapper = document.getElementById('bizScrollWrapper');
@@ -212,24 +212,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }, { passive: true });
     }
 
-    // Detector de gesto Swipe Back en la vista del negocio
+    // Detector de gesto Swipe Back en cualquier punto de la vista de negocio
     if (pubBizView) {
-        let startX = 0;
-        let startY = 0;
+        let touchStartX = 0;
+        let touchStartY = 0;
 
         pubBizView.addEventListener('touchstart', (e) => {
-            startX = e.touches[0].clientX;
-            startY = e.touches[0].clientY;
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
         }, { passive: true });
 
         pubBizView.addEventListener('touchend', (e) => {
-            const endX = e.changedTouches[0].clientX;
-            const endY = e.changedTouches[0].clientY;
-            const diffX = endX - startX;
-            const diffY = Math.abs(endY - startY);
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = Math.abs(touchEndY - touchStartY);
 
-            // Si el usuario desliza de izquierda a derecha (más de 65px horizontal y menos de 75px vertical)
-            if (startX < 80 && diffX > 65 && diffY < 75) {
+            // Deslizamiento horizontal de izquierda a derecha mayor a 60px
+            if (deltaX > 60 && deltaY < 80) {
                 goBackFromBusiness();
             }
         }, { passive: true });

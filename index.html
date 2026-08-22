@@ -18,7 +18,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <link rel="stylesheet" href="css/styles.css?v=20">
+    <link rel="stylesheet" href="css/styles.css?v=21">
 </head>
 <body>
 
@@ -207,54 +207,54 @@
                 <div id="dynamicCategoryList" class="space-y-3 pt-2 pb-6"></div>
             </div>
 
-            <!-- VISTA DE PAGO / TERMINAL ADAPTADA CON PROPORCIONES EXACTAS -->
-            <div id="view-payment" class="absolute inset-0 bg-white z-50 hidden flex-col justify-between px-6 pt-4 pb-6">
-                <!-- Cabecera -->
+            <!-- VISTA DE PAGO EQUILIBRADA Y BIEN PROPORCIONADA -->
+            <div id="view-payment" class="absolute inset-0 bg-white z-50 hidden flex-col justify-between px-6 pt-6 pb-8">
+                <!-- Cabecera y Estado -->
                 <div class="flex items-center justify-between shrink-0">
                     <button onclick="closePaymentView()" class="w-10 h-10 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-black hover:bg-neutral-200 transition active:scale-95">
                         <i data-lucide="arrow-left" class="w-5 h-5"></i>
                     </button>
-                    <div class="flex items-center space-x-2 px-3.5 py-1 bg-emerald-50 border border-emerald-200/60 rounded-full">
+                    <div class="flex items-center space-x-2 px-3.5 py-1.5 bg-emerald-50 border border-emerald-200/60 rounded-full">
                         <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
                         <span class="text-[9px] font-bold text-emerald-700 uppercase tracking-widest">Conectado</span>
                     </div>
                     <div class="w-10"></div>
                 </div>
 
-                <!-- Destinatario e Importe -->
-                <div class="flex flex-col items-center justify-center space-y-2 shrink-0">
-                    <div class="w-12 h-12 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-md text-xs font-bold" id="payeeInitialsBubble">NW</div>
+                <!-- Receptor e Importe -->
+                <div class="flex flex-col items-center space-y-3 my-auto shrink-0">
+                    <div class="w-16 h-16 rounded-3xl bg-neutral-900 text-white flex items-center justify-center shadow-lg text-base font-bold" id="payeeInitialsBubble">NW</div>
                     <div class="text-center">
                         <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">Enviando a</span>
-                        <h2 id="payeeNameDisplay" class="text-sm font-bold text-black tracking-tight truncate max-w-[280px]">Destinatario</h2>
+                        <h2 id="payeeNameDisplay" class="text-lg font-bold text-black tracking-tight mt-0.5 truncate max-w-[280px]">Destinatario</h2>
                     </div>
                     
-                    <div class="w-full max-w-[320px] text-center py-2.5 bg-neutral-50/90 rounded-[24px] border border-neutral-200/85 shadow-sm">
-                        <div class="flex items-center justify-center space-x-1">
-                            <span class="text-xl font-light text-neutral-400">€</span>
-                            <span id="payAmountDisplay" class="text-4xl font-extrabold tracking-tight text-black">0,00</span>
+                    <div class="w-full max-w-[320px] text-center py-4 bg-neutral-50/90 rounded-[28px] border border-neutral-200/85 shadow-sm">
+                        <div class="flex items-center justify-center space-x-1.5">
+                            <span class="text-3xl font-light text-neutral-400">€</span>
+                            <span id="payAmountDisplay" class="text-5xl font-extrabold tracking-tight text-black">0,00</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Bloque Inferior: Teclado y Botón con Separación -->
-                <div class="w-full max-w-[310px] mx-auto flex flex-col space-y-3 shrink-0">
-                    <div class="grid grid-cols-3 gap-2 w-full">
-                        <button onclick="appendNum('1')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-sm">1</button>
-                        <button onclick="appendNum('2')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-sm">2</button>
-                        <button onclick="appendNum('3')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-sm">3</button>
-                        <button onclick="appendNum('4')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-sm">4</button>
-                        <button onclick="appendNum('5')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-sm">5</button>
-                        <button onclick="appendNum('6')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-sm">6</button>
-                        <button onclick="appendNum('7')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-sm">7</button>
-                        <button onclick="appendNum('8')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-sm">8</button>
-                        <button onclick="appendNum('9')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-sm">9</button>
-                        <button onclick="appendNum('00')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-sm">00</button>
-                        <button onclick="appendNum('0')" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-black transition active:scale-95 shadow-sm">0</button>
-                        <button onclick="clearNum()" class="py-2.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-lg font-semibold text-rose-600 transition active:scale-95 shadow-sm flex items-center justify-center"><i data-lucide="delete" class="w-5 h-5"></i></button>
+                <!-- Teclado Numérico y Botón de Confirmación -->
+                <div class="w-full max-w-[320px] mx-auto flex flex-col space-y-4 shrink-0">
+                    <div class="grid grid-cols-3 gap-2.5 w-full">
+                        <button onclick="appendNum('1')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">1</button>
+                        <button onclick="appendNum('2')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">2</button>
+                        <button onclick="appendNum('3')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">3</button>
+                        <button onclick="appendNum('4')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">4</button>
+                        <button onclick="appendNum('5')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">5</button>
+                        <button onclick="appendNum('6')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">6</button>
+                        <button onclick="appendNum('7')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">7</button>
+                        <button onclick="appendNum('8')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">8</button>
+                        <button onclick="appendNum('9')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">9</button>
+                        <button onclick="appendNum('00')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">00</button>
+                        <button onclick="appendNum('0')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">0</button>
+                        <button onclick="clearNum()" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-rose-600 transition active:scale-95 shadow-sm flex items-center justify-center"><i data-lucide="delete" class="w-6 h-6"></i></button>
                     </div>
 
-                    <div id="holdButtonContainer" class="relative w-full h-13 bg-black rounded-2xl overflow-hidden shadow-2xl select-none touch-none cursor-pointer flex items-center justify-center">
+                    <div id="holdButtonContainer" class="relative w-full h-16 bg-black rounded-2xl overflow-hidden shadow-2xl select-none touch-none cursor-pointer flex items-center justify-center">
                         <div id="progressBar" class="absolute top-0 left-0 bottom-0 w-0 bg-emerald-500 transition-all duration-100 ease-out pointer-events-none"></div>
                         <span class="relative z-10 text-white font-bold text-xs tracking-widest uppercase pointer-events-none">MANTENER PARA CONFIRMAR</span>
                     </div>
@@ -314,7 +314,7 @@
                 </div>
             </div>
 
-            <!-- VISTA PÚBLICA DEL COMERCIO CON SOPORTE SWIPE BACK -->
+            <!-- VISTA PÚBLICA DEL COMERCIO -->
             <div id="view-public-business" class="absolute inset-0 bg-white z-30 hidden flex-col allow-scroll pb-28">
                 <div class="relative w-full h-[240px] bg-neutral-200 shrink-0">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent z-10"></div>
@@ -381,14 +381,14 @@
     </div>
 
     <!-- SCRIPTS MODULARES ACTUALIZADOS -->
-    <script src="js/config.js?v=20"></script>
-    <script src="js/navigation.js?v=20"></script>
-    <script src="js/auth.js?v=20"></script>
-    <script src="js/directory.js?v=20"></script>
-    <script src="js/catalog-cart.js?v=20"></script>
-    <script src="js/dashboard.js?v=20"></script>
-    <script src="js/scanner.js?v=20"></script>
-    <script src="js/payment.js?v=20"></script>
+    <script src="js/config.js?v=21"></script>
+    <script src="js/navigation.js?v=21"></script>
+    <script src="js/auth.js?v=21"></script>
+    <script src="js/directory.js?v=21"></script>
+    <script src="js/catalog-cart.js?v=21"></script>
+    <script src="js/dashboard.js?v=21"></script>
+    <script src="js/scanner.js?v=21"></script>
+    <script src="js/payment.js?v=21"></script>
 
 </body>
 </html>
