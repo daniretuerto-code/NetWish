@@ -10,7 +10,6 @@ function openPublicBusiness(safeName, safeType) {
     activeBusinessCategory = decodeURIComponent(safeType || '').toLowerCase();
     activePayee = activeBusinessName;
     
-    // Detener reproducción si había audio en curso
     stopCurrentAudio();
 
     document.getElementById('publicBizName').innerText = activeBusinessName;
@@ -138,14 +137,12 @@ async function renderPublicCatalogItems() {
     lucide.createIcons();
 }
 
-// --- CONTROLADOR DE AUDIO PREVIEW ---
 function togglePlayPreview(encodedUrl, iconId) {
     const url = decodeURIComponent(encodedUrl);
     if (!url) return;
 
     const iconEl = document.getElementById(iconId);
 
-    // Si ya se está reproduciendo el mismo audio, pausar
     if (currentlyPlayingAudio && currentlyPlayingAudio.src === url && !currentlyPlayingAudio.paused) {
         currentlyPlayingAudio.pause();
         if (iconEl) {
@@ -156,10 +153,8 @@ function togglePlayPreview(encodedUrl, iconId) {
         return;
     }
 
-    // Detener cualquier audio anterior
     stopCurrentAudio();
 
-    // Iniciar nuevo audio
     currentlyPlayingAudio = new Audio(url);
     currentPlayingBtnId = iconId;
 
@@ -255,12 +250,15 @@ function changeItemQuantity(encodedId, encodedName, price, delta) {
 function updateCartDisplay() {
     const cartBar = document.getElementById('publicBusinessCartBar');
     if (!cartBar) return;
+    
     if (cartItemCount > 0) {
-        cartBar.classList.remove('translate-y-32');
+        cartBar.classList.remove('translate-y-64', 'opacity-0', 'pointer-events-none');
+        cartBar.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
         document.getElementById('cartTotalDisplay').innerText = cartTotalValue.toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' €';
         document.getElementById('cartCountDisplay').innerText = cartItemCount;
     } else {
-        cartBar.classList.add('translate-y-32');
+        cartBar.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+        cartBar.classList.add('translate-y-64', 'opacity-0', 'pointer-events-none');
     }
 }
 
@@ -290,7 +288,6 @@ function toggleScheduleSection() {
 function openCartSummary() {
     if (cartItemCount === 0) return;
     
-    // Detener preview al ir a pagar
     stopCurrentAudio();
 
     let html = '';
@@ -327,7 +324,12 @@ function openCartSummary() {
         container.classList.remove('hidden', 'opacity-0');
     }
 
-    document.getElementById('publicBusinessCartBar').classList.add('translate-y-32');
+    // Ocultar barra flotante al entrar al checkout
+    const cartBar = document.getElementById('publicBusinessCartBar');
+    if (cartBar) {
+        cartBar.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+        cartBar.classList.add('translate-y-64', 'opacity-0', 'pointer-events-none');
+    }
     
     if (typeof swipeAnim !== 'undefined') swipeAnim = 'slide-in-right';
     switchTab('cart');

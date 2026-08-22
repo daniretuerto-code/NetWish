@@ -18,7 +18,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <link rel="stylesheet" href="css/styles.css?v=16">
+    <link rel="stylesheet" href="css/styles.css?v=17">
 </head>
 <body>
 
@@ -251,7 +251,8 @@
                 </div>
             </div>
 
-            <div id="view-cart" class="absolute inset-0 bg-white z-20 hidden flex-col allow-scroll px-6 pt-20 pb-28 space-y-5">
+            <!-- VISTA CESTA CON Z-40 PARA SUPERPONERSE CORRECTAMENTE -->
+            <div id="view-cart" class="absolute inset-0 bg-white z-40 hidden flex-col allow-scroll px-6 pt-20 pb-28 space-y-5">
                 <div class="flex items-center px-1">
                     <button onclick="switchTab('public-business')" class="w-10 h-10 rounded-2xl bg-neutral-100 flex items-center justify-center text-black active:scale-95 transition">
                         <i data-lucide="arrow-left" class="w-5 h-5"></i>
@@ -303,7 +304,8 @@
                 </div>
             </div>
 
-            <div id="view-public-business" class="absolute inset-0 bg-white z-30 hidden flex-col allow-scroll pb-24">
+            <!-- VISTA PÚBLICA DEL COMERCIO -->
+            <div id="view-public-business" class="absolute inset-0 bg-white z-30 hidden flex-col allow-scroll pb-28">
                 <div class="relative w-full h-[240px] bg-neutral-200 shrink-0">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent z-10"></div>
                     <img id="publicBizImage" src="https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80" alt="Comercio" class="w-full h-full object-cover">
@@ -332,9 +334,9 @@
                     <div class="space-y-4" id="publicBizCatalog"></div>
                 </div>
 
-                <!-- BARRA DE CESTA AJUSTADA EN BOTTOM-24 PARA NO SOLAPAR EL MENÚ INFERIOR -->
-                <div id="publicBusinessCartBar" class="absolute bottom-24 left-6 right-6 z-50 transition-transform translate-y-32">
-                    <button onclick="openCartSummary()" class="w-full bg-black text-white p-4 rounded-2xl flex justify-between items-center shadow-[0_20px_40px_rgba(0,0,0,0.3)] active:scale-95 transition-transform">
+                <!-- BARRA FLOTANTE DE CESTA -->
+                <div id="publicBusinessCartBar" class="absolute bottom-24 left-6 right-6 z-50 transition-all duration-300 transform translate-y-64 opacity-0 pointer-events-none">
+                    <button onclick="openCartSummary()" class="w-full bg-black text-white p-4 rounded-2xl flex justify-between items-center shadow-[0_20px_40px_rgba(0,0,0,0.35)] active:scale-95 transition-transform">
                         <div class="flex items-center space-x-3">
                             <div class="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center text-xs font-bold" id="cartCountDisplay">0</div>
                             <span class="text-xs font-bold tracking-widest uppercase">Ver Cesta</span>
@@ -369,14 +371,14 @@
     </div>
 
     <!-- SCRIPTS MODULARES ACTUALIZADOS -->
-    <script src="js/config.js?v=16"></script>
-    <script src="js/navigation.js?v=16"></script>
-    <script src="js/auth.js?v=16"></script>
-    <script src="js/directory.js?v=16"></script>
-    <script src="js/catalog-cart.js?v=16"></script>
-    <script src="js/dashboard.js?v=16"></script>
-    <script src="js/scanner.js?v=16"></script>
-    <script src="js/payment.js?v=16"></script>
+    <script src="js/config.js?v=17"></script>
+    <script src="js/navigation.js?v=17"></script>
+    <script src="js/auth.js?v=17"></script>
+    <script src="js/directory.js?v=17"></script>
+    <script src="js/catalog-cart.js?v=17"></script>
+    <script src="js/dashboard.js?v=17"></script>
+    <script src="js/scanner.js?v=17"></script>
+    <script src="js/payment.js?v=17"></script>
 
 </body>
 </html>
