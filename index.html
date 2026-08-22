@@ -18,7 +18,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <link rel="stylesheet" href="css/styles.css?v=21">
+    <link rel="stylesheet" href="css/styles.css?v=22">
 </head>
 <body>
 
@@ -207,9 +207,9 @@
                 <div id="dynamicCategoryList" class="space-y-3 pt-2 pb-6"></div>
             </div>
 
-            <!-- VISTA DE PAGO EQUILIBRADA Y BIEN PROPORCIONADA -->
-            <div id="view-payment" class="absolute inset-0 bg-white z-50 hidden flex-col justify-between px-6 pt-6 pb-8">
-                <!-- Cabecera y Estado -->
+            <!-- VISTA DE PAGO CON ESTRUCTURA VERTICAL PERFECTAMENTE PROPORCIONADA -->
+            <div id="view-payment" class="absolute inset-0 bg-white z-50 hidden flex-col justify-between px-6 pt-6 pb-10">
+                <!-- Cabecera -->
                 <div class="flex items-center justify-between shrink-0">
                     <button onclick="closePaymentView()" class="w-10 h-10 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-black hover:bg-neutral-200 transition active:scale-95">
                         <i data-lucide="arrow-left" class="w-5 h-5"></i>
@@ -222,7 +222,7 @@
                 </div>
 
                 <!-- Receptor e Importe -->
-                <div class="flex flex-col items-center space-y-3 my-auto shrink-0">
+                <div class="flex flex-col items-center space-y-3 shrink-0 pt-2">
                     <div class="w-16 h-16 rounded-3xl bg-neutral-900 text-white flex items-center justify-center shadow-lg text-base font-bold" id="payeeInitialsBubble">NW</div>
                     <div class="text-center">
                         <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">Enviando a</span>
@@ -237,8 +237,8 @@
                     </div>
                 </div>
 
-                <!-- Teclado Numérico y Botón de Confirmación -->
-                <div class="w-full max-w-[320px] mx-auto flex flex-col space-y-4 shrink-0">
+                <!-- Bloque Inferior con Separación Óptima y Mayor Presencia -->
+                <div class="w-full max-w-[320px] mx-auto flex flex-col space-y-6 mt-auto shrink-0">
                     <div class="grid grid-cols-3 gap-2.5 w-full">
                         <button onclick="appendNum('1')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">1</button>
                         <button onclick="appendNum('2')" class="py-3.5 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">2</button>
@@ -381,14 +381,14 @@
     </div>
 
     <!-- SCRIPTS MODULARES ACTUALIZADOS -->
-    <script src="js/config.js?v=21"></script>
-    <script src="js/navigation.js?v=21"></script>
-    <script src="js/auth.js?v=21"></script>
-    <script src="js/directory.js?v=21"></script>
-    <script src="js/catalog-cart.js?v=21"></script>
-    <script src="js/dashboard.js?v=21"></script>
-    <script src="js/scanner.js?v=21"></script>
-    <script src="js/payment.js?v=21"></script>
+    <script src="js/config.js?v=22"></script>
+    <script src="js/navigation.js?v=22"></script>
+    <script src="js/auth.js?v=22"></script>
+    <script src="js/directory.js?v=22"></script>
+    <script src="js/catalog-cart.js?v=22"></script>
+    <script src="js/dashboard.js?v=22"></script>
+    <script src="js/scanner.js?v=22"></script>
+    <script src="js/payment.js?v=22"></script>
 
 </body>
 </html>
