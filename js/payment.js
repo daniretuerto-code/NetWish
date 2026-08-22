@@ -1,4 +1,3 @@
-// Aseguramos que la variable de monto sea global para que `catalog-cart.js` pueda sobreescribirla
 window.rawAmountString = "000";
 let holdTimer = null;
 let holdProgress = 0;
@@ -23,7 +22,6 @@ function clearNum() {
     window.updateAmountDisplay();
 }
 
-// Hacemos que la función también sea estrictamente global
 window.updateAmountDisplay = function() {
     const display = document.getElementById('payAmountDisplay');
     if (!display) return;
@@ -37,18 +35,16 @@ window.updateAmountDisplay = function() {
     display.innerText = formatted;
 };
 
-// --- GESTOR ROBUSTO TÁCTIL Y DE RATÓN PARA MANTENER PARA CONFIRMAR ---
+// --- GESTOR TÁCTIL UNIVERSAL A PRUEBA DE FALLOS ---
 function initHoldButton() {
     const btnContainer = document.getElementById('holdButtonContainer');
     if (!btnContainer) return;
 
     const startHold = (e) => {
-        // Prevenir scroll o selección de texto nativa
-        if (e.cancelable) e.preventDefault(); 
-        
+        // No evitamos por defecto agresivamente para no bloquear scroll si el usuario falla el toque
         const val = parseInt(window.rawAmountString, 10) || 0;
         if (val <= 0) {
-            alert("Introduce un importe válido para continuar.");
+            alert("Introduce un importe o añade productos al carrito para continuar.");
             return;
         }
 
@@ -59,7 +55,7 @@ function initHoldButton() {
         clearInterval(holdTimer);
         holdTimer = setInterval(() => {
             if (!isHolding) return;
-            holdProgress += 4;
+            holdProgress += 4; // Velocidad de llenado
             if (progressBar) progressBar.style.width = holdProgress + '%';
 
             if (holdProgress >= 100) {
@@ -71,7 +67,7 @@ function initHoldButton() {
         }, 30);
     };
 
-    const stopHold = (e) => {
+    const stopHold = () => {
         if (!isHolding) return;
         isHolding = false;
         clearInterval(holdTimer);
@@ -80,41 +76,45 @@ function initHoldButton() {
         if (progressBar) progressBar.style.width = '0%';
     };
 
-    // Listeners universales e infalibles para móviles y PC
-    btnContainer.addEventListener('mousedown', startHold);
-    btnContainer.addEventListener('touchstart', startHold, { passive: false });
+    // Combinación letal táctil + ratón
+    btnContainer.addEventListener('touchstart', startHold, { passive: true });
+    btnContainer.addEventListener('touchend', stopHold, { passive: true });
+    btnContainer.addEventListener('touchcancel', stopHold, { passive: true });
     
+    btnContainer.addEventListener('mousedown', startHold);
     window.addEventListener('mouseup', stopHold);
-    window.addEventListener('touchend', stopHold);
 }
 
 document.addEventListener('DOMContentLoaded', initHoldButton);
 
-// --- EJECUCIÓN DEL PAGO Y NOTIFICACIÓN DIRECTA POR WHATSAPP ---
+// --- EJECUCIÓN DEL PAGO Y ENVÍO DE WHATSAPP AL COMERCIO ---
 async function executeFullPayment(isReservation = false) {
     const modal = document.getElementById('customModal');
     const modalContent = document.getElementById('modalContent');
     const modalBody = document.getElementById('modalBody');
 
-    let totalVal = isCartCheckout ? cartTotalValue : (parseInt(window.rawAmountString, 10) / 100);
-    let itemsDesc = isCartCheckout 
-        ? cartItemsList.map(i => `${i.qty}x ${i.name}`).join(', ') 
-        : 'Pago Directo Terminal';
+    // Recuperar variables globales blindadas
+    let totalVal = window.isCartCheckout ? window.cartTotalValue : (parseInt(window.rawAmountString, 10) / 100);
+    
+    let itemsDesc = window.isCartCheckout && window.cartItemsList.length > 0
+        ? window.cartItemsList.map(i => `${i.qty}x ${i.name}`).join(', ') 
+        : 'Pago Directo Terminal / Sin Detalle';
         
     let customerName = currentUser 
         ? (currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email || 'Cliente') 
-        : 'Cliente';
+        : 'Cliente Anónimo';
 
-    let orderDate = pendingOrderDetails?.date || new Date().toISOString().split('T')[0];
-    let orderTime = pendingOrderDetails?.time || "Inmediato";
+    let orderDate = window.pendingOrderDetails?.date || new Date().toISOString().split('T')[0];
+    let orderTime = window.pendingOrderDetails?.time || "Inmediato";
     let statusText = isReservation ? 'Pendiente (Pago en local)' : 'Pagado Online';
+    let targetBusiness = window.activePayee || window.activeBusinessName || 'Comercio Desconocido';
 
-    // Inserción de orden en Supabase
+    // 1. Guardar en Supabase
     try {
         const { error } = await supabaseClient
             .from('orders')
             .insert([{
-                business_name: activePayee,
+                business_name: targetBusiness,
                 customer: customerName,
                 items: itemsDesc,
                 total: totalVal,
@@ -123,33 +123,33 @@ async function executeFullPayment(isReservation = false) {
                 status: statusText
             }]);
 
-        if (error) console.warn("Aviso Supabase Orders:", error);
+        if (error) console.warn("Aviso al guardar en Supabase Orders:", error);
     } catch (err) {
         console.warn("Fallo inserción orden:", err);
     }
 
-    // Consulta de teléfono asociado al comercio
+    // 2. Buscar el teléfono del negocio en la BD
     let bizPhone = null;
     try {
         const { data } = await supabaseClient
             .from('businesses')
             .select('phone, telefono')
-            .ilike('name', `%${activePayee}%`)
+            .ilike('name', `%${targetBusiness}%`)
             .maybeSingle();
 
         if (data) {
             bizPhone = data.phone || data.telefono;
         }
     } catch (e) {
-        console.warn("Consulta teléfono comercio:", e);
+        console.warn("Consulta teléfono comercio falló:", e);
     }
 
-    // Generar URL de WhatsApp si existe teléfono
+    // 3. Crear el Link de WhatsApp
     let waUrl = "";
     if (bizPhone) {
         let cleanPhone = bizPhone.replace(/\D/g, '');
         if (!cleanPhone.startsWith('34') && cleanPhone.length === 9) {
-            cleanPhone = '34' + cleanPhone;
+            cleanPhone = '34' + cleanPhone; // Forzar prefijo de España
         }
 
         const msgText = encodeURIComponent(
@@ -157,14 +157,14 @@ async function executeFullPayment(isReservation = false) {
             `👤 *Cliente:* ${customerName}\n` +
             `📦 *Pedido:* ${itemsDesc}\n` +
             `💰 *Total:* ${totalVal.toFixed(2)} €\n` +
-            `📅 *Cita/Recogida:* ${orderDate} - ${orderTime}\n` +
+            `📅 *Recogida/Cita:* ${orderDate} a las ${orderTime}\n` +
             `📌 *Estado:* ${statusText}`
         );
 
         waUrl = `https://wa.me/${cleanPhone}?text=${msgText}`;
     }
 
-    // Modal de confirmación de pedido
+    // 4. Mostrar confirmación en pantalla
     if (modalBody) {
         modalBody.innerHTML = `
             <div class="text-center space-y-4 py-3">
@@ -173,11 +173,11 @@ async function executeFullPayment(isReservation = false) {
                 </div>
                 <div>
                     <h3 class="text-lg font-bold text-black">${isReservation ? 'Reserva Confirmada' : 'Pago Completado'}</h3>
-                    <p class="text-xs text-neutral-500 mt-1">Se ha registrado tu pedido correctamente con ${activePayee}.</p>
+                    <p class="text-xs text-neutral-500 mt-1">Pedido registrado correctamente en ${targetBusiness}.</p>
                 </div>
 
                 <div class="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-left space-y-1">
-                    <span class="text-[10px] text-neutral-400 font-mono uppercase block">Detalles</span>
+                    <span class="text-[10px] text-neutral-400 font-mono uppercase block">Detalle del Pedido</span>
                     <span class="text-xs font-bold text-black block truncate">${itemsDesc}</span>
                     <span class="text-sm font-extrabold text-black block mt-1">${totalVal.toFixed(2)} €</span>
                 </div>
@@ -185,7 +185,7 @@ async function executeFullPayment(isReservation = false) {
                 ${waUrl ? `
                     <a href="${waUrl}" target="_blank" class="w-full py-3.5 bg-emerald-600 text-white font-bold rounded-2xl text-xs shadow-md flex items-center justify-center space-x-2 active:scale-95 transition">
                         <i data-lucide="message-circle" class="w-4 h-4"></i>
-                        <span>Enviar WhatsApp al Negocio</span>
+                        <span>Avisar por WhatsApp</span>
                     </a>
                 ` : ''}
 
@@ -216,11 +216,13 @@ function finishPaymentFlow() {
         setTimeout(() => modal.classList.add('hidden'), 300);
     }
 
+    // Resetear todas las variables a su estado original
     window.rawAmountString = "000";
-    cartItemsList = [];
-    cartTotalValue = 0;
-    cartItemCount = 0;
-    isCartCheckout = false;
+    window.cartItemsList = [];
+    window.cartTotalValue = 0;
+    window.cartItemCount = 0;
+    window.isCartCheckout = false;
+    window.pendingOrderDetails = null;
 
     const progressBar = document.getElementById('progressBar');
     if (progressBar) progressBar.style.width = '0%';
