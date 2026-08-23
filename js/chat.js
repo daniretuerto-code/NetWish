@@ -102,32 +102,82 @@ async function renderBusinessMessagesTab() {
             return;
         }
 
-        const uniqueCustomers = {};
+        // Agrupar por cliente, recopilando avatar y conteo de no leídos
+        const customerDataMap = {};
         data.forEach(m => {
             const clientName = m.sender_type === 'customer' ? m.sender_name : m.receiver_name;
-            if (clientName && !uniqueCustomers[clientName]) {
-                uniqueCustomers[clientName] = m;
+            if (!clientName) return;
+
+            if (!customerDataMap[clientName]) {
+                customerDataMap[clientName] = {
+                    lastMessage: m,
+                    unreadCount: 0,
+                    avatarUrl: null
+                };
+            }
+
+            if (m.sender_type === 'customer' && m.is_read === false) {
+                customerDataMap[clientName].unreadCount += 1;
+            }
+
+            if (m.avatar_url && !customerDataMap[clientName].avatarUrl) {
+                customerDataMap[clientName].avatarUrl = m.avatar_url;
             }
         });
 
         let listHtml = '';
-        Object.keys(uniqueCustomers).forEach(client => {
-            const lastMsg = uniqueCustomers[client];
+        Object.keys(customerDataMap).forEach(client => {
+            const entry = customerDataMap[client];
+            const lastMsg = entry.lastMessage;
+            const unread = entry.unreadCount;
+            const avatar = entry.avatarUrl;
             const dateStr = lastMsg.created_at ? new Date(lastMsg.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
-            listHtml += `
-                <div onclick="openBusinessChatWithCustomer('${encodeURIComponent(client)}')" class="p-4 bg-white hover:bg-neutral-50 rounded-3xl border border-neutral-200/80 shadow-sm flex items-center justify-between cursor-pointer transition active:scale-98">
-                    <div class="flex items-center space-x-3.5 overflow-hidden flex-1 mr-2">
-                        <div class="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-sm">
-                            ${client.substring(0, 2).toUpperCase()}
-                        </div>
-                        <div class="overflow-hidden">
-                            <span class="text-xs font-bold text-black block truncate">${client}</span>
-                            <span class="text-[11px] text-neutral-500 block truncate mt-0.5">${lastMsg.text}</span>
+
+            // Icono / Avatar del cliente
+            let avatarMarkup = '';
+            if (avatar) {
+                avatarMarkup = `
+                    <div class="relative w-10 h-10 shrink-0">
+                        <img src="${avatar}" class="w-10 h-10 rounded-2xl object-cover border border-neutral-200/80 shadow-sm" alt="${client}">
+                        <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-xs border border-neutral-100">
+                            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
                         </div>
                     </div>
-                    <div class="text-right shrink-0">
-                        <span class="text-[9px] font-mono text-neutral-400 block">${dateStr}</span>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 ml-auto mt-1"></i>
+                `;
+            } else {
+                avatarMarkup = `
+                    <div class="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-sm">
+                        ${client.substring(0, 2).toUpperCase()}
+                    </div>
+                `;
+            }
+
+            // Indicador de no leído
+            const unreadBadge = unread > 0 ? `
+                <div class="flex items-center space-x-1 bg-rose-500 text-white px-2 py-0.5 rounded-full text-[9px] font-bold shadow-xs">
+                    <span>${unread}</span>
+                    <span class="text-[8px] uppercase tracking-wider">${unread === 1 ? 'nuevo' : 'nuevos'}</span>
+                </div>
+            ` : '';
+
+            listHtml += `
+                <div onclick="openBusinessChatWithCustomer('${encodeURIComponent(client)}', '${encodeURIComponent(avatar || '')}')" 
+                    class="p-4 ${unread > 0 ? 'bg-rose-50/40 border-rose-200/80 shadow-xs' : 'bg-white border-neutral-200/80'} hover:bg-neutral-50 rounded-3xl border shadow-sm flex items-center justify-between cursor-pointer transition active:scale-98">
+                    
+                    <div class="flex items-center space-x-3.5 overflow-hidden flex-1 mr-2">
+                        ${avatarMarkup}
+                        <div class="overflow-hidden">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-bold text-black block truncate ${unread > 0 ? 'text-rose-950 font-black' : ''}">${client}</span>
+                                ${unread > 0 ? '<span class="w-2 h-2 rounded-full bg-rose-500 shrink-0 animate-pulse"></span>' : ''}
+                            </div>
+                            <span class="text-[11px] ${unread > 0 ? 'text-rose-900 font-semibold' : 'text-neutral-500'} block truncate mt-0.5">${lastMsg.text}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col items-end space-y-1.5 shrink-0">
+                        <span class="text-[9px] font-mono ${unread > 0 ? 'text-rose-600 font-bold' : 'text-neutral-400'}">${dateStr}</span>
+                        ${unreadBadge}
                     </div>
                 </div>
             `;
@@ -143,26 +193,58 @@ async function renderBusinessMessagesTab() {
 }
 
 // --- ABRIR CHAT INDIVIDUAL DEL NEGOCIO CON UN CLIENTE (MODAL) ---
-function openBusinessChatWithCustomer(encodedClient) {
+async function openBusinessChatWithCustomer(encodedClient, encodedAvatar = '') {
     const client = decodeURIComponent(encodedClient);
+    const avatar = decodeURIComponent(encodedAvatar);
     currentChatBusiness = currentBusiness.name;
     currentChatCustomer = client;
+
+    // 1. Marcar mensajes de este cliente como leídos en Supabase
+    try {
+        await supabaseClient
+            .from('messages')
+            .update({ is_read: true })
+            .ilike('business_name', `%${currentBusiness.name}%`)
+            .eq('sender_name', client)
+            .eq('sender_type', 'customer');
+    } catch (err) {
+        console.warn("Aviso marcando mensajes como leídos:", err);
+    }
 
     const modal = document.getElementById('customModal');
     const modalContent = document.getElementById('modalContent');
     const modalBody = document.getElementById('modalBody');
     if (!modalBody) return;
 
+    let headerAvatarMarkup = '';
+    if (avatar) {
+        headerAvatarMarkup = `
+            <div class="relative w-9 h-9 shrink-0">
+                <img src="${avatar}" class="w-9 h-9 rounded-2xl object-cover border border-neutral-200" alt="${client}">
+                <div class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-white rounded-full flex items-center justify-center border border-neutral-100">
+                    <svg class="w-2 h-2" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+                </div>
+            </div>
+        `;
+    } else {
+        headerAvatarMarkup = `
+            <div class="w-9 h-9 rounded-2xl bg-black text-white flex items-center justify-center text-xs font-bold shadow-sm shrink-0">
+                ${client.substring(0, 2).toUpperCase()}
+            </div>
+        `;
+    }
+
     modalBody.innerHTML = `
         <div class="flex flex-col h-[430px] justify-between text-left">
             <!-- Header Chat Negocio -->
             <div class="flex items-center justify-between pb-3 border-b border-neutral-100 shrink-0">
                 <div class="flex items-center space-x-2.5">
-                    <div class="w-9 h-9 rounded-2xl bg-black text-white flex items-center justify-center text-xs font-bold shadow-sm">
-                        ${client.substring(0, 2).toUpperCase()}
-                    </div>
-                    <div class="text-left">
-                        <h4 class="text-xs font-bold text-black truncate max-w-[190px]">${client}</h4>
+                    <button onclick="renderBusinessMessagesTab(); closeChatModal();" class="w-8 h-8 rounded-xl bg-neutral-100 flex items-center justify-center text-black active:scale-90 transition mr-0.5">
+                        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    </button>
+                    ${headerAvatarMarkup}
+                    <div class="text-left overflow-hidden">
+                        <h4 class="text-xs font-bold text-black truncate max-w-[170px]">${client}</h4>
                         <span class="text-[9px] text-neutral-400 font-mono block">Cliente Directo</span>
                     </div>
                 </div>
@@ -218,7 +300,7 @@ async function loadChatMessages(currentRole) {
 
         renderMessagesList(data || [], currentRole);
 
-        // Suscripción Realtime
+        // Suscripción Realtime para actualizar la conversación en vivo
         if (!chatRealtimeSubscription && typeof supabaseClient.channel === 'function') {
             chatRealtimeSubscription = supabaseClient
                 .channel('public:messages')
@@ -250,12 +332,21 @@ function renderMessagesList(messages, currentRole) {
                        (currentRole === 'business' && m.sender_type === 'business');
         const timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Ahora';
 
+        // Avatar en el mensaje si viene de Google
+        let avatarBubble = '';
+        if (!isMine && m.avatar_url) {
+            avatarBubble = `<img src="${m.avatar_url}" class="w-6 h-6 rounded-full object-cover mr-1.5 self-end mb-1 border border-neutral-200/80" alt="Avatar">`;
+        }
+
         html += `
-            <div class="flex flex-col ${isMine ? 'items-end' : 'items-start'}">
-                <div class="max-w-[80%] px-4 py-2.5 rounded-2xl text-xs leading-relaxed shadow-sm ${isMine ? 'bg-black text-white rounded-br-none' : 'bg-neutral-100 text-black rounded-bl-none'}">
-                    ${m.text}
+            <div class="flex items-end ${isMine ? 'justify-end' : 'justify-start'}">
+                ${avatarBubble}
+                <div class="flex flex-col ${isMine ? 'items-end' : 'items-start'} max-w-[80%]">
+                    <div class="px-4 py-2.5 rounded-2xl text-xs leading-relaxed shadow-sm ${isMine ? 'bg-black text-white rounded-br-none' : 'bg-neutral-100 text-black rounded-bl-none'}">
+                        ${m.text}
+                    </div>
+                    <span class="text-[8px] text-neutral-400 font-mono mt-0.5 px-1">${timeStr}</span>
                 </div>
-                <span class="text-[8px] text-neutral-400 font-mono mt-0.5 px-1">${timeStr}</span>
             </div>
         `;
     });
@@ -268,7 +359,6 @@ function appendSingleMessage(msg, currentRole) {
     const container = document.getElementById('chatMessagesContainer');
     if (!container) return;
 
-    // Eliminar texto de chat vacío si existe
     const emptyPlaceholder = container.querySelector('.empty-chat-placeholder');
     if (emptyPlaceholder) emptyPlaceholder.remove();
 
@@ -276,26 +366,40 @@ function appendSingleMessage(msg, currentRole) {
                    (currentRole === 'business' && msg.sender_type === 'business');
     const timeStr = msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Ahora';
 
+    let avatarBubble = '';
+    if (!isMine && msg.avatar_url) {
+        avatarBubble = `<img src="${msg.avatar_url}" class="w-6 h-6 rounded-full object-cover mr-1.5 self-end mb-1 border border-neutral-200/80" alt="Avatar">`;
+    }
+
     const msgEl = document.createElement('div');
-    msgEl.className = `flex flex-col ${isMine ? 'items-end' : 'items-start'}`;
+    msgEl.className = `flex items-end ${isMine ? 'justify-end' : 'justify-start'}`;
     msgEl.innerHTML = `
-        <div class="max-w-[80%] px-4 py-2.5 rounded-2xl text-xs leading-relaxed shadow-sm ${isMine ? 'bg-black text-white rounded-br-none' : 'bg-neutral-100 text-black rounded-bl-none'}">
-            ${msg.text}
+        ${avatarBubble}
+        <div class="flex flex-col ${isMine ? 'items-end' : 'items-start'} max-w-[80%]">
+            <div class="px-4 py-2.5 rounded-2xl text-xs leading-relaxed shadow-sm ${isMine ? 'bg-black text-white rounded-br-none' : 'bg-neutral-100 text-black rounded-bl-none'}">
+                ${msg.text}
+            </div>
+            <span class="text-[8px] text-neutral-400 font-mono mt-0.5 px-1">${timeStr}</span>
         </div>
-        <span class="text-[8px] text-neutral-400 font-mono mt-0.5 px-1">${timeStr}</span>
     `;
 
     container.appendChild(msgEl);
     container.scrollTop = container.scrollHeight;
 }
 
-// --- ENVÍO INMEDIATO CON RENDERIZADO OPTIMISTA (NO DESAPARECE) ---
+// --- ENVÍO INMEDIATO CON RENDERIZADO OPTIMISTA Y AVATAR DE GOOGLE ---
 async function sendChatMessage(senderType) {
     const input = document.getElementById('chatInputText');
     if (!input || !input.value.trim()) return;
 
     const text = input.value.trim();
     input.value = '';
+
+    // Obtener foto de Google si el remitente es un cliente autenticado
+    let userAvatar = null;
+    if (senderType === 'customer' && typeof currentUser !== 'undefined' && currentUser) {
+        userAvatar = currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || null;
+    }
 
     const payload = {
         business_name: currentChatBusiness,
@@ -304,6 +408,8 @@ async function sendChatMessage(senderType) {
         receiver_name: senderType === 'customer' ? currentChatBusiness : currentChatCustomer,
         text: text,
         sender_type: senderType,
+        avatar_url: userAvatar,
+        is_read: false,
         created_at: new Date().toISOString()
     };
 
