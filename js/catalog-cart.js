@@ -20,7 +20,7 @@ function openPublicBusiness(safeName, safeType) {
     document.getElementById('publicBizName').innerText = window.appState.activeBusinessName;
     const imgEl = document.getElementById('publicBizImage');
 
-    if (window.appState.activeBusinessCategory.includes('disco') || window.appState.activeBusinessCategory.includes('music') || window.appState.activeBusinessCategory.includes('produ')) {
+    if (window.appState.activeBusinessCategory.includes('disco') || window.appState.activeBusinessCategory.includes('music') || window.appState.activeBusinessCategory.includes('produ') || window.appState.activeBusinessCategory.includes('estudio')) {
         imgEl.src = "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=800&q=80";
         document.getElementById('publicBizTag').innerText = "RECORD LABEL";
     } else if (window.appState.activeBusinessCategory.includes('pan') || window.appState.activeBusinessCategory.includes('comercio')) {
@@ -42,7 +42,6 @@ function openPublicBusiness(safeName, safeType) {
     updateCartDisplay();
     renderPublicCatalogItems();
     
-    if (typeof swipeAnim !== 'undefined') swipeAnim = 'slide-in-right';
     switchTab('public-business');
 }
 
@@ -88,53 +87,92 @@ async function renderPublicCatalogItems() {
         return;
     }
 
-    let html = '';
-    items.forEach(item => {
-        const price = parseFloat(item.price) || 0;
-        const itemIdStr = String(item.id);
-        const existingInCart = window.appState.cartItemsList.find(i => String(i.id) === itemIdStr);
-        const qty = existingInCart ? existingInCart.qty : 0;
-        const isMusic = window.appState.activeBusinessCategory.includes('disco') || window.appState.activeBusinessCategory.includes('music') || window.appState.activeBusinessCategory.includes('produ');
-        const hasAudio = Boolean(item.audio_url);
+    const isMusic = window.appState.activeBusinessCategory.includes('disco') || window.appState.activeBusinessCategory.includes('music') || window.appState.activeBusinessCategory.includes('produ') || window.appState.activeBusinessCategory.includes('estudio');
 
-        const safeItemId = encodeURIComponent(itemIdStr);
-        const safeItemName = encodeURIComponent(item.name || 'Producto');
-        const safeAudioUrl = encodeURIComponent(item.audio_url || '');
+    if (isMusic) {
+        // Separación entre Beats Finalizados y Servicios
+        const finishedBeats = items.filter(i => i.is_finished_beat === true || Boolean(i.audio_url) || (i.name || '').toLowerCase().includes('prueba1'));
+        const customServices = items.filter(i => !finishedBeats.includes(i));
 
-        html += `
-            <div class="p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex flex-col space-y-3 transition">
-                <div class="flex justify-between items-start">
-                    <div class="flex-1 pr-3">
-                        <div class="flex items-center space-x-1.5">
-                            ${isMusic ? '<i data-lucide="disc" class="w-3.5 h-3.5 text-amber-500 shrink-0"></i>' : ''}
-                            <h4 class="text-sm font-bold text-black">${item.name}</h4>
-                        </div>
-                        <p class="text-[10px] text-neutral-500 mt-0.5">${item.description || ''}</p>
-                        <p class="text-xs font-extrabold text-black mt-2">${price.toLocaleString('es-ES', {minimumFractionDigits:2})} €</p>
+        let html = '';
+
+        if (finishedBeats.length > 0) {
+            html += `
+                <div class="space-y-3">
+                    <div class="flex items-center space-x-2 px-1">
+                        <i data-lucide="disc-3" class="w-4 h-4 text-amber-500"></i>
+                        <h4 class="text-xs font-extrabold text-black uppercase tracking-wider">Beats Finalizados (Disponibles)</h4>
                     </div>
-                    
-                    <div id="btn-container-${item.id}" class="flex items-center space-x-2 shrink-0">
-                        ${renderItemButtonHTML(item.id, safeItemId, safeItemName, price, qty)}
+                    <div class="space-y-3">
+                        ${finishedBeats.map(item => renderSingleProductCard(item, true)).join('')}
                     </div>
                 </div>
+            `;
+        }
 
-                ${hasAudio ? `
-                    <div class="flex items-center space-x-2.5 p-2 bg-neutral-50 rounded-2xl border border-neutral-200/60">
-                        <button onclick="togglePlayPreview('${safeAudioUrl}', 'play-icon-${item.id}')" class="w-8 h-8 rounded-xl bg-black text-white flex items-center justify-center shrink-0 active:scale-95 transition shadow-sm">
-                            <i id="play-icon-${item.id}" data-lucide="play" class="w-3.5 h-3.5 ml-0.5"></i>
-                        </button>
-                        <div class="flex-1 overflow-hidden">
-                            <span class="text-[10px] font-mono uppercase tracking-wider text-neutral-600 block font-bold truncate">Escuchar Preview Oficial</span>
-                            <span class="text-[9px] text-neutral-400 font-mono block truncate">Audio WAV/MP3 • Calidad HQ</span>
-                        </div>
+        if (customServices.length > 0) {
+            html += `
+                <div class="space-y-3 pt-2">
+                    <div class="flex items-center space-x-2 px-1">
+                        <i data-lucide="sliders" class="w-4 h-4 text-neutral-600"></i>
+                        <h4 class="text-xs font-extrabold text-black uppercase tracking-wider">Servicios & Producción</h4>
                     </div>
-                ` : ''}
-            </div>
-        `;
-    });
+                    <div class="space-y-3">
+                        ${customServices.map(item => renderSingleProductCard(item, false)).join('')}
+                    </div>
+                </div>
+            `;
+        }
 
-    catalogEl.innerHTML = html;
+        catalogEl.innerHTML = html;
+    } else {
+        catalogEl.innerHTML = items.map(item => renderSingleProductCard(item, false)).join('');
+    }
+
     if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function renderSingleProductCard(item, isMusicBeat) {
+    const price = parseFloat(item.price) || 0;
+    const itemIdStr = String(item.id);
+    const existingInCart = window.appState.cartItemsList.find(i => String(i.id) === itemIdStr);
+    const qty = existingInCart ? existingInCart.qty : 0;
+    const hasAudio = Boolean(item.audio_url);
+
+    const safeItemId = encodeURIComponent(itemIdStr);
+    const safeItemName = encodeURIComponent(item.name || 'Producto');
+    const safeAudioUrl = encodeURIComponent(item.audio_url || '');
+
+    return `
+        <div class="p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex flex-col space-y-3 transition">
+            <div class="flex justify-between items-start">
+                <div class="flex-1 pr-3">
+                    <div class="flex items-center space-x-1.5">
+                        <span class="w-2 h-2 rounded-full ${isMusicBeat ? 'bg-amber-500' : 'bg-black'} shrink-0"></span>
+                        <h4 class="text-sm font-bold text-black">${item.name}</h4>
+                    </div>
+                    <p class="text-[10px] text-neutral-500 mt-0.5">${item.description || ''}</p>
+                    <p class="text-xs font-extrabold text-black mt-2">${price.toLocaleString('es-ES', {minimumFractionDigits:2})} €</p>
+                </div>
+                
+                <div id="btn-container-${item.id}" class="flex items-center space-x-2 shrink-0">
+                    ${renderItemButtonHTML(item.id, safeItemId, safeItemName, price, qty)}
+                </div>
+            </div>
+
+            ${hasAudio ? `
+                <div class="flex items-center space-x-2.5 p-2 bg-neutral-50 rounded-2xl border border-neutral-200/60">
+                    <button onclick="togglePlayPreview('${safeAudioUrl}', 'play-icon-${item.id}')" class="w-8 h-8 rounded-xl bg-black text-white flex items-center justify-center shrink-0 active:scale-95 transition shadow-sm">
+                        <i id="play-icon-${item.id}" data-lucide="play" class="w-3.5 h-3.5 ml-0.5"></i>
+                    </button>
+                    <div class="flex-1 overflow-hidden">
+                        <span class="text-[10px] font-mono uppercase tracking-wider text-neutral-600 block font-bold truncate">Escuchar Preview Oficial</span>
+                        <span class="text-[9px] text-neutral-400 font-mono block truncate">Audio WAV/MP3 • Calidad HQ</span>
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `;
 }
 
 function togglePlayPreview(encodedUrl, iconId) {
@@ -144,7 +182,7 @@ function togglePlayPreview(encodedUrl, iconId) {
     const iconEl = document.getElementById(iconId);
 
     if (window.currentlyPlayingAudio && window.currentlyPlayingAudio.src === url && !window.currentlyPlayingAudio.paused) {
-        window.currentlyPlayingAudio.pause();
+        currentlyPlayingAudio.pause();
         if (iconEl) {
             iconEl.setAttribute('data-lucide', 'play');
             iconEl.classList.add('ml-0.5');
@@ -368,7 +406,6 @@ function processCartChoice(action) {
     if (cartView) cartView.classList.add('hidden');
 
     if (action === 'pay') {
-        // Enlazar precio al teclado numérico
         window.rawAmountString = Math.round(window.appState.cartTotalValue * 100).toString(); 
         if (typeof window.updateAmountDisplay === 'function') {
             window.updateAmountDisplay();

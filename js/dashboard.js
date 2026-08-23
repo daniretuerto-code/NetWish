@@ -2,7 +2,9 @@ let ordersRealtimeSubscription = null;
 let currentBusinessOrders = []; 
 let activeOrdersTab = 'pending'; // 'pending' | 'completed'
 
-// --- MODAL DE CONTROL DE STOCK / GESTOR DE BEATS ---
+// ==========================================
+// 1. MODAL DE CONTROL DE STOCK / GESTOR DE BEATS
+// ==========================================
 async function openStockControlModal() {
     if (!currentBusiness) return;
     const modal = document.getElementById('customModal');
@@ -21,12 +23,15 @@ async function openStockControlModal() {
     modalBody.innerHTML = `
         <div class="space-y-4 text-center py-6">
             <i data-lucide="loader-2" class="w-6 h-6 mx-auto animate-spin text-black mb-2"></i>
-            <p class="text-xs text-neutral-500">Consultando Supabase...</p>
+            <p class="text-xs text-neutral-500">Consultando catálogo en Supabase...</p>
         </div>
     `;
     lucide.createIcons();
     modal.classList.remove('hidden');
-    setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
+    setTimeout(() => { 
+        modal.classList.remove('opacity-0'); 
+        modalContent?.classList.remove('scale-95'); 
+    }, 10);
 
     let catalog = [];
     try {
@@ -50,16 +55,19 @@ async function openStockControlModal() {
     catalog.forEach(p => {
         const price = parseFloat(p.price) || 0;
         const hasAudio = Boolean(p.audio_url);
+        const isFinished = p.is_finished_beat === true || (p.name || '').toLowerCase().includes('prueba1');
+
         productsHtml += `
-            <div class="flex justify-between items-center bg-neutral-50 p-3 rounded-2xl border border-neutral-200/60">
+            <div class="flex justify-between items-center bg-neutral-50 p-3.5 rounded-2xl border border-neutral-200/60 shadow-xs">
                 <div class="overflow-hidden pr-2">
                     <div class="flex items-center space-x-1.5">
                         ${hasAudio ? '<i data-lucide="volume-2" class="w-3.5 h-3.5 text-amber-500 shrink-0"></i>' : ''}
                         <span class="text-xs font-bold block text-black truncate">${p.name}</span>
+                        ${isFinished ? '<span class="text-[8px] bg-amber-500/10 text-amber-600 font-bold px-1.5 py-0.5 rounded-full border border-amber-500/20">Finalizado</span>' : ''}
                     </div>
-                    <span class="text-[10px] text-neutral-500 block truncate">${p.description || ''} • <strong class="text-black">${price.toFixed(2)} €</strong></span>
+                    <span class="text-[10px] text-neutral-500 block truncate mt-0.5">${p.description || ''} • <strong class="text-black">${price.toFixed(2)} €</strong></span>
                 </div>
-                <button onclick="deleteStockProduct('${p.id}')" class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-100 shrink-0 transition">
+                <button onclick="deleteStockProduct('${p.id}')" class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-100 active:scale-90 shrink-0 transition shadow-xs">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
             </div>
@@ -75,17 +83,22 @@ async function openStockControlModal() {
 
             <div class="space-y-2.5 pt-1 border-t border-neutral-100">
                 <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">Nuevo Registro</span>
-                <input type="text" id="newProdName" placeholder="${phName}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
-                <input type="text" id="newProdDesc" placeholder="${phDesc}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
-                <input type="number" step="0.01" id="newProdPrice" placeholder="Precio en € (ej. 29.99)" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                <input type="text" id="newProdName" placeholder="${phName}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black transition">
+                <input type="text" id="newProdDesc" placeholder="${phDesc}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black transition">
+                <input type="number" step="0.01" id="newProdPrice" placeholder="Precio en € (ej. 29.99)" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black transition">
                 
                 ${isMusic ? `
-                <div class="p-3 bg-amber-500/5 rounded-2xl border border-amber-500/20 space-y-1.5">
+                <div class="p-3 bg-amber-500/5 rounded-2xl border border-amber-500/20 space-y-2">
                     <label class="text-[10px] font-mono text-amber-700 font-bold uppercase tracking-wider block flex items-center space-x-1.5">
                         <i data-lucide="music" class="w-3.5 h-3.5"></i>
                         <span>Archivo de Audio Preview (.mp3 / .wav)</span>
                     </label>
-                    <input type="file" id="newProdAudioFile" accept="audio/mp3,audio/wav,audio/mpeg" class="w-full text-[11px] text-neutral-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-black file:text-white hover:file:bg-neutral-800 cursor-pointer">
+                    <input type="file" id="newProdAudioFile" accept="audio/mp3,audio/wav,audio/mpeg" class="w-full text-[11px] text-neutral-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-black file:text-white hover:file:bg-neutral-800 cursor-pointer transition">
+                    
+                    <label class="flex items-center space-x-2 pt-1 cursor-pointer select-none">
+                        <input type="checkbox" id="newProdIsFinishedBeat" checked class="w-4 h-4 rounded text-black border-neutral-300 focus:ring-0">
+                        <span class="text-xs font-bold text-neutral-800">Marcar como Beat Finalizado (Listo para comprar)</span>
+                    </label>
                 </div>
                 ` : ''}
 
@@ -97,7 +110,7 @@ async function openStockControlModal() {
 
             <div class="space-y-2 pt-2 border-t border-neutral-100">
                 <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">Artículos Publicados (${catalog.length})</span>
-                <div class="max-h-40 overflow-y-auto space-y-2 pr-1">
+                <div class="max-h-40 overflow-y-auto space-y-2 pr-1 allow-scroll">
                     ${catalog.length > 0 ? productsHtml : '<p class="text-xs text-neutral-400 text-center py-3">No hay artículos dados de alta en Supabase.</p>'}
                 </div>
             </div>
@@ -110,7 +123,9 @@ async function openStockControlModal() {
     lucide.createIcons();
 }
 
-// --- GUARDAR NUEVO PRODUCTO O BEAT EN SUPABASE ---
+// ==========================================
+// 2. GUARDAR PRODUCTO O BEAT EN SUPABASE
+// ==========================================
 async function saveNewStockProduct() {
     if (!currentBusiness) return;
     
@@ -118,6 +133,7 @@ async function saveNewStockProduct() {
     const desc = document.getElementById('newProdDesc').value.trim();
     const price = parseFloat(document.getElementById('newProdPrice').value);
     const audioInput = document.getElementById('newProdAudioFile');
+    const isFinishedCheckbox = document.getElementById('newProdIsFinishedBeat');
     const saveBtn = document.getElementById('saveProdBtn');
 
     if (!name || isNaN(price) || price <= 0) {
@@ -126,6 +142,7 @@ async function saveNewStockProduct() {
     }
 
     let audioUrl = null;
+    const isFinished = isFinishedCheckbox ? isFinishedCheckbox.checked : false;
 
     if (audioInput && audioInput.files.length > 0) {
         const file = audioInput.files[0];
@@ -167,7 +184,8 @@ async function saveNewStockProduct() {
             business_id: currentBusiness.name, 
             name: name, 
             description: desc, 
-            price: price 
+            price: price,
+            is_finished_beat: isFinished
         };
 
         if (audioUrl) {
@@ -182,7 +200,9 @@ async function saveNewStockProduct() {
     }
 }
 
-// --- ELIMINAR PRODUCTO DE SUPABASE ---
+// ==========================================
+// 3. ELIMINAR PRODUCTO DE SUPABASE
+// ==========================================
 async function deleteStockProduct(productId) {
     try {
         const { error } = await supabaseClient.from('products').delete().eq('id', productId);
@@ -193,7 +213,9 @@ async function deleteStockProduct(productId) {
     }
 }
 
-// --- CAMBIO DE ESTADO DEL PEDIDO ---
+// ==========================================
+// 4. CAMBIO DE ESTADO Y COMPLETADO DE PEDIDO
+// ==========================================
 async function completeBusinessOrder(orderId) {
     try {
         const { error } = await supabaseClient
@@ -219,7 +241,9 @@ function setOrdersTab(tab) {
     renderBusinessOrders();
 }
 
-// --- HISTORIAL DE PEDIDOS CON FILTRO DE FECHA ---
+// ==========================================
+// 5. MODAL DE HISTORIAL DE PEDIDOS CON FILTRO DE FECHA
+// ==========================================
 function openHistoryModal(dateFilter = '') {
     if (!currentBusiness) return;
     const modal = document.getElementById('customModal');
@@ -245,9 +269,11 @@ function openHistoryModal(dateFilter = '') {
             const totalVal = parseFloat(o.total) || 0;
             
             ordersHtml += `
-                <div class="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/60 shadow-sm flex justify-between items-center">
+                <div class="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/60 shadow-xs flex justify-between items-center">
                     <div class="flex items-center space-x-3 overflow-hidden">
-                        <div class="w-8 h-8 rounded-full ${iconBg} flex items-center justify-center shrink-0"><i data-lucide="${iconName}" class="w-4 h-4"></i></div>
+                        <div class="w-8 h-8 rounded-full ${iconBg} flex items-center justify-center shrink-0">
+                            <i data-lucide="${iconName}" class="w-4 h-4"></i>
+                        </div>
                         <div class="overflow-hidden">
                             <span class="text-xs font-bold block text-black truncate">${o.items}</span>
                             <span class="text-[9px] text-neutral-500 font-mono">Día: ${o.date} • ${o.time}</span>
@@ -272,7 +298,7 @@ function openHistoryModal(dateFilter = '') {
 
             <div class="pt-2 border-t border-neutral-100">
                 <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Filtrar por Día</label>
-                <input type="date" id="historyDateFilter" value="${dateFilter}" onchange="openHistoryModal(this.value)" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black">
+                <input type="date" id="historyDateFilter" value="${dateFilter}" onchange="openHistoryModal(this.value)" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black transition">
             </div>
 
             <div class="space-y-2 max-h-72 overflow-y-auto pr-1 allow-scroll">
@@ -292,10 +318,15 @@ function openHistoryModal(dateFilter = '') {
     lucide.createIcons();
     
     modal.classList.remove('hidden');
-    setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
+    setTimeout(() => { 
+        modal.classList.remove('opacity-0'); 
+        modalContent?.classList.remove('scale-95'); 
+    }, 10);
 }
 
-// --- RENDERIZADO PRINCIPAL DEL PANEL Y PEDIDOS ---
+// ==========================================
+// 6. RENDERIZADO DEL PANEL PRINCIPAL Y SECCIONES
+// ==========================================
 async function renderBusinessOrders() {
     if (!currentBusiness) return;
     
@@ -306,6 +337,7 @@ async function renderBusinessOrders() {
     const cat = (currentBusiness.category || '').toLowerCase();
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
     
+    // Suscripción Realtime para actualizar pedidos al instante
     if (!ordersRealtimeSubscription && typeof supabaseClient.channel === 'function') {
         ordersRealtimeSubscription = supabaseClient
             .channel('public:orders')
@@ -362,7 +394,9 @@ async function renderBusinessOrders() {
         }
     });
 
-    // 1. RENDERIZADO DEL DASHBOARD PRINCIPAL
+    // ----------------------------------------------------
+    // VISTA DINÁMICA DEL DASHBOARD SEGÚN EL TIPO DE NEGOCIO
+    // ----------------------------------------------------
     let dashHtml = '';
 
     if (isMusic) {
@@ -545,7 +579,9 @@ async function renderBusinessOrders() {
     dashHtml += `</div></div>`;
     dashboardContainer.innerHTML = dashHtml;
 
-    // 2. RENDERIZADO DE LA PESTAÑA DEDICADA DE PEDIDOS
+    // ----------------------------------------------------
+    // PESTAÑA DEDICADA DE GESTIÓN DE PEDIDOS
+    // ----------------------------------------------------
     if (ordersContainer) {
         const isPendingTab = activeOrdersTab === 'pending';
         const displayList = isPendingTab ? pendingOrders : completedOrders;
