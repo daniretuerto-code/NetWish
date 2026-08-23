@@ -11,7 +11,7 @@ window.currentlyPlayingAudio = null;
 window.currentPlayingBtnId = null;
 
 window.currentLoadedBeatsList = [];
-window.lastVisitedBeatsView = false; // Guarda si el cliente estaba dentro de la pantalla de beats
+window.lastVisitedBeatsView = false;
 
 function openPublicBusiness(safeName, safeType) {
     window.appState.activeBusinessName = decodeURIComponent(safeName || '');
@@ -359,7 +359,6 @@ function changeItemQuantity(encodedId, encodedName, price, delta) {
 
     updateCartDisplay();
 
-    // Actualizar todos los selectores de unidades duplicados
     const btnContainers = document.querySelectorAll(`[id="btn-container-${id}"]`);
     btnContainers.forEach(container => {
         container.innerHTML = renderItemButtonHTML(id, encodedId, encodedName, price, newQty);
@@ -372,7 +371,11 @@ function updateCartDisplay() {
     const cartBar = document.getElementById('publicBusinessCartBar');
     if (!cartBar) return;
     
-    if (window.appState.cartItemCount > 0) {
+    // Si la pantalla de la cesta está visible, ocultamos la barra flotante
+    const cartView = document.getElementById('view-cart');
+    const isCartOpen = cartView && !cartView.classList.contains('hidden');
+
+    if (window.appState.cartItemCount > 0 && !isCartOpen) {
         cartBar.classList.remove('translate-y-64', 'opacity-0', 'pointer-events-none');
         cartBar.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
         document.getElementById('cartTotalDisplay').innerText = window.appState.cartTotalValue.toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' €';
@@ -454,6 +457,13 @@ function openCartSummary() {
         beatsView.classList.remove('flex');
     }
 
+    // Ocultar barra flotante de forma garantizada
+    const cartBar = document.getElementById('publicBusinessCartBar');
+    if (cartBar) {
+        cartBar.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+        cartBar.classList.add('translate-y-64', 'opacity-0', 'pointer-events-none');
+    }
+
     const cartView = document.getElementById('view-cart');
     if (cartView) {
         cartView.classList.remove('hidden');
@@ -467,7 +477,7 @@ function closeCartSummary() {
     const cartView = document.getElementById('view-cart');
     if (cartView) cartView.classList.add('hidden');
 
-    // Regresar a la vista exacta donde estaba el usuario
+    // Regresar a la vista donde estaba el usuario
     if (window.lastVisitedBeatsView) {
         const beatsView = document.getElementById('view-beats-catalog');
         if (beatsView) {
