@@ -32,7 +32,7 @@ window.updateAmountDisplay = function() {
     display.innerText = formatted;
 };
 
-// --- GESTOR TÁCTIL DE CONFIRMACIÓN ---
+// --- BOTÓN MANTENER PARA CONFIRMAR ---
 function initHoldButton() {
     const btnContainer = document.getElementById('holdButtonContainer');
     if (!btnContainer) return;
@@ -91,7 +91,7 @@ function initHoldButton() {
 
 document.addEventListener('DOMContentLoaded', initHoldButton);
 
-// --- EJECUCIÓN DEL PAGO Y ENVÍO GARANTIZADO DE CORREO ---
+// --- EJECUCIÓN DEL PAGO Y NOTIFICACIÓN DUAL ---
 window.executeFullPayment = async function(isReservation = false) {
     try {
         const modal = document.getElementById('customModal');
@@ -126,6 +126,7 @@ window.executeFullPayment = async function(isReservation = false) {
             business_name: tBusiness,
             customer: customerName,
             customer_email: customerEmail,
+            business_email: 'daniretuerto@gmail.com', // Notificación operativa al negocio
             items: itemsDesc,
             total: totalVal,
             date: orderDate,
@@ -136,13 +137,22 @@ window.executeFullPayment = async function(isReservation = false) {
         // 1. Guardar orden en Supabase
         try {
             if (typeof supabaseClient !== 'undefined') {
-                await supabaseClient.from('orders').insert([orderPayload]);
+                await supabaseClient.from('orders').insert([{
+                    business_name: tBusiness,
+                    customer: customerName,
+                    customer_email: customerEmail,
+                    items: itemsDesc,
+                    total: totalVal,
+                    date: orderDate,
+                    time: orderTime,
+                    status: statusText
+                }]);
             }
         } catch (err) {
             console.warn("Aviso guardando orden en BD:", err);
         }
 
-        // 2. Invocación HTTP directa a la Edge Function
+        // 2. Disparo dual de emails a la Edge Function
         try {
             const funcUrl = `${SUPABASE_URL}/functions/v1/send-order-email`;
             fetch(funcUrl, {
@@ -155,13 +165,13 @@ window.executeFullPayment = async function(isReservation = false) {
                 body: JSON.stringify({ record: orderPayload })
             })
             .then(res => res.json())
-            .then(data => console.log("Email enviado con éxito:", data))
-            .catch(err => console.warn("Error enviando email:", err));
+            .then(data => console.log("Notificaciones enviadas a cliente y negocio:", data))
+            .catch(err => console.warn("Error enviando emails:", err));
         } catch (mailErr) {
             console.warn("Fallo en la llamada del correo:", mailErr);
         }
 
-        // 3. Modal de confirmación en el diseño de NetWish
+        // 3. Modal de confirmación NetWish
         if (modalBody) {
             modalBody.innerHTML = `
                 <div class="text-center space-y-4 py-3">
@@ -171,7 +181,7 @@ window.executeFullPayment = async function(isReservation = false) {
                     <div>
                         <h3 class="text-lg font-bold text-black">${isReservation ? 'Reserva Confirmada' : 'Pago Completado'}</h3>
                         <p class="text-xs text-neutral-500 mt-1">Registrado con éxito en ${tBusiness}.</p>
-                        <p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo digital enviado a ${customerEmail}</p>
+                        <p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo enviado al cliente y aviso al negocio.</p>
                     </div>
 
                     <div class="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-left space-y-1">
