@@ -1,6 +1,7 @@
 let currentChatBusiness = null;
 let currentChatCustomer = null;
 let chatRealtimeSubscription = null;
+let bizGlobalUnreadSubscription = null;
 
 // --- ABRIR CHAT DESDE EL CLIENTE HACIA EL COMERCIO ---
 function openCustomerChat(bizName) {
@@ -46,7 +47,7 @@ function openCustomerChat(bizName) {
 
             <!-- Input Envío -->
             <div class="pt-2 border-t border-neutral-100 flex items-center space-x-2 shrink-0">
-                <input type="text" id="chatInputText" placeholder="Escribe tu consulta personalizada..." 
+                <input type="text" id="chatInputText" placeholder="Escribe tu consulta o pedido a medida..." 
                     onkeydown="if(event.key === 'Enter') sendChatMessage('customer')"
                     class="flex-1 bg-neutral-50 border border-neutral-200/80 rounded-2xl px-3.5 py-3 text-xs text-black focus:outline-none focus:border-black transition">
                 <button onclick="sendChatMessage('customer')" class="w-11 h-11 rounded-2xl bg-black text-white flex items-center justify-center active:scale-90 transition shrink-0 shadow-md">
@@ -66,6 +67,33 @@ function openCustomerChat(bizName) {
     loadChatMessages('customer');
 }
 
+// --- ACTUALIZACIÓN REACTIVA DEL BADGE ROJO EN LA BARRA INFERIOR ---
+async function updateBusinessNavUnreadBadge() {
+    if (!currentBusiness) return;
+    const dot = document.getElementById('bizNavUnreadDot');
+    if (!dot) return;
+
+    try {
+        const cleanBizName = (currentBusiness.name || '').trim();
+        const { count, error } = await supabaseClient
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .ilike('business_name', `%${cleanBizName}%`)
+            .eq('sender_type', 'customer')
+            .eq('is_read', false);
+
+        if (!error && typeof count === 'number') {
+            if (count > 0) {
+                dot.classList.remove('hidden');
+            } else {
+                dot.classList.add('hidden');
+            }
+        }
+    } catch (e) {
+        console.warn("Consulta contador no leídos nav:", e);
+    }
+}
+
 // --- RENDERIZADO DE LA PESTAÑA DEDICADA DE MENSAJES (MODO COMERCIO) ---
 async function renderBusinessMessagesTab() {
     if (!currentBusiness) return;
@@ -79,6 +107,22 @@ async function renderBusinessMessagesTab() {
         </div>
     `;
     lucide.createIcons();
+
+    // Actualizar punto rojo en barra de navegación
+    updateBusinessNavUnreadBadge();
+
+    // Suscripción Realtime global para el badge y la lista
+    if (!bizGlobalUnreadSubscription && typeof supabaseClient.channel === 'function') {
+        bizGlobalUnreadSubscription = supabaseClient
+            .channel('public:messages_global_unread')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
+                updateBusinessNavUnreadBadge();
+                if (activeTab === 'business-messages') {
+                    renderBusinessMessagesTab();
+                }
+            })
+            .subscribe();
+    }
 
     try {
         const cleanBizName = (currentBusiness.name || '').trim();
@@ -95,14 +139,13 @@ async function renderBusinessMessagesTab() {
                 <div class="p-8 rounded-3xl bg-neutral-50/70 border border-neutral-100 text-center space-y-2">
                     <i data-lucide="message-square-off" class="w-6 h-6 mx-auto text-neutral-300"></i>
                     <p class="text-xs font-bold text-black">Sin mensajes recibidos</p>
-                    <p class="text-[10px] text-neutral-400">Cuando los clientes inicien un chat directo, aparecerán aquí en tiempo real.</p>
+                    <p class="text-[10px] text-neutral-400">Cuando los clientes inicien un chat directo o pedido personalizado, aparecerán aquí en tiempo real.</p>
                 </div>
             `;
             lucide.createIcons();
             return;
         }
 
-        // Agrupar por cliente, recopilando avatar y conteo de no leídos
         const customerDataMap = {};
         data.forEach(m => {
             const clientName = m.sender_type === 'customer' ? m.sender_name : m.receiver_name;
@@ -152,7 +195,7 @@ async function renderBusinessMessagesTab() {
                 `;
             }
 
-            // Indicador de no leído
+            // Badge de no leídos
             const unreadBadge = unread > 0 ? `
                 <div class="flex items-center space-x-1 bg-rose-500 text-white px-2 py-0.5 rounded-full text-[9px] font-bold shadow-xs">
                     <span>${unread}</span>
@@ -199,7 +242,7 @@ async function openBusinessChatWithCustomer(encodedClient, encodedAvatar = '') {
     currentChatBusiness = currentBusiness.name;
     currentChatCustomer = client;
 
-    // 1. Marcar mensajes de este cliente como leídos en Supabase
+    // Marcar mensajes de este cliente como leídos en Supabase
     try {
         await supabaseClient
             .from('messages')
@@ -207,6 +250,8 @@ async function openBusinessChatWithCustomer(encodedClient, encodedAvatar = '') {
             .ilike('business_name', `%${currentBusiness.name}%`)
             .eq('sender_name', client)
             .eq('sender_type', 'customer');
+            
+        updateBusinessNavUnreadBadge();
     } catch (err) {
         console.warn("Aviso marcando mensajes como leídos:", err);
     }
@@ -300,10 +345,10 @@ async function loadChatMessages(currentRole) {
 
         renderMessagesList(data || [], currentRole);
 
-        // Suscripción Realtime para actualizar la conversación en vivo
+        // Suscripción Realtime para la conversación activa
         if (!chatRealtimeSubscription && typeof supabaseClient.channel === 'function') {
             chatRealtimeSubscription = supabaseClient
-                .channel('public:messages')
+                .channel('public:messages_single_chat')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
                     if (payload.new && payload.new.business_name.toLowerCase().includes(cleanBiz.toLowerCase())) {
                         appendSingleMessage(payload.new, currentRole);
@@ -322,7 +367,7 @@ function renderMessagesList(messages, currentRole) {
     if (!container) return;
 
     if (messages.length === 0) {
-        container.innerHTML = `<p class="empty-chat-placeholder text-[11px] text-neutral-400 text-center py-8">Inicia la conversación. Envía tu primera consulta.</p>`;
+        container.innerHTML = `<p class="empty-chat-placeholder text-[11px] text-neutral-400 text-center py-8">Inicia la conversación. Envía tu consulta o solicitud personalizada.</p>`;
         return;
     }
 
@@ -332,7 +377,6 @@ function renderMessagesList(messages, currentRole) {
                        (currentRole === 'business' && m.sender_type === 'business');
         const timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Ahora';
 
-        // Avatar en el mensaje si viene de Google
         let avatarBubble = '';
         if (!isMine && m.avatar_url) {
             avatarBubble = `<img src="${m.avatar_url}" class="w-6 h-6 rounded-full object-cover mr-1.5 self-end mb-1 border border-neutral-200/80" alt="Avatar">`;
@@ -387,7 +431,7 @@ function appendSingleMessage(msg, currentRole) {
     container.scrollTop = container.scrollHeight;
 }
 
-// --- ENVÍO INMEDIATO CON RENDERIZADO OPTIMISTA Y AVATAR DE GOOGLE ---
+// --- ENVÍO DE MENSAJES ---
 async function sendChatMessage(senderType) {
     const input = document.getElementById('chatInputText');
     if (!input || !input.value.trim()) return;
@@ -395,7 +439,6 @@ async function sendChatMessage(senderType) {
     const text = input.value.trim();
     input.value = '';
 
-    // Obtener foto de Google si el remitente es un cliente autenticado
     let userAvatar = null;
     if (senderType === 'customer' && typeof currentUser !== 'undefined' && currentUser) {
         userAvatar = currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || null;
@@ -413,10 +456,8 @@ async function sendChatMessage(senderType) {
         created_at: new Date().toISOString()
     };
 
-    // 1. Renderizado optimista instantáneo en pantalla
     appendSingleMessage(payload, senderType);
 
-    // 2. Persistencia en Supabase
     try {
         const { error } = await supabaseClient
             .from('messages')
@@ -435,3 +476,10 @@ function closeChatModal() {
     }
     if (typeof closeModal === 'function') closeModal();
 }
+
+// Inicializar chequeo de badge si ya está en modo comercio
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof currentBusiness !== 'undefined' && currentBusiness) {
+        updateBusinessNavUnreadBadge();
+    }
+});
