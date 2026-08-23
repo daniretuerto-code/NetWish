@@ -18,7 +18,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <link rel="stylesheet" href="css/styles.css?v=24">
+    <link rel="stylesheet" href="css/styles.css?v=25">
 </head>
 <body>
 
@@ -156,7 +156,13 @@
                             <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">PANEL DE COMERCIO</span>
                             <h2 id="businessTitleName" class="text-xl font-bold text-black tracking-tight">Mi Negocio</h2>
                         </div>
-                        <button onclick="logoutBusiness()" class="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition">Salir</button>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="openBusinessMessagesModal()" class="px-3 py-1.5 bg-black text-white rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-sm active:scale-95 transition">
+                                <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+                                <span>Mensajes</span>
+                            </button>
+                            <button onclick="logoutBusiness()" class="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition">Salir</button>
+                        </div>
                     </div>
                     <div id="dynamicDashboardContent" class="space-y-5"></div>
                 </div>
@@ -314,7 +320,7 @@
                 </div>
             </div>
 
-            <!-- VISTA PÚBLICA DEL COMERCIO -->
+            <!-- VISTA PÚBLICA DEL COMERCIO CON BOTÓN DE INFORMACIÓN & CHAT DIRECTO -->
             <div id="view-public-business" class="absolute inset-0 bg-white z-30 hidden flex-col allow-scroll pb-28">
                 <div class="relative w-full h-[240px] bg-neutral-200 shrink-0">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent z-10"></div>
@@ -335,8 +341,24 @@
                     </div>
                 </div>
 
-                <div class="px-6 pt-6 space-y-6">
-                    <div class="flex items-center justify-between">
+                <div class="px-6 pt-5 space-y-5">
+                    <!-- BOTÓN DE CHAT DIRECTO & ATENCIÓN PERSONALIZADA -->
+                    <button onclick="openCustomerChat(window.appState?.activeBusinessName)" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-98 transition group">
+                        <div class="flex items-center space-x-3.5">
+                            <div class="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center shadow-md shrink-0">
+                                <i data-lucide="message-circle" class="w-5 h-5"></i>
+                            </div>
+                            <div class="text-left">
+                                <span class="block text-xs font-bold text-black tracking-tight">Atención & Chat Directo</span>
+                                <span class="block text-[10px] text-neutral-400 mt-0.5">Consulta dudas o pide información personalizada</span>
+                            </div>
+                        </div>
+                        <div class="w-7 h-7 rounded-full bg-white border border-neutral-200/60 flex items-center justify-center text-neutral-400 group-hover:text-black transition">
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                        </div>
+                    </button>
+
+                    <div class="flex items-center justify-between pt-1">
                         <h3 class="text-sm font-bold text-black tracking-tight">Catálogo y Pedidos</h3>
                         <span class="text-[10px] font-mono text-neutral-400 uppercase">Click & Collect</span>
                     </div>
@@ -380,15 +402,16 @@
 
     </div>
 
-    <!-- SCRIPTS MODULARES ACTUALIZADOS -->
-    <script src="js/config.js?v=24"></script>
-    <script src="js/navigation.js?v=24"></script>
-    <script src="js/auth.js?v=24"></script>
-    <script src="js/directory.js?v=24"></script>
-    <script src="js/catalog-cart.js?v=24"></script>
-    <script src="js/dashboard.js?v=24"></script>
-    <script src="js/scanner.js?v=24"></script>
-    <script src="js/payment.js?v=24"></script>
+    <!-- SCRIPTS MODULARES CON EL NUEVO CHAT -->
+    <script src="js/config.js?v=25"></script>
+    <script src="js/navigation.js?v=25"></script>
+    <script src="js/auth.js?v=25"></script>
+    <script src="js/directory.js?v=25"></script>
+    <script src="js/catalog-cart.js?v=25"></script>
+    <script src="js/dashboard.js?v=25"></script>
+    <script src="js/scanner.js?v=25"></script>
+    <script src="js/payment.js?v=25"></script>
+    <script src="js/chat.js?v=25"></script>
 
 </body>
 </html>
