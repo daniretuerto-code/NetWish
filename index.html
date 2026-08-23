@@ -18,7 +18,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <link rel="stylesheet" href="css/styles.css?v=25">
+    <link rel="stylesheet" href="css/styles.css?v=26">
 </head>
 <body>
 
@@ -156,13 +156,7 @@
                             <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">PANEL DE COMERCIO</span>
                             <h2 id="businessTitleName" class="text-xl font-bold text-black tracking-tight">Mi Negocio</h2>
                         </div>
-                        <div class="flex items-center space-x-2">
-                            <button onclick="openBusinessMessagesModal()" class="px-3 py-1.5 bg-black text-white rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-sm active:scale-95 transition">
-                                <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
-                                <span>Mensajes</span>
-                            </button>
-                            <button onclick="logoutBusiness()" class="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition">Salir</button>
-                        </div>
+                        <button onclick="logoutBusiness()" class="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition">Salir</button>
                     </div>
                     <div id="dynamicDashboardContent" class="space-y-5"></div>
                 </div>
@@ -178,13 +172,13 @@
                     <div id="dynamicOrdersTabContent" class="space-y-4"></div>
                 </div>
 
-                <div id="view-business-scan" class="view-pane px-6 pb-28 flex flex-col items-center justify-center text-center my-auto space-y-6">
-                    <div class="w-16 h-16 rounded-[28px] bg-black text-white flex items-center justify-center mx-auto shadow-xl"><i data-lucide="scan-line" class="w-8 h-8"></i></div>
-                    <div class="space-y-1.5">
-                        <h2 class="text-sm font-bold text-black">Terminal de Cobro QR</h2>
-                        <p class="text-xs text-neutral-500 px-6">Escanea el código QR de un cliente para solicitar o cobrar un importe.</p>
+                <!-- NUEVA PESTAÑA DEDICADA DE MENSAJES PARA EL NEGOCIO -->
+                <div id="view-business-messages" class="view-pane px-6 pt-2 pb-28 space-y-4">
+                    <div class="space-y-1 px-1">
+                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">ATENCIÓN AL CLIENTE</span>
+                        <h2 class="text-xl font-bold text-black tracking-tight">Mensajes & Consultas</h2>
                     </div>
-                    <button onclick="startCameraModal()" class="w-full py-3.5 bg-black text-white rounded-2xl text-xs font-semibold transition hover:bg-neutral-800 shadow-md">Abrir Terminal de Cobro</button>
+                    <div id="businessMessagesTabContent" class="space-y-3 pt-1"></div>
                 </div>
 
                 <div id="view-business-profile" class="view-pane px-6 pt-2 pb-28 space-y-5">
@@ -213,9 +207,8 @@
                 <div id="dynamicCategoryList" class="space-y-3 pt-2 pb-6"></div>
             </div>
 
-            <!-- VISTA DE PAGO CON CONTENEDOR FLEXIBLE -->
+            <!-- VISTA DE PAGO -->
             <div id="view-payment" class="absolute inset-0 bg-white z-50 hidden flex-col justify-between px-6 pt-6 pb-12">
-                <!-- Cabecera de Pago -->
                 <div class="flex items-center justify-between shrink-0">
                     <button onclick="closePaymentView()" class="w-10 h-10 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-black hover:bg-neutral-200 transition active:scale-95">
                         <i data-lucide="arrow-left" class="w-5 h-5"></i>
@@ -227,7 +220,6 @@
                     <div class="w-10"></div>
                 </div>
 
-                <!-- Bloque de Receptor y Precio -->
                 <div class="flex flex-col items-center space-y-2 shrink-0 pt-2">
                     <div class="w-14 h-14 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-md text-xs font-bold" id="payeeInitialsBubble">NW</div>
                     <div class="text-center">
@@ -243,7 +235,6 @@
                     </div>
                 </div>
 
-                <!-- Bloque Inferior: Teclado y Botón Interactivo de Confirmación -->
                 <div class="w-full max-w-[320px] mx-auto flex flex-col space-y-6 mt-auto shrink-0">
                     <div class="grid grid-cols-3 gap-2.5 w-full">
                         <button onclick="appendNum('1')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">1</button>
@@ -320,7 +311,7 @@
                 </div>
             </div>
 
-            <!-- VISTA PÚBLICA DEL COMERCIO CON BOTÓN DE INFORMACIÓN & CHAT DIRECTO -->
+            <!-- VISTA PÚBLICA DEL COMERCIO -->
             <div id="view-public-business" class="absolute inset-0 bg-white z-30 hidden flex-col allow-scroll pb-28">
                 <div class="relative w-full h-[240px] bg-neutral-200 shrink-0">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent z-10"></div>
@@ -342,7 +333,7 @@
                 </div>
 
                 <div class="px-6 pt-5 space-y-5">
-                    <!-- BOTÓN DE CHAT DIRECTO & ATENCIÓN PERSONALIZADA -->
+                    <!-- BOTÓN DE ATENCIÓN & CHAT DIRECTO -->
                     <button onclick="openCustomerChat(window.appState?.activeBusinessName)" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-98 transition group">
                         <div class="flex items-center space-x-3.5">
                             <div class="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center shadow-md shrink-0">
@@ -388,10 +379,11 @@
             <button id="nav-btn-profile" onclick="switchTab('profile')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="user" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Perfil</span></button>
         </nav>
 
+        <!-- BARRA COMERCIAL CON PESTAÑA MENSAJES -->
         <nav id="business-nav" class="hidden absolute bottom-4 left-4 right-4 border border-neutral-800 bg-black/95 backdrop-blur-2xl px-4 py-3.5 rounded-[32px] flex justify-around items-center z-40 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
             <button id="biz-nav-btn-dashboard" onclick="switchTab('business-dashboard')" class="flex flex-col items-center text-white space-y-1 transition group"><i data-lucide="layout-dashboard" class="w-5 h-5 transition-transform group-active:scale-90 scale-110"></i><span class="text-[9px] font-medium tracking-tight">Panel</span></button>
             <button id="biz-nav-btn-orders" onclick="switchTab('business-orders')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="clipboard-list" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Pedidos</span></button>
-            <button id="biz-nav-btn-scan" onclick="switchTab('business-scan')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="scan-line" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Cobrar</span></button>
+            <button id="biz-nav-btn-messages" onclick="switchTab('business-messages')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="message-square" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Mensajes</span></button>
             <button id="biz-nav-btn-profile" onclick="switchTab('business-profile')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="store" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Negocio</span></button>
         </nav>
 
@@ -402,16 +394,16 @@
 
     </div>
 
-    <!-- SCRIPTS MODULARES CON EL NUEVO CHAT -->
-    <script src="js/config.js?v=25"></script>
-    <script src="js/navigation.js?v=25"></script>
-    <script src="js/auth.js?v=25"></script>
-    <script src="js/directory.js?v=25"></script>
-    <script src="js/catalog-cart.js?v=25"></script>
-    <script src="js/dashboard.js?v=25"></script>
-    <script src="js/scanner.js?v=25"></script>
-    <script src="js/payment.js?v=25"></script>
-    <script src="js/chat.js?v=25"></script>
+    <!-- SCRIPTS MODULARES -->
+    <script src="js/config.js?v=26"></script>
+    <script src="js/navigation.js?v=26"></script>
+    <script src="js/auth.js?v=26"></script>
+    <script src="js/directory.js?v=26"></script>
+    <script src="js/catalog-cart.js?v=26"></script>
+    <script src="js/dashboard.js?v=26"></script>
+    <script src="js/scanner.js?v=26"></script>
+    <script src="js/payment.js?v=26"></script>
+    <script src="js/chat.js?v=26"></script>
 
 </body>
 </html>

@@ -1,6 +1,6 @@
 // --- ÓRDENES Y CONFIGURACIÓN DE PESTAÑAS ---
 const userTabOrder = ['home', 'explore', 'scan', 'profile'];
-const bizTabOrder = ['business-dashboard', 'business-orders', 'business-scan', 'business-profile'];
+const bizTabOrder = ['business-dashboard', 'business-orders', 'business-messages', 'business-profile'];
 
 // --- CONTROLADOR PRINCIPAL DE ENRUTAMIENTO Y TRANSICIONES ---
 function switchTab(tabId) {
@@ -22,7 +22,7 @@ function switchTab(tabId) {
         });
     }
 
-    // 2. Alternancia de wrappers y barras según el modo
+    // 2. Comprobación y alternancia de wrappers según el modo (Comercio o Usuario)
     if (currentBusiness) {
         if (personalNav) personalNav.classList.add('hidden');
         if (bizNav) bizNav.classList.remove('hidden');
@@ -38,6 +38,11 @@ function switchTab(tabId) {
                 });
             }
             updateActiveBizNavButton(tabId);
+
+            // Cargar mensajes si entra en la pestaña dedicada
+            if (tabId === 'business-messages' && typeof renderBusinessMessagesTab === 'function') {
+                renderBusinessMessagesTab();
+            }
         }
     } else {
         if (bizNav) bizNav.classList.add('hidden');
@@ -57,7 +62,7 @@ function switchTab(tabId) {
         }
     }
 
-    // 3. Manejo de vistas flotantes
+    // 3. Manejo de vistas modulares y submenús flotantes
     if (tabId === 'category') {
         const catView = document.getElementById('view-category');
         if (catView) {
@@ -70,8 +75,6 @@ function switchTab(tabId) {
             payView.classList.remove('hidden');
             payView.scrollTop = 0;
         }
-        if (personalNav) personalNav.classList.add('hidden');
-        if (bizNav) bizNav.classList.add('hidden');
     } else if (tabId === 'cart') {
         const cartView = document.getElementById('view-cart');
         if (cartView) {
@@ -86,10 +89,10 @@ function switchTab(tabId) {
         }
     }
 
-    // 4. Adaptación de la cabecera
+    // 4. Adaptación reactiva de la cabecera
     updateHeaderLayout(tabId);
 
-    // 5. Refresco de iconos
+    // 5. Refresco dinámico de iconos Lucide
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
     }
@@ -100,7 +103,7 @@ function closePaymentView() {
     const payView = document.getElementById('view-payment');
     if (payView) payView.classList.add('hidden');
 
-    if (isCartCheckout) {
+    if (window.appState && window.appState.isCartCheckout) {
         const cartView = document.getElementById('view-cart');
         if (cartView) cartView.classList.remove('hidden');
     } else {
@@ -159,7 +162,7 @@ function updateActiveBizNavButton(activeId) {
     const keyMap = {
         'business-dashboard': 'dashboard',
         'business-orders': 'orders',
-        'business-scan': 'scan',
+        'business-messages': 'messages',
         'business-profile': 'profile'
     };
     
@@ -182,7 +185,7 @@ function updateActiveBizNavButton(activeId) {
     });
 }
 
-// --- ESCUCHADORES DE SCROLL SNAP E INERCIA TÁCTIL (INCLUYE SWIPE BACK GLOBAL) ---
+// --- ESCUCHADORES DE SCROLL SNAP E INERCIA TÁCTIL ---
 document.addEventListener('DOMContentLoaded', () => {
     const userWrapper = document.getElementById('userScrollWrapper');
     const bizWrapper = document.getElementById('bizScrollWrapper');
@@ -208,11 +211,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateActiveBizNavButton(targetTab);
                 updateHeaderLayout(targetTab);
                 activeTab = targetTab;
+                if (targetTab === 'business-messages' && typeof renderBusinessMessagesTab === 'function') {
+                    renderBusinessMessagesTab();
+                }
             }
         }, { passive: true });
     }
 
-    // Detector de gesto Swipe Back en cualquier punto de la vista de negocio
     if (pubBizView) {
         let touchStartX = 0;
         let touchStartY = 0;
@@ -228,7 +233,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const deltaX = touchEndX - touchStartX;
             const deltaY = Math.abs(touchEndY - touchStartY);
 
-            // Deslizamiento horizontal de izquierda a derecha mayor a 60px
             if (deltaX > 60 && deltaY < 80) {
                 goBackFromBusiness();
             }

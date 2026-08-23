@@ -2,6 +2,7 @@ let ordersRealtimeSubscription = null;
 let currentBusinessOrders = []; 
 let activeOrdersTab = 'pending'; // 'pending' | 'completed'
 
+// --- MODAL DE CONTROL DE STOCK / GESTOR DE BEATS ---
 async function openStockControlModal() {
     if (!currentBusiness) return;
     const modal = document.getElementById('customModal');
@@ -29,9 +30,7 @@ async function openStockControlModal() {
 
     let catalog = [];
     try {
-        const { data, error } = await supabaseClient
-            .from('products')
-            .select('*');
+        const { data, error } = await supabaseClient.from('products').select('*');
         if (error) throw error;
         
         const cleanBizName = (currentBusiness.name || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -111,6 +110,7 @@ async function openStockControlModal() {
     lucide.createIcons();
 }
 
+// --- GUARDAR NUEVO PRODUCTO O BEAT EN SUPABASE ---
 async function saveNewStockProduct() {
     if (!currentBusiness) return;
     
@@ -127,7 +127,6 @@ async function saveNewStockProduct() {
 
     let audioUrl = null;
 
-    // Subida opcional de archivo de audio a Supabase Storage
     if (audioInput && audioInput.files.length > 0) {
         const file = audioInput.files[0];
         const fileExt = file.name.split('.').pop().toLowerCase();
@@ -175,10 +174,7 @@ async function saveNewStockProduct() {
             insertPayload.audio_url = audioUrl;
         }
 
-        const { error } = await supabaseClient
-            .from('products')
-            .insert([insertPayload]);
-            
+        const { error } = await supabaseClient.from('products').insert([insertPayload]);
         if (error) throw error;
         openStockControlModal();
     } catch (err) {
@@ -186,13 +182,10 @@ async function saveNewStockProduct() {
     }
 }
 
+// --- ELIMINAR PRODUCTO DE SUPABASE ---
 async function deleteStockProduct(productId) {
     try {
-        const { error } = await supabaseClient
-            .from('products')
-            .delete()
-            .eq('id', productId);
-            
+        const { error } = await supabaseClient.from('products').delete().eq('id', productId);
         if (error) throw error;
         openStockControlModal();
     } catch (err) {
@@ -200,7 +193,7 @@ async function deleteStockProduct(productId) {
     }
 }
 
-// --- CAMBIO DE ESTADO DEL PEDIDO (CHECK / COMPLETAR) ---
+// --- CAMBIO DE ESTADO DEL PEDIDO ---
 async function completeBusinessOrder(orderId) {
     try {
         const { error } = await supabaseClient
@@ -226,6 +219,7 @@ function setOrdersTab(tab) {
     renderBusinessOrders();
 }
 
+// --- HISTORIAL DE PEDIDOS CON FILTRO DE FECHA ---
 function openHistoryModal(dateFilter = '') {
     if (!currentBusiness) return;
     const modal = document.getElementById('customModal');
@@ -301,6 +295,7 @@ function openHistoryModal(dateFilter = '') {
     setTimeout(() => { modal.classList.remove('opacity-0'); modalContent.classList.remove('scale-95'); }, 10);
 }
 
+// --- RENDERIZADO PRINCIPAL DEL PANEL Y PEDIDOS ---
 async function renderBusinessOrders() {
     if (!currentBusiness) return;
     
@@ -311,7 +306,6 @@ async function renderBusinessOrders() {
     const cat = (currentBusiness.category || '').toLowerCase();
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
     
-    // Suscripción Realtime
     if (!ordersRealtimeSubscription && typeof supabaseClient.channel === 'function') {
         ordersRealtimeSubscription = supabaseClient
             .channel('public:orders')
@@ -330,9 +324,6 @@ async function renderBusinessOrders() {
             
         if (!error && data) {
             orders = data;
-        } else {
-            const fallback = await supabaseClient.from('orders').select('*').order('id', { ascending: false });
-            if (fallback.data) orders = fallback.data;
         }
     } catch (e) {
         console.warn("Lectura de orders Supabase:", e);
@@ -348,7 +339,6 @@ async function renderBusinessOrders() {
         return bizKeywords.some(keyword => oName.includes(keyword));
     });
 
-    // Ordenamiento estricto por fecha real de inserción descendente
     myOrders.sort((a, b) => {
         const timeA = a.created_at ? new Date(a.created_at).getTime() : (parseInt(a.id, 10) || 0);
         const timeB = b.created_at ? new Date(b.created_at).getTime() : (parseInt(b.id, 10) || 0);
@@ -395,10 +385,16 @@ async function renderBusinessOrders() {
                     </div>
                 </div>
 
-                <button onclick="if(typeof openBusinessQR === 'function') openBusinessQR()" class="w-full mt-2 py-3 bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600 text-black font-extrabold rounded-2xl text-xs tracking-wide shadow-lg flex items-center justify-center space-x-2 active:scale-95 transition">
-                    <i data-lucide="qr-code" class="w-4 h-4"></i>
-                    <span>Mostrar QR de Cobro VIP</span>
-                </button>
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                    <button onclick="if(typeof openBusinessQR === 'function') openBusinessQR()" class="py-3 bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600 text-black font-extrabold rounded-2xl text-xs shadow-lg flex items-center justify-center space-x-1.5 active:scale-95 transition">
+                        <i data-lucide="qr-code" class="w-4 h-4"></i>
+                        <span>QR VIP</span>
+                    </button>
+                    <button onclick="startCameraModal()" class="py-3 bg-neutral-900 border border-amber-500/30 text-white font-bold rounded-2xl text-xs shadow-lg flex items-center justify-center space-x-1.5 active:scale-95 transition">
+                        <i data-lucide="scan" class="w-4 h-4 text-amber-400"></i>
+                        <span>Cobrar QR</span>
+                    </button>
+                </div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
@@ -464,25 +460,31 @@ async function renderBusinessOrders() {
                 <button onclick="openStockControlModal()" class="flex-1 py-3 bg-white border border-neutral-200 text-black font-bold rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2">
                     <i data-lucide="book-open" class="w-4 h-4"></i><span>Carta</span>
                 </button>
-                <button onclick="if(typeof switchTab === 'function') switchTab('business-scan')" class="flex-1 py-3 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex justify-center items-center space-x-2">
+                <button onclick="startCameraModal()" class="flex-1 py-3 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex justify-center items-center space-x-2">
                     <i data-lucide="scan-line" class="w-4 h-4"></i><span>Escanear Mesa</span>
                 </button>
             </div>
         `;
     } else {
         dashHtml += `
-            <section class="glass-dark p-6 rounded-[32px] text-white flex flex-col justify-between space-y-5 relative overflow-hidden shadow-xl">
+            <section class="glass-dark p-6 rounded-[32px] text-white flex flex-col justify-between space-y-4 relative overflow-hidden shadow-xl">
                 <div class="flex justify-between items-start relative z-10">
                     <div>
-                        <span class="text-[9px] text-neutral-400 font-mono tracking-widest uppercase bg-white/10 px-2.5 py-1 rounded-full">TERMINAL VIRTUAL</span>
-                        <h2 class="text-lg font-medium tracking-tight mt-2 text-white">Cobro Rápido</h2>
+                        <span class="text-[9px] text-neutral-400 font-mono tracking-widest uppercase bg-white/10 px-2.5 py-1 rounded-full">TERMINAL DE NEGOCIO</span>
+                        <h2 class="text-lg font-medium tracking-tight mt-2 text-white">Cobro & Escáner</h2>
                     </div>
                     <i data-lucide="qr-code" class="w-5 h-5 text-white"></i>
                 </div>
-                <button onclick="if(typeof openBusinessQR === 'function') openBusinessQR()" class="w-full py-3.5 bg-white text-black font-semibold rounded-2xl text-xs tracking-wide transition shadow-lg flex items-center justify-center space-x-2">
-                    <i data-lucide="qr-code" class="w-4 h-4"></i>
-                    <span>Mostrar QR de Negocio</span>
-                </button>
+                <div class="grid grid-cols-2 gap-2 relative z-10">
+                    <button onclick="if(typeof openBusinessQR === 'function') openBusinessQR()" class="py-3.5 bg-white text-black font-semibold rounded-2xl text-xs tracking-wide transition shadow-lg flex items-center justify-center space-x-1.5 active:scale-95">
+                        <i data-lucide="qr-code" class="w-4 h-4"></i>
+                        <span>Mi QR</span>
+                    </button>
+                    <button onclick="startCameraModal()" class="py-3.5 bg-white/15 border border-white/20 text-white font-semibold rounded-2xl text-xs tracking-wide transition shadow-lg flex items-center justify-center space-x-1.5 active:scale-95">
+                        <i data-lucide="scan" class="w-4 h-4"></i>
+                        <span>Cobrar QR</span>
+                    </button>
+                </div>
             </section>
 
             <div class="grid grid-cols-2 gap-3">
@@ -503,7 +505,7 @@ async function renderBusinessOrders() {
         `;
     }
 
-    // SECCIÓN DE ÚLTIMO PEDIDO EN EL DASHBOARD
+    // ÚLTIMO PEDIDO
     dashHtml += `
         <div class="space-y-2 pt-2">
             <div class="flex justify-between items-center px-1">
@@ -598,22 +600,22 @@ async function renderBusinessOrders() {
 
                             ${!isCompleted ? `
                                 <button onclick="completeBusinessOrder('${o.id}')" title="Completar pedido" class="w-9 h-9 rounded-2xl bg-black text-white hover:bg-neutral-800 flex items-center justify-center active:scale-90 transition shadow-md shrink-0">
-                                <i data-lucide="check" class="w-4 h-4"></i>
-                            </button>
-                        ` : `
-                            <div class="w-9 h-9 rounded-2xl bg-neutral-100 text-neutral-400 flex items-center justify-center shrink-0">
-                                <i data-lucide="check-check" class="w-4 h-4"></i>
-                            </div>
-                        `}
+                                    <i data-lucide="check" class="w-4 h-4"></i>
+                                </button>
+                            ` : `
+                                <div class="w-9 h-9 rounded-2xl bg-neutral-100 text-neutral-400 flex items-center justify-center shrink-0">
+                                    <i data-lucide="check-check" class="w-4 h-4"></i>
+                                </div>
+                            `}
+                        </div>
                     </div>
-                </div>
-            `;
-        });
+                `;
+            });
+        }
+
+        ordersHtml += `</div>`;
+        ordersContainer.innerHTML = ordersHtml;
     }
 
-    ordersHtml += `</div>`;
-    ordersContainer.innerHTML = ordersHtml;
-}
-
-lucide.createIcons();
+    lucide.createIcons();
 }

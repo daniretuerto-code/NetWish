@@ -4,7 +4,7 @@ let chatRealtimeSubscription = null;
 
 // --- ABRIR CHAT DESDE EL CLIENTE HACIA EL COMERCIO ---
 function openCustomerChat(bizName) {
-    if (!currentUser) {
+    if (typeof currentUser === 'undefined' || !currentUser) {
         if (typeof openAuthModal === 'function') openAuthModal('login');
         return;
     }
@@ -17,19 +17,22 @@ function openCustomerChat(bizName) {
     const modalBody = document.getElementById('modalBody');
 
     modalBody.innerHTML = `
-        <div class="flex flex-col h-[420px] justify-between">
+        <div class="flex flex-col h-[430px] justify-between text-left">
             <!-- Header Chat -->
             <div class="flex items-center justify-between pb-3 border-b border-neutral-100 shrink-0">
                 <div class="flex items-center space-x-2.5">
-                    <div class="w-8 h-8 rounded-xl bg-black text-white flex items-center justify-center text-xs font-bold">
+                    <div class="w-9 h-9 rounded-2xl bg-black text-white flex items-center justify-center text-xs font-bold shadow-sm">
                         ${currentChatBusiness.substring(0, 2).toUpperCase()}
                     </div>
                     <div class="text-left">
                         <h4 class="text-xs font-bold text-black truncate max-w-[190px]">${currentChatBusiness}</h4>
-                        <span class="text-[9px] text-emerald-600 font-mono block">● En línea</span>
+                        <span class="text-[9px] text-emerald-600 font-mono flex items-center space-x-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"></span>
+                            <span>En línea</span>
+                        </span>
                     </div>
                 </div>
-                <button onclick="closeChatModal()" class="w-7 h-7 rounded-xl bg-neutral-100 flex items-center justify-center text-neutral-400 hover:text-black">
+                <button onclick="closeChatModal()" class="w-8 h-8 rounded-xl bg-neutral-100 flex items-center justify-center text-neutral-400 hover:text-black active:scale-90 transition">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
@@ -45,8 +48,8 @@ function openCustomerChat(bizName) {
             <div class="pt-2 border-t border-neutral-100 flex items-center space-x-2 shrink-0">
                 <input type="text" id="chatInputText" placeholder="Escribe tu consulta personalizada..." 
                     onkeydown="if(event.key === 'Enter') sendChatMessage('customer')"
-                    class="flex-1 bg-neutral-50 border border-neutral-200/80 rounded-xl px-3 py-2.5 text-xs text-black focus:outline-none focus:border-black transition">
-                <button onclick="sendChatMessage('customer')" class="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center active:scale-90 transition shrink-0 shadow-sm">
+                    class="flex-1 bg-neutral-50 border border-neutral-200/80 rounded-2xl px-3.5 py-3 text-xs text-black focus:outline-none focus:border-black transition">
+                <button onclick="sendChatMessage('customer')" class="w-11 h-11 rounded-2xl bg-black text-white flex items-center justify-center active:scale-90 transition shrink-0 shadow-md">
                     <i data-lucide="send" class="w-4 h-4"></i>
                 </button>
             </div>
@@ -63,59 +66,42 @@ function openCustomerChat(bizName) {
     loadChatMessages('customer');
 }
 
-// --- ABRIR BANDEJA DE MENSAJES PARA EL NEGOCIO ---
-async function openBusinessMessagesModal() {
+// --- RENDERIZADO DE LA PESTAÑA DEDICADA DE MENSAJES (MODO COMERCIO) ---
+async function renderBusinessMessagesTab() {
     if (!currentBusiness) return;
+    const container = document.getElementById('businessMessagesTabContent');
+    if (!container) return;
 
-    const modal = document.getElementById('customModal');
-    const modalContent = document.getElementById('modalContent');
-    const modalBody = document.getElementById('modalBody');
-
-    modalBody.innerHTML = `
-        <div class="space-y-4 text-left">
-            <div class="text-center space-y-1">
-                <h3 class="text-base font-bold text-black">Bandeja de Mensajes</h3>
-                <p class="text-[11px] text-neutral-500">Consultas de clientes en tiempo real.</p>
-            </div>
-
-            <div id="businessConversationsList" class="space-y-2 max-h-72 overflow-y-auto pr-1 allow-scroll">
-                <div class="text-center py-6">
-                    <i data-lucide="loader-2" class="w-4 h-4 mx-auto animate-spin text-neutral-400"></i>
-                </div>
-            </div>
-
-            <button onclick="closeChatModal()" class="w-full py-2.5 bg-neutral-100 hover:bg-neutral-200 text-black font-semibold rounded-xl text-xs transition">
-                Cerrar
-            </button>
+    container.innerHTML = `
+        <div class="text-center py-12">
+            <i data-lucide="loader-2" class="w-5 h-5 mx-auto animate-spin text-neutral-400 mb-2"></i>
+            <p class="text-xs text-neutral-400">Cargando conversaciones...</p>
         </div>
     `;
-
     lucide.createIcons();
-    modal.classList.remove('hidden');
-    setTimeout(() => {
-        modal.classList.remove('opacity-0');
-        modalContent?.classList.remove('scale-95');
-    }, 10);
 
-    // Cargar conversaciones agrupadas por cliente
     try {
+        const cleanBizName = (currentBusiness.name || '').trim();
         const { data, error } = await supabaseClient
             .from('messages')
             .select('*')
-            .ilike('business_name', `%${currentBusiness.name}%`)
+            .ilike('business_name', `%${cleanBizName}%`)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        const container = document.getElementById('businessConversationsList');
-        if (!container) return;
-
         if (!data || data.length === 0) {
-            container.innerHTML = `<p class="text-xs text-neutral-400 text-center py-8">No tienes mensajes ni consultas aún.</p>`;
+            container.innerHTML = `
+                <div class="p-8 rounded-3xl bg-neutral-50/70 border border-neutral-100 text-center space-y-2">
+                    <i data-lucide="message-square-off" class="w-6 h-6 mx-auto text-neutral-300"></i>
+                    <p class="text-xs font-bold text-black">Sin mensajes recibidos</p>
+                    <p class="text-[10px] text-neutral-400">Cuando los clientes inicien un chat directo, aparecerán aquí en tiempo real.</p>
+                </div>
+            `;
+            lucide.createIcons();
             return;
         }
 
-        // Agrupar por nombre de cliente
         const uniqueCustomers = {};
         data.forEach(m => {
             const clientName = m.sender_type === 'customer' ? m.sender_name : m.receiver_name;
@@ -127,18 +113,22 @@ async function openBusinessMessagesModal() {
         let listHtml = '';
         Object.keys(uniqueCustomers).forEach(client => {
             const lastMsg = uniqueCustomers[client];
+            const dateStr = lastMsg.created_at ? new Date(lastMsg.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
             listHtml += `
-                <div onclick="openBusinessChatWithCustomer('${encodeURIComponent(client)}')" class="p-3 bg-neutral-50 hover:bg-neutral-100 rounded-2xl border border-neutral-200/60 flex items-center justify-between cursor-pointer transition active:scale-98">
-                    <div class="flex items-center space-x-3 overflow-hidden">
-                        <div class="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-xs font-bold shrink-0">
+                <div onclick="openBusinessChatWithCustomer('${encodeURIComponent(client)}')" class="p-4 bg-white hover:bg-neutral-50 rounded-3xl border border-neutral-200/80 shadow-sm flex items-center justify-between cursor-pointer transition active:scale-98">
+                    <div class="flex items-center space-x-3.5 overflow-hidden flex-1 mr-2">
+                        <div class="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-sm">
                             ${client.substring(0, 2).toUpperCase()}
                         </div>
                         <div class="overflow-hidden">
                             <span class="text-xs font-bold text-black block truncate">${client}</span>
-                            <span class="text-[10px] text-neutral-500 block truncate">${lastMsg.text}</span>
+                            <span class="text-[11px] text-neutral-500 block truncate mt-0.5">${lastMsg.text}</span>
                         </div>
                     </div>
-                    <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
+                    <div class="text-right shrink-0">
+                        <span class="text-[9px] font-mono text-neutral-400 block">${dateStr}</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 ml-auto mt-1"></i>
+                    </div>
                 </div>
             `;
         });
@@ -147,36 +137,36 @@ async function openBusinessMessagesModal() {
         lucide.createIcons();
 
     } catch (e) {
-        console.error("Error cargando bandeja:", e);
+        console.error("Error cargando mensajes del negocio:", e);
+        container.innerHTML = `<p class="text-xs text-rose-500 text-center py-6">Error al sincronizar mensajes.</p>`;
     }
 }
 
-// --- ABRIR CHAT INDIVIDUAL DEL NEGOCIO CON UN CLIENTE ---
+// --- ABRIR CHAT INDIVIDUAL DEL NEGOCIO CON UN CLIENTE (MODAL) ---
 function openBusinessChatWithCustomer(encodedClient) {
     const client = decodeURIComponent(encodedClient);
     currentChatBusiness = currentBusiness.name;
     currentChatCustomer = client;
 
+    const modal = document.getElementById('customModal');
+    const modalContent = document.getElementById('modalContent');
     const modalBody = document.getElementById('modalBody');
     if (!modalBody) return;
 
     modalBody.innerHTML = `
-        <div class="flex flex-col h-[420px] justify-between">
+        <div class="flex flex-col h-[430px] justify-between text-left">
             <!-- Header Chat Negocio -->
             <div class="flex items-center justify-between pb-3 border-b border-neutral-100 shrink-0">
                 <div class="flex items-center space-x-2.5">
-                    <button onclick="openBusinessMessagesModal()" class="w-7 h-7 rounded-xl bg-neutral-100 flex items-center justify-center text-black mr-1">
-                        <i data-lucide="arrow-left" class="w-4 h-4"></i>
-                    </button>
-                    <div class="w-8 h-8 rounded-full bg-neutral-900 text-white flex items-center justify-center text-xs font-bold">
+                    <div class="w-9 h-9 rounded-2xl bg-black text-white flex items-center justify-center text-xs font-bold shadow-sm">
                         ${client.substring(0, 2).toUpperCase()}
                     </div>
                     <div class="text-left">
-                        <h4 class="text-xs font-bold text-black truncate max-w-[170px]">${client}</h4>
-                        <span class="text-[9px] text-neutral-400 font-mono block">Cliente</span>
+                        <h4 class="text-xs font-bold text-black truncate max-w-[190px]">${client}</h4>
+                        <span class="text-[9px] text-neutral-400 font-mono block">Cliente Directo</span>
                     </div>
                 </div>
-                <button onclick="closeChatModal()" class="w-7 h-7 rounded-xl bg-neutral-100 flex items-center justify-center text-neutral-400 hover:text-black">
+                <button onclick="closeChatModal()" class="w-8 h-8 rounded-xl bg-neutral-100 flex items-center justify-center text-neutral-400 hover:text-black active:scale-90 transition">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
@@ -192,8 +182,8 @@ function openBusinessChatWithCustomer(encodedClient) {
             <div class="pt-2 border-t border-neutral-100 flex items-center space-x-2 shrink-0">
                 <input type="text" id="chatInputText" placeholder="Responder al cliente..." 
                     onkeydown="if(event.key === 'Enter') sendChatMessage('business')"
-                    class="flex-1 bg-neutral-50 border border-neutral-200/80 rounded-xl px-3 py-2.5 text-xs text-black focus:outline-none focus:border-black transition">
-                <button onclick="sendChatMessage('business')" class="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center active:scale-90 transition shrink-0 shadow-sm">
+                    class="flex-1 bg-neutral-50 border border-neutral-200/80 rounded-2xl px-3.5 py-3 text-xs text-black focus:outline-none focus:border-black transition">
+                <button onclick="sendChatMessage('business')" class="w-11 h-11 rounded-2xl bg-black text-white flex items-center justify-center active:scale-90 transition shrink-0 shadow-md">
                     <i data-lucide="send" class="w-4 h-4"></i>
                 </button>
             </div>
@@ -201,19 +191,26 @@ function openBusinessChatWithCustomer(encodedClient) {
     `;
 
     lucide.createIcons();
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        modalContent?.classList.remove('scale-95');
+    }, 10);
+
     loadChatMessages('business');
 }
 
-// --- CARGAR Y SINCRONIZAR MENSAJES EN TIEMPO REAL ---
+// --- CARGA Y RENDERIZADO DE MENSAJES CON REALTIME ---
 async function loadChatMessages(currentRole) {
     const container = document.getElementById('chatMessagesContainer');
     if (!container) return;
 
     try {
+        const cleanBiz = (currentChatBusiness || '').trim();
         const { data, error } = await supabaseClient
             .from('messages')
             .select('*')
-            .ilike('business_name', `%${currentChatBusiness}%`)
+            .ilike('business_name', `%${cleanBiz}%`)
             .or(`sender_name.ilike.%${currentChatCustomer}%,receiver_name.ilike.%${currentChatCustomer}%`)
             .order('created_at', { ascending: true });
 
@@ -221,12 +218,12 @@ async function loadChatMessages(currentRole) {
 
         renderMessagesList(data || [], currentRole);
 
-        // Suscribirse a nuevos mensajes en vivo
+        // Suscripción Realtime
         if (!chatRealtimeSubscription && typeof supabaseClient.channel === 'function') {
             chatRealtimeSubscription = supabaseClient
                 .channel('public:messages')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-                    if (payload.new && payload.new.business_name.toLowerCase().includes(currentChatBusiness.toLowerCase())) {
+                    if (payload.new && payload.new.business_name.toLowerCase().includes(cleanBiz.toLowerCase())) {
                         appendSingleMessage(payload.new, currentRole);
                     }
                 })
@@ -234,7 +231,7 @@ async function loadChatMessages(currentRole) {
         }
 
     } catch (err) {
-        console.error("Error cargando chat:", err);
+        console.error("Error cargando mensajes:", err);
     }
 }
 
@@ -243,7 +240,7 @@ function renderMessagesList(messages, currentRole) {
     if (!container) return;
 
     if (messages.length === 0) {
-        container.innerHTML = `<p class="text-[11px] text-neutral-400 text-center py-8">Inicia la conversación. Envía tu primera consulta.</p>`;
+        container.innerHTML = `<p class="empty-chat-placeholder text-[11px] text-neutral-400 text-center py-8">Inicia la conversación. Envía tu primera consulta.</p>`;
         return;
     }
 
@@ -251,13 +248,14 @@ function renderMessagesList(messages, currentRole) {
     messages.forEach(m => {
         const isMine = (currentRole === 'customer' && m.sender_type === 'customer') ||
                        (currentRole === 'business' && m.sender_type === 'business');
+        const timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Ahora';
 
         html += `
             <div class="flex flex-col ${isMine ? 'items-end' : 'items-start'}">
-                <div class="max-w-[80%] px-3.5 py-2 rounded-2xl text-xs leading-relaxed ${isMine ? 'bg-black text-white rounded-br-none' : 'bg-neutral-100 text-black rounded-bl-none'}">
+                <div class="max-w-[80%] px-4 py-2.5 rounded-2xl text-xs leading-relaxed shadow-sm ${isMine ? 'bg-black text-white rounded-br-none' : 'bg-neutral-100 text-black rounded-bl-none'}">
                     ${m.text}
                 </div>
-                <span class="text-[8px] text-neutral-400 font-mono mt-0.5 px-1">${new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                <span class="text-[8px] text-neutral-400 font-mono mt-0.5 px-1">${timeStr}</span>
             </div>
         `;
     });
@@ -270,23 +268,28 @@ function appendSingleMessage(msg, currentRole) {
     const container = document.getElementById('chatMessagesContainer');
     if (!container) return;
 
+    // Eliminar texto de chat vacío si existe
+    const emptyPlaceholder = container.querySelector('.empty-chat-placeholder');
+    if (emptyPlaceholder) emptyPlaceholder.remove();
+
     const isMine = (currentRole === 'customer' && msg.sender_type === 'customer') ||
                    (currentRole === 'business' && msg.sender_type === 'business');
+    const timeStr = msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Ahora';
 
     const msgEl = document.createElement('div');
     msgEl.className = `flex flex-col ${isMine ? 'items-end' : 'items-start'}`;
     msgEl.innerHTML = `
-        <div class="max-w-[80%] px-3.5 py-2 rounded-2xl text-xs leading-relaxed ${isMine ? 'bg-black text-white rounded-br-none' : 'bg-neutral-100 text-black rounded-bl-none'}">
+        <div class="max-w-[80%] px-4 py-2.5 rounded-2xl text-xs leading-relaxed shadow-sm ${isMine ? 'bg-black text-white rounded-br-none' : 'bg-neutral-100 text-black rounded-bl-none'}">
             ${msg.text}
         </div>
-        <span class="text-[8px] text-neutral-400 font-mono mt-0.5 px-1">${new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+        <span class="text-[8px] text-neutral-400 font-mono mt-0.5 px-1">${timeStr}</span>
     `;
 
     container.appendChild(msgEl);
     container.scrollTop = container.scrollHeight;
 }
 
-// --- ENVIAR MENSAJE ---
+// --- ENVÍO INMEDIATO CON RENDERIZADO OPTIMISTA (NO DESAPARECE) ---
 async function sendChatMessage(senderType) {
     const input = document.getElementById('chatInputText');
     if (!input || !input.value.trim()) return;
@@ -297,20 +300,25 @@ async function sendChatMessage(senderType) {
     const payload = {
         business_name: currentChatBusiness,
         sender_name: senderType === 'customer' ? currentChatCustomer : currentChatBusiness,
-        sender_id: currentUser?.id || 'anon',
+        sender_id: typeof currentUser !== 'undefined' && currentUser ? currentUser.id : 'anon',
         receiver_name: senderType === 'customer' ? currentChatBusiness : currentChatCustomer,
         text: text,
-        sender_type: senderType
+        sender_type: senderType,
+        created_at: new Date().toISOString()
     };
 
+    // 1. Renderizado optimista instantáneo en pantalla
+    appendSingleMessage(payload, senderType);
+
+    // 2. Persistencia en Supabase
     try {
         const { error } = await supabaseClient
             .from('messages')
             .insert([payload]);
 
-        if (error) throw error;
+        if (error) console.warn("Aviso guardado en tabla messages:", error);
     } catch (e) {
-        alert("Error al enviar mensaje: " + e.message);
+        console.error("Fallo insertando mensaje:", e);
     }
 }
 
