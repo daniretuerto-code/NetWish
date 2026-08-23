@@ -18,7 +18,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <link rel="stylesheet" href="css/styles.css?v=28">
+    <link rel="stylesheet" href="css/styles.css?v=29">
 </head>
 <body>
 
@@ -172,7 +172,7 @@
                     <div id="dynamicOrdersTabContent" class="space-y-4"></div>
                 </div>
 
-                <!-- PESTAÑA DE MENSAJES DEL NEGOCIO -->
+                <!-- PESTAÑA DE MENSAJES -->
                 <div id="view-business-messages" class="view-pane px-6 pt-2 pb-28 space-y-4">
                     <div class="space-y-1 px-1">
                         <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">ATENCIÓN AL CLIENTE</span>
@@ -369,9 +369,9 @@
                 </div>
             </div>
 
-            <!-- NUEVA VISTA DEDICADA: PÁGINA DE CATÁLOGO DE BEATS -->
-            <div id="view-beats-catalog" class="absolute inset-0 bg-white z-35 hidden flex-col allow-scroll px-6 pt-24 pb-28 space-y-4">
-                <div class="flex items-center space-x-3 px-1">
+            <!-- VISTA DEDICADA: PÁGINA DE CATÁLOGO DE BEATS (CON Z-40 Y DISPLAY FLEX) -->
+            <div id="view-beats-catalog" class="absolute inset-0 bg-white z-40 hidden flex-col allow-scroll px-6 pt-24 pb-28 space-y-4">
+                <div class="flex items-center space-x-3 px-1 shrink-0">
                     <button onclick="closeBeatsCatalogView()" class="w-10 h-10 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-black hover:bg-neutral-200 transition active:scale-95">
                         <i data-lucide="arrow-left" class="w-5 h-5"></i>
                     </button>
@@ -381,7 +381,7 @@
                     </div>
                 </div>
 
-                <div class="relative flex items-center shadow-sm">
+                <div class="relative flex items-center shadow-sm shrink-0">
                     <i data-lucide="search" class="absolute left-4 w-4 h-4 text-neutral-400"></i>
                     <input type="text" id="beatsCatalogSearch" onkeyup="filterBeatsCatalogView()" placeholder="Buscar beats por nombre o estilo..." class="w-full bg-neutral-50 border border-neutral-200/80 rounded-2xl py-3.5 pl-11 pr-4 text-xs text-black placeholder-neutral-400 focus:outline-none focus:border-black transition">
                 </div>
@@ -422,15 +422,15 @@
     </div>
 
     <!-- SCRIPTS MODULARES -->
-    <script src="js/config.js?v=28"></script>
-    <script src="js/navigation.js?v=28"></script>
-    <script src="js/auth.js?v=28"></script>
-    <script src="js/directory.js?v=28"></script>
-    <script src="js/catalog-cart.js?v=28"></script>
-    <script src="js/dashboard.js?v=28"></script>
-    <script src="js/scanner.js?v=28"></script>
-    <script src="js/payment.js?v=28"></script>
-    <script src="js/chat.js?v=28"></script>
+    <script src="js/config.js?v=29"></script>
+    <script src="js/navigation.js?v=29"></script>
+    <script src="js/auth.js?v=29"></script>
+    <script src="js/directory.js?v=29"></script>
+    <script src="js/catalog-cart.js?v=29"></script>
+    <script src="js/dashboard.js?v=29"></script>
+    <script src="js/scanner.js?v=29"></script>
+    <script src="js/payment.js?v=29"></script>
+    <script src="js/chat.js?v=29"></script>
 
 </body>
 </html>

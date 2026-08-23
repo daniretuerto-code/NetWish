@@ -10,7 +10,7 @@ window.appState.pendingOrderDetails = null;
 window.currentlyPlayingAudio = null;
 window.currentPlayingBtnId = null;
 
-let currentLoadedBeatsList = [];
+window.currentLoadedBeatsList = [];
 
 function openPublicBusiness(safeName, safeType) {
     window.appState.activeBusinessName = decodeURIComponent(safeName || '');
@@ -92,11 +92,10 @@ async function renderPublicCatalogItems() {
     const isMusic = window.appState.activeBusinessCategory.includes('disco') || window.appState.activeBusinessCategory.includes('music') || window.appState.activeBusinessCategory.includes('produ') || window.appState.activeBusinessCategory.includes('estudio');
 
     if (isMusic) {
-        // Filtrar los beats finalizados (incluye prueba1)
         const finishedBeats = items.filter(i => i.is_finished_beat === true || Boolean(i.audio_url) || (i.name || '').toLowerCase().includes('prueba1'));
         const customServices = items.filter(i => !finishedBeats.includes(i));
         
-        currentLoadedBeatsList = finishedBeats;
+        window.currentLoadedBeatsList = finishedBeats;
 
         let html = '';
 
@@ -121,7 +120,7 @@ async function renderPublicCatalogItems() {
             </button>
         `;
 
-        // LISTADO DE SERVICIOS RESTANTES
+        // LISTADO DE SERVICIOS
         if (customServices.length > 0) {
             html += `
                 <div class="space-y-3 pt-2">
@@ -144,24 +143,40 @@ async function renderPublicCatalogItems() {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// --- NAVEGACIÓN Y RENDERIZADO DE LA PÁGINA: CATÁLOGO DE BEATS ---
-function openBeatsCatalogView() {
+// --- NAVEGACIÓN Y RENDERIZADO DE LA PÁGINA DEDICADA DE BEATS ---
+window.openBeatsCatalogView = function() {
     stopCurrentAudio();
     const beatsView = document.getElementById('view-beats-catalog');
     if (!beatsView) return;
 
-    renderBeatsCatalogList(currentLoadedBeatsList);
+    renderBeatsCatalogList(window.currentLoadedBeatsList);
+
+    // Ocultar vista del negocio y mostrar vista de Beats
+    const pubBizView = document.getElementById('view-public-business');
+    if (pubBizView) pubBizView.classList.add('hidden');
 
     beatsView.classList.remove('hidden');
+    beatsView.classList.add('flex');
     beatsView.scrollTop = 0;
+    
     if (typeof lucide !== 'undefined') lucide.createIcons();
-}
+};
 
-function closeBeatsCatalogView() {
+window.closeBeatsCatalogView = function() {
     stopCurrentAudio();
     const beatsView = document.getElementById('view-beats-catalog');
-    if (beatsView) beatsView.classList.add('hidden');
-}
+    if (beatsView) {
+        beatsView.classList.add('hidden');
+        beatsView.classList.remove('flex');
+    }
+
+    const pubBizView = document.getElementById('view-public-business');
+    if (pubBizView) {
+        pubBizView.classList.remove('hidden');
+    }
+
+    updateCartDisplay();
+};
 
 function renderBeatsCatalogList(list) {
     const container = document.getElementById('dynamicBeatsCatalogList');
@@ -183,15 +198,15 @@ function renderBeatsCatalogList(list) {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-function filterBeatsCatalogView() {
+window.filterBeatsCatalogView = function() {
     const q = (document.getElementById('beatsCatalogSearch')?.value || '').toLowerCase();
-    const filtered = currentLoadedBeatsList.filter(item => {
+    const filtered = (window.currentLoadedBeatsList || []).filter(item => {
         const name = (item.name || '').toLowerCase();
         const desc = (item.description || '').toLowerCase();
         return name.includes(q) || desc.includes(q);
     });
     renderBeatsCatalogList(filtered);
-}
+};
 
 // --- RENDERIZADO DE TARJETA INDIVIDUAL DE PRODUCTO / BEAT ---
 function renderSingleProductCard(item, isMusicBeat) {
@@ -340,7 +355,6 @@ function changeItemQuantity(encodedId, encodedName, price, delta) {
 
     updateCartDisplay();
 
-    // Actualizar todos los contenedores con este ID (tanto en el catálogo principal como en la vista de Beats)
     const btnContainers = document.querySelectorAll(`[id="btn-container-${id}"]`);
     btnContainers.forEach(container => {
         container.innerHTML = renderItemButtonHTML(id, encodedId, encodedName, price, newQty);
@@ -430,7 +444,10 @@ function openCartSummary() {
     if (pubBizView) pubBizView.classList.add('hidden');
 
     const beatsView = document.getElementById('view-beats-catalog');
-    if (beatsView) beatsView.classList.add('hidden');
+    if (beatsView) {
+        beatsView.classList.add('hidden');
+        beatsView.classList.remove('flex');
+    }
 
     const cartView = document.getElementById('view-cart');
     if (cartView) {
