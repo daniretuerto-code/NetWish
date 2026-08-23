@@ -10,6 +10,8 @@ window.appState.pendingOrderDetails = null;
 window.currentlyPlayingAudio = null;
 window.currentPlayingBtnId = null;
 
+let currentLoadedBeatsList = [];
+
 function openPublicBusiness(safeName, safeType) {
     window.appState.activeBusinessName = decodeURIComponent(safeName || '');
     window.appState.activeBusinessCategory = decodeURIComponent(safeType || '').toLowerCase();
@@ -90,32 +92,42 @@ async function renderPublicCatalogItems() {
     const isMusic = window.appState.activeBusinessCategory.includes('disco') || window.appState.activeBusinessCategory.includes('music') || window.appState.activeBusinessCategory.includes('produ') || window.appState.activeBusinessCategory.includes('estudio');
 
     if (isMusic) {
-        // Separación entre Beats Finalizados y Servicios
+        // Filtrar los beats finalizados (incluye prueba1)
         const finishedBeats = items.filter(i => i.is_finished_beat === true || Boolean(i.audio_url) || (i.name || '').toLowerCase().includes('prueba1'));
         const customServices = items.filter(i => !finishedBeats.includes(i));
+        
+        currentLoadedBeatsList = finishedBeats;
 
         let html = '';
 
-        if (finishedBeats.length > 0) {
-            html += `
-                <div class="space-y-3">
-                    <div class="flex items-center space-x-2 px-1">
-                        <i data-lucide="disc-3" class="w-4 h-4 text-amber-500"></i>
-                        <h4 class="text-xs font-extrabold text-black uppercase tracking-wider">Beats Finalizados (Disponibles)</h4>
+        // BOTÓN ACCESO A LA PÁGINA DEL CATÁLOGO DE BEATS
+        html += `
+            <button onclick="openBeatsCatalogView()" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-98 transition group">
+                <div class="flex items-center space-x-3.5 overflow-hidden">
+                    <div class="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center shadow-md shrink-0">
+                        <i data-lucide="disc" class="w-5 h-5 text-amber-400"></i>
                     </div>
-                    <div class="space-y-3">
-                        ${finishedBeats.map(item => renderSingleProductCard(item, true)).join('')}
+                    <div class="text-left overflow-hidden">
+                        <div class="flex items-center space-x-2">
+                            <span class="block text-xs font-bold text-black tracking-tight truncate">Catálogo de Beats</span>
+                            <span class="text-[9px] bg-amber-500/10 text-amber-600 font-bold px-2 py-0.5 rounded-full border border-amber-500/20">${finishedBeats.length} disponibles</span>
+                        </div>
+                        <span class="block text-[10px] text-neutral-400 mt-0.5 truncate">Explora y escucha instrumentales listas para compra inmediata</span>
                     </div>
                 </div>
-            `;
-        }
+                <div class="w-7 h-7 rounded-full bg-white border border-neutral-200/60 flex items-center justify-center text-neutral-400 group-hover:text-black transition shrink-0 ml-2">
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                </div>
+            </button>
+        `;
 
+        // LISTADO DE SERVICIOS RESTANTES
         if (customServices.length > 0) {
             html += `
                 <div class="space-y-3 pt-2">
                     <div class="flex items-center space-x-2 px-1">
-                        <i data-lucide="sliders" class="w-4 h-4 text-neutral-600"></i>
-                        <h4 class="text-xs font-extrabold text-black uppercase tracking-wider">Servicios & Producción</h4>
+                        <i data-lucide="sliders" class="w-3.5 h-3.5 text-neutral-400"></i>
+                        <h4 class="text-[10px] font-mono font-bold text-neutral-400 uppercase tracking-widest">Servicios & Producción</h4>
                     </div>
                     <div class="space-y-3">
                         ${customServices.map(item => renderSingleProductCard(item, false)).join('')}
@@ -132,6 +144,56 @@ async function renderPublicCatalogItems() {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// --- NAVEGACIÓN Y RENDERIZADO DE LA PÁGINA: CATÁLOGO DE BEATS ---
+function openBeatsCatalogView() {
+    stopCurrentAudio();
+    const beatsView = document.getElementById('view-beats-catalog');
+    if (!beatsView) return;
+
+    renderBeatsCatalogList(currentLoadedBeatsList);
+
+    beatsView.classList.remove('hidden');
+    beatsView.scrollTop = 0;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeBeatsCatalogView() {
+    stopCurrentAudio();
+    const beatsView = document.getElementById('view-beats-catalog');
+    if (beatsView) beatsView.classList.add('hidden');
+}
+
+function renderBeatsCatalogList(list) {
+    const container = document.getElementById('dynamicBeatsCatalogList');
+    if (!container) return;
+
+    if (!list || list.length === 0) {
+        container.innerHTML = `
+            <div class="p-8 rounded-3xl bg-neutral-50 border border-neutral-200/60 text-center space-y-2">
+                <i data-lucide="disc" class="w-6 h-6 mx-auto text-neutral-300"></i>
+                <p class="text-xs font-bold text-black">No hay beats disponibles</p>
+                <p class="text-[10px] text-neutral-400">El estudio aún no ha subido instrumentales terminadas a la venta.</p>
+            </div>
+        `;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+    }
+
+    container.innerHTML = list.map(item => renderSingleProductCard(item, true)).join('');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function filterBeatsCatalogView() {
+    const q = (document.getElementById('beatsCatalogSearch')?.value || '').toLowerCase();
+    const filtered = currentLoadedBeatsList.filter(item => {
+        const name = (item.name || '').toLowerCase();
+        const desc = (item.description || '').toLowerCase();
+        return name.includes(q) || desc.includes(q);
+    });
+    renderBeatsCatalogList(filtered);
+}
+
+// --- RENDERIZADO DE TARJETA INDIVIDUAL DE PRODUCTO / BEAT ---
 function renderSingleProductCard(item, isMusicBeat) {
     const price = parseFloat(item.price) || 0;
     const itemIdStr = String(item.id);
@@ -182,7 +244,7 @@ function togglePlayPreview(encodedUrl, iconId) {
     const iconEl = document.getElementById(iconId);
 
     if (window.currentlyPlayingAudio && window.currentlyPlayingAudio.src === url && !window.currentlyPlayingAudio.paused) {
-        currentlyPlayingAudio.pause();
+        window.currentlyPlayingAudio.pause();
         if (iconEl) {
             iconEl.setAttribute('data-lucide', 'play');
             iconEl.classList.add('ml-0.5');
@@ -278,11 +340,13 @@ function changeItemQuantity(encodedId, encodedName, price, delta) {
 
     updateCartDisplay();
 
-    const btnContainer = document.getElementById(`btn-container-${id}`);
-    if (btnContainer) {
-        btnContainer.innerHTML = renderItemButtonHTML(id, encodedId, encodedName, price, newQty);
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
+    // Actualizar todos los contenedores con este ID (tanto en el catálogo principal como en la vista de Beats)
+    const btnContainers = document.querySelectorAll(`[id="btn-container-${id}"]`);
+    btnContainers.forEach(container => {
+        container.innerHTML = renderItemButtonHTML(id, encodedId, encodedName, price, newQty);
+    });
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function updateCartDisplay() {
@@ -364,6 +428,9 @@ function openCartSummary() {
 
     const pubBizView = document.getElementById('view-public-business');
     if (pubBizView) pubBizView.classList.add('hidden');
+
+    const beatsView = document.getElementById('view-beats-catalog');
+    if (beatsView) beatsView.classList.add('hidden');
 
     const cartView = document.getElementById('view-cart');
     if (cartView) {

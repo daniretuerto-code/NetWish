@@ -12,7 +12,7 @@ function switchTab(tabId) {
     const bizNav = document.getElementById('business-nav');
 
     // 1. Cerrar submenús flotantes si se navega a pestañas principales
-    const subViews = ['view-category', 'view-payment', 'view-cart', 'view-public-business'];
+    const subViews = ['view-category', 'view-payment', 'view-cart', 'view-public-business', 'view-beats-catalog'];
     if (userTabOrder.includes(tabId) || bizTabOrder.includes(tabId)) {
         subViews.forEach(vId => {
             const el = document.getElementById(vId);
@@ -39,7 +39,6 @@ function switchTab(tabId) {
             }
             updateActiveBizNavButton(tabId);
 
-            // Cargar mensajes si entra en la pestaña dedicada
             if (tabId === 'business-messages' && typeof renderBusinessMessagesTab === 'function') {
                 renderBusinessMessagesTab();
             }
@@ -86,6 +85,12 @@ function switchTab(tabId) {
         if (pubBizView) {
             pubBizView.classList.remove('hidden');
             pubBizView.scrollTop = 0;
+        }
+    } else if (tabId === 'beats-catalog') {
+        const beatsView = document.getElementById('view-beats-catalog');
+        if (beatsView) {
+            beatsView.classList.remove('hidden');
+            beatsView.scrollTop = 0;
         }
     }
 
@@ -190,6 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const userWrapper = document.getElementById('userScrollWrapper');
     const bizWrapper = document.getElementById('bizScrollWrapper');
     const pubBizView = document.getElementById('view-public-business');
+    const beatsView = document.getElementById('view-beats-catalog');
 
     if (userWrapper) {
         userWrapper.addEventListener('scroll', () => {
@@ -239,6 +245,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }, { passive: true });
     }
 
+    if (beatsView) {
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        beatsView.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        beatsView.addEventListener('touchend', (e) => {
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = Math.abs(touchEndY - touchStartY);
+
+            if (deltaX > 60 && deltaY < 80) {
+                if (typeof closeBeatsCatalogView === 'function') closeBeatsCatalogView();
+            }
+        }, { passive: true });
+    }
+
     updateHeaderLayout(activeTab || 'home');
 });
 
@@ -256,6 +283,10 @@ function goBackFromBusiness() {
     const pubBizView = document.getElementById('view-public-business');
     if (pubBizView) {
         pubBizView.classList.add('hidden');
+    }
+    const beatsView = document.getElementById('view-beats-catalog');
+    if (beatsView) {
+        beatsView.classList.add('hidden');
     }
     switchTab('explore');
 }
