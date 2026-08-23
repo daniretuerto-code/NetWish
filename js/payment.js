@@ -1,5 +1,7 @@
+// Variable global para almacenar el importe en formato string de céntimos (ej. "100" = 1,00 €)
 window.rawAmountString = window.rawAmountString || "000";
 
+// --- GESTIÓN DEL TECLADO NUMÉRICO ---
 function appendNum(num) {
     if (window.rawAmountString.length >= 8) return;
     if (window.rawAmountString === "000" || window.rawAmountString === "0") {
@@ -32,7 +34,7 @@ window.updateAmountDisplay = function() {
     display.innerText = formatted;
 };
 
-// --- MOTOR TÁCTIL INDESTRUCTIBLE ---
+// --- MOTOR DEL BOTÓN INTERACTIVO "MANTENER PARA CONFIRMAR" ---
 function initHoldButton() {
     const btnContainer = document.getElementById('holdButtonContainer');
     if (!btnContainer) return;
@@ -42,7 +44,7 @@ function initHoldButton() {
     let isHolding = false;
 
     const startHold = (e) => {
-        if (e.cancelable) e.preventDefault(); // Bloquear scroll en móvil
+        if (e.cancelable) e.preventDefault(); // Previene scroll accidental en pantallas táctiles
         
         const isCart = window.appState && window.appState.isCartCheckout;
         const val = parseInt(window.rawAmountString, 10) || 0;
@@ -59,14 +61,14 @@ function initHoldButton() {
         clearInterval(holdTimer);
         holdTimer = setInterval(() => {
             if (!isHolding) return;
-            holdProgress += 4;
+            holdProgress += 4; // Velocidad de llenado
             if (progressBar) progressBar.style.width = holdProgress + '%';
 
             if (holdProgress >= 100) {
                 clearInterval(holdTimer);
                 isHolding = false;
                 if (progressBar) progressBar.style.width = '0%';
-                window.executeFullPayment(false); // Llamada al pago
+                window.executeFullPayment(false); // Dispara el pago
             }
         }, 30);
     };
@@ -80,11 +82,12 @@ function initHoldButton() {
         if (progressBar) progressBar.style.width = '0%';
     };
 
-    // Listeners universales (Móvil y PC)
+    // Eventos táctiles para móviles y tablets
     btnContainer.addEventListener('touchstart', startHold, { passive: false });
     btnContainer.addEventListener('touchend', stopHold);
     btnContainer.addEventListener('touchcancel', stopHold);
     
+    // Eventos de ratón para ordenadores
     btnContainer.addEventListener('mousedown', startHold);
     window.addEventListener('mouseup', stopHold);
     btnContainer.addEventListener('mouseleave', stopHold);
@@ -92,14 +95,14 @@ function initHoldButton() {
 
 document.addEventListener('DOMContentLoaded', initHoldButton);
 
-// --- EJECUCIÓN DEL PAGO Y REDIRECCIÓN A WHATSAPP ---
+// --- EJECUCIÓN DEL PAGO Y GUARDADO EN SUPABASE ---
 window.executeFullPayment = async function(isReservation = false) {
     try {
         const modal = document.getElementById('customModal');
         const modalContent = document.getElementById('modalContent');
         const modalBody = document.getElementById('modalBody');
 
-        // Leer datos del carrito o del teclado
+        // Leer datos de la cesta o del teclado del terminal
         let isCart = window.appState && window.appState.isCartCheckout;
         let cTotal = window.appState ? window.appState.cartTotalValue : 0;
         let cItems = window.appState ? window.appState.cartItemsList : [];
@@ -113,19 +116,24 @@ window.executeFullPayment = async function(isReservation = false) {
             : 'Pago Directo Terminal';
             
         let customerName = (typeof currentUser !== 'undefined' && currentUser) 
-            ? (currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email || 'Cliente Anónimo') 
+            ? (currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email || 'Cliente') 
             : 'Cliente Anónimo';
+
+        let customerEmail = (typeof currentUser !== 'undefined' && currentUser) 
+            ? currentUser.email 
+            : null;
 
         let orderDate = pDetails?.date || new Date().toISOString().split('T')[0];
         let orderTime = pDetails?.time || "Inmediato";
         let statusText = isReservation ? 'Pendiente (Pago en local)' : 'Pagado Online';
 
-        // 1. Guardar en Supabase
+        // 1. Guardar en la tabla 'orders' de Supabase (Activa el Webhook de Resend automáticamente)
         try {
             if (typeof supabaseClient !== 'undefined') {
                 await supabaseClient.from('orders').insert([{
                     business_name: tBusiness,
                     customer: customerName,
+                    customer_email: customerEmail,
                     items: itemsDesc,
                     total: totalVal,
                     date: orderDate,
@@ -134,49 +142,10 @@ window.executeFullPayment = async function(isReservation = false) {
                 }]);
             }
         } catch (err) {
-            console.warn("Fallo guardando en BD:", err);
+            console.warn("Aviso guardando orden en BD:", err);
         }
 
-        // 2. Buscar Teléfono del Negocio (Corrección de consulta: select('*') evita errores si falta 'phone')
-        let bizPhone = null;
-        try {
-            if (typeof supabaseClient !== 'undefined') {
-                const { data, error } = await supabaseClient
-                    .from('businesses')
-                    .select('*')
-                    .ilike('name', `%${tBusiness}%`)
-                    .maybeSingle();
-
-                if (error) throw error;
-                if (data) {
-                    bizPhone = data.telefono || data.phone || null;
-                }
-            }
-        } catch (e) {
-            console.warn("Fallo buscando teléfono:", e);
-        }
-
-        // 3. Crear el enlace de WhatsApp
-        let waUrl = "";
-        if (bizPhone) {
-            let cleanPhone = String(bizPhone).replace(/\D/g, '');
-            if (!cleanPhone.startsWith('34') && cleanPhone.length === 9) {
-                cleanPhone = '34' + cleanPhone; 
-            }
-
-            const msgText = encodeURIComponent(
-                `🚀 *Nuevo Pedido NetWish*\n\n` +
-                `👤 *Cliente:* ${customerName}\n` +
-                `📦 *Pedido:* ${itemsDesc}\n` +
-                `💰 *Total:* ${totalVal.toFixed(2)} €\n` +
-                `📅 *Cita/Recogida:* ${orderDate} a las ${orderTime}\n` +
-                `📌 *Estado:* ${statusText}`
-            );
-
-            waUrl = `https://wa.me/${cleanPhone}?text=${msgText}`;
-        }
-
-        // 4. Mostrar el Modal
+        // 2. Mostrar el modal minimalista de confirmación
         if (modalBody) {
             modalBody.innerHTML = `
                 <div class="text-center space-y-4 py-3">
@@ -186,6 +155,7 @@ window.executeFullPayment = async function(isReservation = false) {
                     <div>
                         <h3 class="text-lg font-bold text-black">${isReservation ? 'Reserva Confirmada' : 'Pago Completado'}</h3>
                         <p class="text-xs text-neutral-500 mt-1">Registrado con éxito en ${tBusiness}.</p>
+                        ${customerEmail ? `<p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo digital enviado a ${customerEmail}</p>` : ''}
                     </div>
 
                     <div class="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-left space-y-1">
@@ -194,14 +164,7 @@ window.executeFullPayment = async function(isReservation = false) {
                         <span class="text-sm font-extrabold text-black block mt-1">${totalVal.toFixed(2)} €</span>
                     </div>
 
-                    ${waUrl ? `
-                        <a href="${waUrl}" target="_blank" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl text-xs shadow-md flex items-center justify-center space-x-2 active:scale-95 transition">
-                            <i data-lucide="message-circle" class="w-4 h-4"></i>
-                            <span>Abrir WhatsApp</span>
-                        </a>
-                    ` : '<p class="text-[10px] text-neutral-400">Este comercio no tiene WhatsApp asociado.</p>'}
-
-                    <button onclick="window.finishPaymentFlow()" class="w-full py-3 bg-black text-white font-semibold rounded-2xl text-xs active:scale-95 transition">
+                    <button onclick="window.finishPaymentFlow()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs active:scale-95 transition shadow-sm">
                         Volver al Inicio
                     </button>
                 </div>
@@ -217,19 +180,13 @@ window.executeFullPayment = async function(isReservation = false) {
             }, 10);
         }
 
-        // 5. REDIRECCIÓN AUTOMÁTICA A WHATSAPP
-        if (waUrl) {
-            setTimeout(() => {
-                window.location.href = waUrl;
-            }, 1200);
-        }
-
     } catch (criticalError) {
-        console.error("Fallo crítico en la confirmación:", criticalError);
+        console.error("Fallo en la confirmación:", criticalError);
         alert("Ocurrió un error. Comprueba tu conexión.");
     }
 };
 
+// --- FINALIZACIÓN Y LIMPIEZA DEL ESTADO ---
 window.finishPaymentFlow = function() {
     const modal = document.getElementById('customModal');
     const modalContent = document.getElementById('modalContent');
@@ -240,7 +197,7 @@ window.finishPaymentFlow = function() {
         setTimeout(() => modal.classList.add('hidden'), 300);
     }
 
-    // Resetear todo al estado de fábrica
+    // Resetear importe y cesta
     window.rawAmountString = "000";
     if (window.appState) {
         window.appState.cartItemsList = [];
@@ -248,6 +205,9 @@ window.finishPaymentFlow = function() {
         window.appState.cartItemCount = 0;
         window.appState.isCartCheckout = false;
         window.appState.pendingOrderDetails = null;
+        if (window.appState.activeBusinessName) {
+            delete window.appState.cartsByBusiness[window.appState.activeBusinessName];
+        }
     }
 
     const progressBar = document.getElementById('progressBar');
