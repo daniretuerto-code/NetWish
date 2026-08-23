@@ -11,11 +11,13 @@ window.currentlyPlayingAudio = null;
 window.currentPlayingBtnId = null;
 
 window.currentLoadedBeatsList = [];
+window.lastVisitedBeatsView = false; // Guarda si el cliente estaba dentro de la pantalla de beats
 
 function openPublicBusiness(safeName, safeType) {
     window.appState.activeBusinessName = decodeURIComponent(safeName || '');
     window.appState.activeBusinessCategory = decodeURIComponent(safeType || '').toLowerCase();
     window.activePayee = window.appState.activeBusinessName;
+    window.lastVisitedBeatsView = false;
     
     stopCurrentAudio();
 
@@ -146,12 +148,12 @@ async function renderPublicCatalogItems() {
 // --- NAVEGACIÓN Y RENDERIZADO DE LA PÁGINA DEDICADA DE BEATS ---
 window.openBeatsCatalogView = function() {
     stopCurrentAudio();
+    window.lastVisitedBeatsView = true;
     const beatsView = document.getElementById('view-beats-catalog');
     if (!beatsView) return;
 
     renderBeatsCatalogList(window.currentLoadedBeatsList);
 
-    // Ocultar vista del negocio y mostrar vista de Beats
     const pubBizView = document.getElementById('view-public-business');
     if (pubBizView) pubBizView.classList.add('hidden');
 
@@ -159,11 +161,13 @@ window.openBeatsCatalogView = function() {
     beatsView.classList.add('flex');
     beatsView.scrollTop = 0;
     
+    updateCartDisplay();
     if (typeof lucide !== 'undefined') lucide.createIcons();
 };
 
 window.closeBeatsCatalogView = function() {
     stopCurrentAudio();
+    window.lastVisitedBeatsView = false;
     const beatsView = document.getElementById('view-beats-catalog');
     if (beatsView) {
         beatsView.classList.add('hidden');
@@ -355,6 +359,7 @@ function changeItemQuantity(encodedId, encodedName, price, delta) {
 
     updateCartDisplay();
 
+    // Actualizar todos los selectores de unidades duplicados
     const btnContainers = document.querySelectorAll(`[id="btn-container-${id}"]`);
     btnContainers.forEach(container => {
         container.innerHTML = renderItemButtonHTML(id, encodedId, encodedName, price, newQty);
@@ -462,8 +467,17 @@ function closeCartSummary() {
     const cartView = document.getElementById('view-cart');
     if (cartView) cartView.classList.add('hidden');
 
-    const pubBizView = document.getElementById('view-public-business');
-    if (pubBizView) pubBizView.classList.remove('hidden');
+    // Regresar a la vista exacta donde estaba el usuario
+    if (window.lastVisitedBeatsView) {
+        const beatsView = document.getElementById('view-beats-catalog');
+        if (beatsView) {
+            beatsView.classList.remove('hidden');
+            beatsView.classList.add('flex');
+        }
+    } else {
+        const pubBizView = document.getElementById('view-public-business');
+        if (pubBizView) pubBizView.classList.remove('hidden');
+    }
 
     updateCartDisplay();
 }

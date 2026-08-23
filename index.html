@@ -18,7 +18,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <link rel="stylesheet" href="css/styles.css?v=29">
+    <link rel="stylesheet" href="css/styles.css?v=30">
 </head>
 <body>
 
@@ -356,20 +356,9 @@
 
                     <div class="space-y-4" id="publicBizCatalog"></div>
                 </div>
-
-                <!-- BARRA FLOTANTE DE CESTA -->
-                <div id="publicBusinessCartBar" class="absolute bottom-24 left-6 right-6 z-50 transition-all duration-300 transform translate-y-64 opacity-0 pointer-events-none">
-                    <button onclick="openCartSummary()" class="w-full bg-black text-white p-4 rounded-2xl flex justify-between items-center shadow-[0_20px_40px_rgba(0,0,0,0.35)] active:scale-95 transition-transform">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center text-xs font-bold" id="cartCountDisplay">0</div>
-                            <span class="text-xs font-bold tracking-widest uppercase">Ver Cesta</span>
-                        </div>
-                        <span class="text-base font-extrabold" id="cartTotalDisplay">0,00 €</span>
-                    </button>
-                </div>
             </div>
 
-            <!-- VISTA DEDICADA: PÁGINA DE CATÁLOGO DE BEATS (CON Z-40 Y DISPLAY FLEX) -->
+            <!-- VISTA DEDICADA: PÁGINA DE CATÁLOGO DE BEATS -->
             <div id="view-beats-catalog" class="absolute inset-0 bg-white z-40 hidden flex-col allow-scroll px-6 pt-24 pb-28 space-y-4">
                 <div class="flex items-center space-x-3 px-1 shrink-0">
                     <button onclick="closeBeatsCatalogView()" class="w-10 h-10 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-black hover:bg-neutral-200 transition active:scale-95">
@@ -387,6 +376,17 @@
                 </div>
 
                 <div id="dynamicBeatsCatalogList" class="space-y-3 pt-2 pb-6"></div>
+            </div>
+
+            <!-- BARRA FLOTANTE GLOBAL DE CESTA (Z-50: VISIBLE TANTO EN EL LOCAL COMO EN BEATS) -->
+            <div id="publicBusinessCartBar" class="absolute bottom-24 left-6 right-6 z-50 transition-all duration-300 transform translate-y-64 opacity-0 pointer-events-none">
+                <button onclick="openCartSummary()" class="w-full bg-black text-white p-4 rounded-2xl flex justify-between items-center shadow-[0_20px_40px_rgba(0,0,0,0.35)] active:scale-95 transition-transform">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center text-xs font-bold" id="cartCountDisplay">0</div>
+                        <span class="text-xs font-bold tracking-widest uppercase">Ver Cesta</span>
+                    </div>
+                    <span class="text-base font-extrabold" id="cartTotalDisplay">0,00 €</span>
+                </button>
             </div>
 
         </main>
@@ -422,15 +422,15 @@
     </div>
 
     <!-- SCRIPTS MODULARES -->
-    <script src="js/config.js?v=29"></script>
-    <script src="js/navigation.js?v=29"></script>
-    <script src="js/auth.js?v=29"></script>
-    <script src="js/directory.js?v=29"></script>
-    <script src="js/catalog-cart.js?v=29"></script>
-    <script src="js/dashboard.js?v=29"></script>
-    <script src="js/scanner.js?v=29"></script>
-    <script src="js/payment.js?v=29"></script>
-    <script src="js/chat.js?v=29"></script>
+    <script src="js/config.js?v=30"></script>
+    <script src="js/navigation.js?v=30"></script>
+    <script src="js/auth.js?v=30"></script>
+    <script src="js/directory.js?v=30"></script>
+    <script src="js/catalog-cart.js?v=30"></script>
+    <script src="js/dashboard.js?v=30"></script>
+    <script src="js/scanner.js?v=30"></script>
+    <script src="js/payment.js?v=30"></script>
+    <script src="js/chat.js?v=30"></script>
 
 </body>
 </html>
