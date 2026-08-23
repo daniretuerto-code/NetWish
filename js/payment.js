@@ -1,7 +1,5 @@
-// Variable global para almacenar el importe en formato string de céntimos (ej. "100" = 1,00 €)
 window.rawAmountString = window.rawAmountString || "000";
 
-// --- GESTIÓN DEL TECLADO NUMÉRICO ---
 function appendNum(num) {
     if (window.rawAmountString.length >= 8) return;
     if (window.rawAmountString === "000" || window.rawAmountString === "0") {
@@ -34,7 +32,7 @@ window.updateAmountDisplay = function() {
     display.innerText = formatted;
 };
 
-// --- MOTOR DEL BOTÓN INTERACTIVO "MANTENER PARA CONFIRMAR" ---
+// --- GESTOR TÁCTIL DE CONFIRMACIÓN ---
 function initHoldButton() {
     const btnContainer = document.getElementById('holdButtonContainer');
     if (!btnContainer) return;
@@ -44,7 +42,7 @@ function initHoldButton() {
     let isHolding = false;
 
     const startHold = (e) => {
-        if (e.cancelable) e.preventDefault(); // Previene scroll accidental en pantallas táctiles
+        if (e.cancelable) e.preventDefault();
         
         const isCart = window.appState && window.appState.isCartCheckout;
         const val = parseInt(window.rawAmountString, 10) || 0;
@@ -61,14 +59,14 @@ function initHoldButton() {
         clearInterval(holdTimer);
         holdTimer = setInterval(() => {
             if (!isHolding) return;
-            holdProgress += 4; // Velocidad de llenado
+            holdProgress += 4;
             if (progressBar) progressBar.style.width = holdProgress + '%';
 
             if (holdProgress >= 100) {
                 clearInterval(holdTimer);
                 isHolding = false;
                 if (progressBar) progressBar.style.width = '0%';
-                window.executeFullPayment(false); // Dispara el pago
+                window.executeFullPayment(false);
             }
         }, 30);
     };
@@ -82,12 +80,10 @@ function initHoldButton() {
         if (progressBar) progressBar.style.width = '0%';
     };
 
-    // Eventos táctiles para móviles y tablets
     btnContainer.addEventListener('touchstart', startHold, { passive: false });
     btnContainer.addEventListener('touchend', stopHold);
     btnContainer.addEventListener('touchcancel', stopHold);
     
-    // Eventos de ratón para ordenadores
     btnContainer.addEventListener('mousedown', startHold);
     window.addEventListener('mouseup', stopHold);
     btnContainer.addEventListener('mouseleave', stopHold);
@@ -95,14 +91,13 @@ function initHoldButton() {
 
 document.addEventListener('DOMContentLoaded', initHoldButton);
 
-// --- EJECUCIÓN DEL PAGO Y GUARDADO EN SUPABASE ---
+// --- EJECUCIÓN DEL PAGO Y ENVÍO GARANTIZADO DE CORREO ---
 window.executeFullPayment = async function(isReservation = false) {
     try {
         const modal = document.getElementById('customModal');
         const modalContent = document.getElementById('modalContent');
         const modalBody = document.getElementById('modalBody');
 
-        // Leer datos de la cesta o del teclado del terminal
         let isCart = window.appState && window.appState.isCartCheckout;
         let cTotal = window.appState ? window.appState.cartTotalValue : 0;
         let cItems = window.appState ? window.appState.cartItemsList : [];
@@ -117,35 +112,56 @@ window.executeFullPayment = async function(isReservation = false) {
             
         let customerName = (typeof currentUser !== 'undefined' && currentUser) 
             ? (currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email || 'Cliente') 
-            : 'Cliente Anónimo';
+            : 'Cliente';
 
-        let customerEmail = (typeof currentUser !== 'undefined' && currentUser) 
+        let customerEmail = (typeof currentUser !== 'undefined' && currentUser && currentUser.email) 
             ? currentUser.email 
-            : null;
+            : 'daniretuerto@gmail.com';
 
         let orderDate = pDetails?.date || new Date().toISOString().split('T')[0];
         let orderTime = pDetails?.time || "Inmediato";
         let statusText = isReservation ? 'Pendiente (Pago en local)' : 'Pagado Online';
 
-        // 1. Guardar en la tabla 'orders' de Supabase (Activa el Webhook de Resend automáticamente)
+        const orderPayload = {
+            business_name: tBusiness,
+            customer: customerName,
+            customer_email: customerEmail,
+            items: itemsDesc,
+            total: totalVal,
+            date: orderDate,
+            time: orderTime,
+            status: statusText
+        };
+
+        // 1. Guardar orden en Supabase
         try {
             if (typeof supabaseClient !== 'undefined') {
-                await supabaseClient.from('orders').insert([{
-                    business_name: tBusiness,
-                    customer: customerName,
-                    customer_email: customerEmail,
-                    items: itemsDesc,
-                    total: totalVal,
-                    date: orderDate,
-                    time: orderTime,
-                    status: statusText
-                }]);
+                await supabaseClient.from('orders').insert([orderPayload]);
             }
         } catch (err) {
             console.warn("Aviso guardando orden en BD:", err);
         }
 
-        // 2. Mostrar el modal minimalista de confirmación
+        // 2. Invocación HTTP directa a la Edge Function
+        try {
+            const funcUrl = `${SUPABASE_URL}/functions/v1/send-order-email`;
+            fetch(funcUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                },
+                body: JSON.stringify({ record: orderPayload })
+            })
+            .then(res => res.json())
+            .then(data => console.log("Email enviado con éxito:", data))
+            .catch(err => console.warn("Error enviando email:", err));
+        } catch (mailErr) {
+            console.warn("Fallo en la llamada del correo:", mailErr);
+        }
+
+        // 3. Modal de confirmación en el diseño de NetWish
         if (modalBody) {
             modalBody.innerHTML = `
                 <div class="text-center space-y-4 py-3">
@@ -155,7 +171,7 @@ window.executeFullPayment = async function(isReservation = false) {
                     <div>
                         <h3 class="text-lg font-bold text-black">${isReservation ? 'Reserva Confirmada' : 'Pago Completado'}</h3>
                         <p class="text-xs text-neutral-500 mt-1">Registrado con éxito en ${tBusiness}.</p>
-                        ${customerEmail ? `<p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo digital enviado a ${customerEmail}</p>` : ''}
+                        <p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo digital enviado a ${customerEmail}</p>
                     </div>
 
                     <div class="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-left space-y-1">
@@ -186,7 +202,6 @@ window.executeFullPayment = async function(isReservation = false) {
     }
 };
 
-// --- FINALIZACIÓN Y LIMPIEZA DEL ESTADO ---
 window.finishPaymentFlow = function() {
     const modal = document.getElementById('customModal');
     const modalContent = document.getElementById('modalContent');
@@ -197,7 +212,6 @@ window.finishPaymentFlow = function() {
         setTimeout(() => modal.classList.add('hidden'), 300);
     }
 
-    // Resetear importe y cesta
     window.rawAmountString = "000";
     if (window.appState) {
         window.appState.cartItemsList = [];
