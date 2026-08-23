@@ -7,6 +7,7 @@ window.appState.cartTotalValue = 0;
 window.appState.cartItemCount = 0;
 window.appState.isCartCheckout = false;
 window.appState.pendingOrderDetails = null;
+window.appState.cartsByBusiness = window.appState.cartsByBusiness || {}; // Almacén multicesta
 window.currentlyPlayingAudio = null;
 window.currentPlayingBtnId = null;
 
@@ -38,9 +39,11 @@ function openPublicBusiness(safeName, safeType) {
         document.getElementById('publicBizTag').innerText = "Comercio";
     }
 
-    window.appState.cartTotalValue = 0; 
-    window.appState.cartItemCount = 0; 
-    window.appState.cartItemsList = []; 
+    // Recuperar la cesta guardada para este negocio o inicializarla vacía
+    const savedCart = window.appState.cartsByBusiness[window.appState.activeBusinessName] || [];
+    window.appState.cartItemsList = savedCart;
+    window.appState.cartTotalValue = savedCart.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
+    window.appState.cartItemCount = savedCart.reduce((acc, curr) => acc + curr.qty, 0);
     window.appState.isCartCheckout = false;
     
     updateCartDisplay();
@@ -101,7 +104,7 @@ async function renderPublicCatalogItems() {
 
         let html = '';
 
-        // BOTÓN ACCESO A LA PÁGINA DEL CATÁLOGO DE BEATS
+        // BOTÓN ACCESO AL CATÁLOGO DE BEATS
         html += `
             <button onclick="openBeatsCatalogView()" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-98 transition group">
                 <div class="flex items-center space-x-3.5 overflow-hidden">
@@ -122,7 +125,6 @@ async function renderPublicCatalogItems() {
             </button>
         `;
 
-        // LISTADO DE SERVICIOS
         if (customServices.length > 0) {
             html += `
                 <div class="space-y-3 pt-2">
@@ -145,7 +147,6 @@ async function renderPublicCatalogItems() {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// --- NAVEGACIÓN Y RENDERIZADO DE LA PÁGINA DEDICADA DE BEATS ---
 window.openBeatsCatalogView = function() {
     stopCurrentAudio();
     window.lastVisitedBeatsView = true;
@@ -212,7 +213,6 @@ window.filterBeatsCatalogView = function() {
     renderBeatsCatalogList(filtered);
 };
 
-// --- RENDERIZADO DE TARJETA INDIVIDUAL DE PRODUCTO / BEAT ---
 function renderSingleProductCard(item, isMusicBeat) {
     const price = parseFloat(item.price) || 0;
     const itemIdStr = String(item.id);
@@ -357,6 +357,11 @@ function changeItemQuantity(encodedId, encodedName, price, delta) {
     window.appState.cartTotalValue = window.appState.cartItemsList.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
     window.appState.cartItemCount = window.appState.cartItemsList.reduce((acc, curr) => acc + curr.qty, 0);
 
+    // Guardar los cambios en el almacén del comercio activo
+    if (window.appState.activeBusinessName) {
+        window.appState.cartsByBusiness[window.appState.activeBusinessName] = [...window.appState.cartItemsList];
+    }
+
     updateCartDisplay();
 
     const btnContainers = document.querySelectorAll(`[id="btn-container-${id}"]`);
@@ -371,11 +376,16 @@ function updateCartDisplay() {
     const cartBar = document.getElementById('publicBusinessCartBar');
     if (!cartBar) return;
     
-    // Si la pantalla de la cesta está visible, ocultamos la barra flotante
+    // Comprobar si estamos en una vista válida del comercio (local público o beats)
+    const pubBizView = document.getElementById('view-public-business');
+    const beatsView = document.getElementById('view-beats-catalog');
+    const isInsideBusiness = (pubBizView && !pubBizView.classList.contains('hidden')) || 
+                             (beatsView && !beatsView.classList.contains('hidden'));
+
     const cartView = document.getElementById('view-cart');
     const isCartOpen = cartView && !cartView.classList.contains('hidden');
 
-    if (window.appState.cartItemCount > 0 && !isCartOpen) {
+    if (window.appState.cartItemCount > 0 && isInsideBusiness && !isCartOpen) {
         cartBar.classList.remove('translate-y-64', 'opacity-0', 'pointer-events-none');
         cartBar.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
         document.getElementById('cartTotalDisplay').innerText = window.appState.cartTotalValue.toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' €';
@@ -457,7 +467,7 @@ function openCartSummary() {
         beatsView.classList.remove('flex');
     }
 
-    // Ocultar barra flotante de forma garantizada
+    // Ocultar barra flotante de forma garantizada dentro del resumen
     const cartBar = document.getElementById('publicBusinessCartBar');
     if (cartBar) {
         cartBar.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
@@ -477,7 +487,6 @@ function closeCartSummary() {
     const cartView = document.getElementById('view-cart');
     if (cartView) cartView.classList.add('hidden');
 
-    // Regresar a la vista donde estaba el usuario
     if (window.lastVisitedBeatsView) {
         const beatsView = document.getElementById('view-beats-catalog');
         if (beatsView) {

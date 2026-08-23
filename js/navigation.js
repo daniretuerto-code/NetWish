@@ -18,11 +18,12 @@ function switchTab(tabId) {
             const el = document.getElementById(vId);
             if (el) {
                 el.classList.add('hidden');
+                el.classList.remove('flex');
             }
         });
     }
 
-    // 2. Comprobación y alternancia de wrappers según el modo (Comercio o Usuario)
+    // 2. Comprobación y alternancia de wrappers según el modo
     if (currentBusiness) {
         if (personalNav) personalNav.classList.add('hidden');
         if (bizNav) bizNav.classList.remove('hidden');
@@ -90,14 +91,20 @@ function switchTab(tabId) {
         const beatsView = document.getElementById('view-beats-catalog');
         if (beatsView) {
             beatsView.classList.remove('hidden');
+            beatsView.classList.add('flex');
             beatsView.scrollTop = 0;
         }
     }
 
-    // 4. Adaptación reactiva de la cabecera
+    // 4. Adaptar visibilidad de la cesta según la pestaña
+    if (typeof updateCartDisplay === 'function') {
+        updateCartDisplay();
+    }
+
+    // 5. Adaptación reactiva de la cabecera
     updateHeaderLayout(tabId);
 
-    // 5. Refresco dinámico de iconos Lucide
+    // 6. Refresco dinámico de iconos Lucide
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
     }
@@ -287,6 +294,7 @@ function goBackFromBusiness() {
     const beatsView = document.getElementById('view-beats-catalog');
     if (beatsView) {
         beatsView.classList.add('hidden');
+        beatsView.classList.remove('flex');
     }
     switchTab('explore');
 }
