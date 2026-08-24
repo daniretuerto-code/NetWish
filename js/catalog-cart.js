@@ -35,6 +35,9 @@ function openPublicBusiness(safeName, safeType) {
                          window.appState.activeBusinessCategory.includes('produ') || 
                          window.appState.activeBusinessCategory.includes('estudio');
 
+    // Adaptación dinámica del botón de contacto/pedidos
+    updateContactButtonLabel(isJuanStudio);
+
     if (imgEl) {
         if (isJuanStudio) {
             imgEl.src = "https://gamjjnyomhnyswbxlhgq.supabase.co/storage/v1/object/public/public-images/juancp-cover.jpg";
@@ -49,7 +52,6 @@ function openPublicBusiness(safeName, safeType) {
         }
     }
 
-    // Cargar la cesta guardada para este negocio o inicializarla vacía
     const savedCart = window.appState.cartsByBusiness[window.appState.activeBusinessName] || [];
     window.appState.cartItemsList = savedCart;
     window.appState.cartTotalValue = savedCart.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
@@ -62,12 +64,28 @@ function openPublicBusiness(safeName, safeType) {
     switchTab('public-business');
 }
 
-// 2. RENDERIZADO DINÁMICO DEL CATÁLOGO (SEGÚN CATEGORÍA)
+// Actualiza el texto del botón según si es estudio o comercio general
+function updateContactButtonLabel(isMusicStudio) {
+    const contactBtn = document.querySelector('#view-public-business button[onclick*="openCustomerChat"]');
+    if (!contactBtn) return;
+
+    const titleSpan = contactBtn.querySelector('span.block.text-xs.font-bold');
+    const subSpan = contactBtn.querySelector('span.block.text-\\[10px\\]');
+
+    if (isMusicStudio) {
+        if (titleSpan) titleSpan.innerText = "Pedidos Personalizados";
+        if (subSpan) subSpan.innerText = "Contacta directamente para solicitudes a medida";
+    } else {
+        if (titleSpan) titleSpan.innerText = "Contacta con nosotros";
+        if (subSpan) subSpan.innerText = "Envía un mensaje o consulta al establecimiento";
+    }
+}
+
+// 2. RENDERIZADO DINÁMICO DEL CATÁLOGO
 async function renderPublicCatalogItems() {
     const catalogEl = document.getElementById('publicBizCatalog');
     if (!catalogEl) return;
 
-    // DETECCIÓN DE RESTAURANTE: DELEGA EN EL MÓDULO JS/RESTAURANT.JS
     const isRestaurant = window.appState.activeBusinessCategory.includes('rest') || 
                          window.appState.activeBusinessCategory.includes('bar') || 
                          window.appState.activeBusinessName.toLowerCase().includes('restaurante');
@@ -281,7 +299,7 @@ function renderSingleProductCard(item, isMusicBeat) {
     `;
 }
 
-// 5. REPRODUCTOR DE AUDIO PARA INSTRUMENTALES
+// 5. REPRODUCTOR DE AUDIO
 function togglePlayPreview(encodedUrl, iconId) {
     const url = decodeURIComponent(encodedUrl);
     if (!url) return;
@@ -335,7 +353,7 @@ function stopCurrentAudio() {
     }
 }
 
-// 6. CONTROLADORES DE CANTIDAD Y CESTA
+// 6. BOTONES REACTIVOS (+ / -) Y CESTA
 function renderItemButtonHTML(rawId, safeItemId, safeItemName, price, qty) {
     if (qty > 0) {
         return `
