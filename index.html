@@ -1,437 +1,526 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="h-full bg-white antialiased">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>NetWish — Palencia</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>NetWish — Palencia</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#f8f9fa">
-
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = { theme: { extend: { colors: { dark: '#0a0a0a', } } } }
-    </script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <link rel="stylesheet" href="css/styles.css?v=30">
+  <style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
 </head>
-<body>
+<body class="min-h-full bg-white text-black font-sans selection:bg-neutral-900 selection:text-white pb-24">
 
-    <div class="w-full h-[100dvh] sm:h-[844px] sm:max-w-[390px] sm:rounded-[48px] bg-white flex flex-col relative shadow-[0_30px_90px_rgba(0,0,0,0.12)] overflow-hidden sm:border-[8px] sm:border-neutral-900 mx-auto my-auto">
-        
-        <!-- CABECERA DINÁMICA REACTIVA -->
-        <header id="mainAppHeader" class="absolute top-0 left-0 right-0 px-6 pt-8 pb-3 border-b border-neutral-100/80 flex justify-between items-center glass-panel z-30 transition-all duration-300">
-            <h1 id="headerLogo" onclick="switchTab(currentBusiness ? 'business-dashboard' : 'home')" class="text-2xl font-bold tracking-tight text-black font-serif italic cursor-pointer active:scale-95 transition-all duration-300">NetWish</h1>
-            <button onclick="handleHeaderProfileClick()" id="headerAvatar" class="w-9 h-9 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-xs font-bold text-black shadow-inner transition-all duration-300 hover:scale-105 active:scale-95 overflow-hidden p-0">
-                IN
-            </button>
-        </header>
+  <!-- ================= CONTENEDOR PRINCIPAL ================= -->
+  <main id="appContainer">
 
-        <main id="mainContentArea" class="flex-1 relative overflow-hidden flex flex-col pt-20">
-            
-            <!-- 1. CARRUSEL MODO USUARIO PERSONAL -->
-            <div id="userScrollWrapper" class="horizontal-scroll-container">
-                
-                <div id="view-home" class="view-pane px-6 pt-2 pb-28 space-y-5">
-                    <section class="glass-dark p-6 rounded-[32px] text-white flex flex-col justify-between space-y-5 relative overflow-hidden shadow-xl transform-gpu" style="-webkit-mask-image: radial-gradient(white, black); mask-image: radial-gradient(white, black);">
-                        <div class="absolute -right-10 -top-10 w-36 h-36 bg-gradient-to-br from-neutral-700/30 to-transparent rounded-full blur-2xl pointer-events-none"></div>
-                        <div class="flex justify-between items-start relative z-10">
-                            <div>
-                                <span class="text-[9px] text-neutral-400 font-mono tracking-widest uppercase bg-white/10 px-2.5 py-1 rounded-full border border-white/5">IDENTIFICACIÓN PERSONAL</span>
-                                <h2 class="text-lg font-medium tracking-tight mt-2 text-white">Recibe tu pago</h2>
-                            </div>
-                            <div class="w-10 h-10 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center backdrop-blur-md">
-                                <i data-lucide="qr-code" class="w-5 h-5 text-white"></i>
-                            </div>
-                        </div>
-                        <button onclick="openPersonalQR()" class="w-full py-3.5 bg-white text-black font-semibold rounded-2xl text-xs tracking-wide transition hover:bg-neutral-100 active:scale-[0.98] relative z-10 shadow-lg flex items-center justify-center space-x-2">
-                            <i data-lucide="qr-code" class="w-4 h-4"></i>
-                            <span>Mostrar código QR</span>
-                        </button>
-                    </section>
+    <!-- 1. FEED PRINCIPAL (HOME) -->
+    <section id="homeView" class="max-w-md mx-auto px-5 py-6 space-y-6">
+      <header class="flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-extrabold tracking-tight italic">NetWish</h1>
+          <p class="text-[11px] text-neutral-400 font-mono uppercase tracking-wider">Palencia Ciudad</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="window.openScannerView()" class="w-9 h-9 flex items-center justify-center rounded-full bg-neutral-50 border border-neutral-200 text-black active:scale-95 transition">
+            <i data-lucide="qr-code" class="w-4 h-4"></i>
+          </button>
+          <button onclick="window.switchTab('profile')" class="w-9 h-9 flex items-center justify-center rounded-full bg-black text-white active:scale-95 transition">
+            <i data-lucide="user" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </header>
 
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center px-1">
-                            <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Servicios Activos</h3>
-                        </div>
+      <!-- Buscador -->
+      <div class="relative">
+        <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400"></i>
+        <input type="text" id="homeSearchInput" placeholder="Buscar comercios, servicios o paradas..." class="w-full pl-10 pr-4 py-3 bg-neutral-50 border border-neutral-200 rounded-2xl text-xs placeholder:text-neutral-400 focus:outline-none focus:border-black transition">
+      </div>
 
-                        <div class="grid grid-cols-2 gap-3">
-                            <button onclick="goToDirectory('pan')" class="group p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/70 hover:border-black/30 hover:bg-white transition-all duration-200 text-left active:scale-[0.97] shadow-sm flex flex-col justify-between h-24">
-                                <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
-                                    <i data-lucide="croissant" class="w-4 h-4 text-amber-600"></i>
-                                </div>
-                                <div>
-                                    <span class="block text-xs font-bold text-black tracking-tight">Panaderías</span>
-                                    <span class="block text-[10px] text-neutral-400 mt-0.5">Click & Collect</span>
-                                </div>
-                            </button>
-                            <button onclick="goToDirectory('rest')" class="group p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/70 hover:border-black/30 hover:bg-white transition-all duration-200 text-left active:scale-[0.97] shadow-sm flex flex-col justify-between h-24">
-                                <div class="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
-                                    <i data-lucide="utensils" class="w-4 h-4 text-rose-600"></i>
-                                </div>
-                                <div>
-                                    <span class="block text-xs font-bold text-black tracking-tight">Restaurantes</span>
-                                    <span class="block text-[10px] text-neutral-400 mt-0.5">QR mesa y carta</span>
-                                </div>
-                            </button>
-                            <button onclick="goToDirectory('movil')" class="group p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/70 hover:border-black/30 hover:bg-white transition-all duration-200 text-left active:scale-[0.97] shadow-sm flex flex-col justify-between h-24">
-                                <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
-                                    <i data-lucide="car" class="w-4 h-4 text-emerald-600"></i>
-                                </div>
-                                <div>
-                                    <span class="block text-xs font-bold text-black tracking-tight">Movilidad</span>
-                                    <span class="block text-[10px] text-neutral-400 mt-0.5">Taxis y bus GPS</span>
-                                </div>
-                            </button>
-                            <button onclick="goToDirectory('pel')" class="group p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/70 hover:border-black/30 hover:bg-white transition-all duration-200 text-left active:scale-[0.97] shadow-sm flex flex-col justify-between h-24">
-                                <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
-                                    <i data-lucide="scissors" class="w-4 h-4 text-blue-600"></i>
-                                </div>
-                                <div>
-                                    <span class="block text-xs font-bold text-black tracking-tight">Peluquería</span>
-                                    <span class="block text-[10px] text-neutral-400 mt-0.5">Reservas express</span>
-                                </div>
-                            </button>
-                        </div>
+      <!-- Categorías Rápidas -->
+      <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+        <button onclick="window.switchTab('home')" class="flex-shrink-0 px-4 py-2 rounded-full bg-black text-white text-[11px] font-semibold">Todos</button>
+        <button onclick="window.switchTab('barber')" class="flex-shrink-0 px-4 py-2 rounded-full bg-neutral-100 text-neutral-800 hover:bg-neutral-200 text-[11px] font-semibold transition">Barberías</button>
+        <button onclick="window.switchTab('bakery')" class="flex-shrink-0 px-4 py-2 rounded-full bg-neutral-100 text-neutral-800 hover:bg-neutral-200 text-[11px] font-semibold transition">Panaderías</button>
+        <button onclick="window.switchTab('transit')" class="flex-shrink-0 px-4 py-2 rounded-full bg-neutral-100 text-neutral-800 hover:bg-neutral-200 text-[11px] font-semibold transition">Transporte</button>
+      </div>
 
-                        <button onclick="goToDirectory('ocio')" class="w-full group p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/70 hover:border-black/30 hover:bg-white transition-all duration-200 text-left active:scale-[0.98] shadow-sm flex items-center justify-between">
-                            <div class="flex items-center space-x-3.5">
-                                <div class="w-10 h-10 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
-                                    <i data-lucide="sparkles" class="w-5 h-5 text-purple-600"></i>
-                                </div>
-                                <div>
-                                    <span class="block text-xs font-bold text-black tracking-tight">Ocio y Experiencias en Palencia</span>
-                                    <span class="block text-[10px] text-neutral-400 mt-0.5">Eventos, cultura y planes urbanos</span>
-                                </div>
-                            </div>
-                            <div class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 group-hover:bg-black group-hover:text-white transition shrink-0">
-                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
-                            </div>
-                        </button>
-                    </div>
-                </div>
-
-                <div id="view-explore" class="view-pane px-6 pt-2 pb-28 space-y-4">
-                    <div class="space-y-1 px-1">
-                        <h2 class="text-xl font-bold text-black tracking-tight">Directorio Urbano</h2>
-                        <p class="text-[11px] text-neutral-500">Todos los comercios de Palencia en un solo lugar.</p>
-                    </div>
-                    
-                    <div class="relative flex items-center shadow-sm">
-                        <i data-lucide="search" class="absolute left-4 w-4 h-4 text-neutral-400"></i>
-                        <input type="text" id="directorySearch" onkeyup="filterDirectory()" placeholder="Buscar locales..." class="w-full bg-neutral-50 border border-neutral-200/80 rounded-2xl py-3.5 pl-11 pr-4 text-xs text-black placeholder-neutral-400 focus:outline-none focus:border-black transition">
-                    </div>
-
-                    <div id="dynamicBusinessList" class="space-y-3 pt-2 pb-6">
-                        <p class="text-xs text-center text-neutral-400 py-4"><i data-lucide="loader-2" class="w-5 h-5 mx-auto animate-spin mb-2"></i> Cargando comercios...</p>
-                    </div>
-                </div>
-
-                <div id="view-scan" class="view-pane px-6 pb-28 flex flex-col items-center justify-center text-center my-auto space-y-6">
-                    <div class="w-16 h-16 rounded-[28px] bg-black text-white flex items-center justify-center mx-auto shadow-xl"><i data-lucide="scan" class="w-8 h-8"></i></div>
-                    <div class="space-y-1.5">
-                        <h2 class="text-sm font-bold text-black">Cámara de Escaneo QR</h2>
-                        <p class="text-xs text-neutral-500 px-6">Apunta la cámara al código QR personal de otro usuario para conectarte al instante.</p>
-                    </div>
-                    <button onclick="startCameraModal()" class="w-full py-3.5 bg-black text-white rounded-2xl text-xs font-semibold transition hover:bg-neutral-800 shadow-md">Activar Lector QR</button>
-                </div>
-
-                <div id="view-profile" class="view-pane px-6 pt-2 pb-28 space-y-5">
-                    <div id="profileContentContainer" class="w-full"></div>
-                </div>
-
-            </div>
-
-            <!-- 2. CARRUSEL MODO COMERCIO / NEGOCIO -->
-            <div id="bizScrollWrapper" class="horizontal-scroll-container hidden">
-                
-                <div id="view-business-dashboard" class="view-pane px-6 pt-2 pb-28 space-y-5">
-                    <div class="flex items-center justify-between px-1">
-                        <div>
-                            <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">PANEL DE COMERCIO</span>
-                            <h2 id="businessTitleName" class="text-xl font-bold text-black tracking-tight">Mi Negocio</h2>
-                        </div>
-                        <button onclick="logoutBusiness()" class="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-xs font-bold transition">Salir</button>
-                    </div>
-                    <div id="dynamicDashboardContent" class="space-y-5"></div>
-                </div>
-
-                <div id="view-business-orders" class="view-pane px-6 pt-2 pb-28 space-y-4">
-                    <div class="flex items-center justify-between px-1">
-                        <div>
-                            <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">GESTIÓN ACTIVA</span>
-                            <h2 class="text-xl font-bold text-black tracking-tight">Pedidos</h2>
-                        </div>
-                        <button onclick="openHistoryModal()" class="text-xs font-bold text-black underline">Historial</button>
-                    </div>
-                    <div id="dynamicOrdersTabContent" class="space-y-4"></div>
-                </div>
-
-                <!-- PESTAÑA DE MENSAJES -->
-                <div id="view-business-messages" class="view-pane px-6 pt-2 pb-28 space-y-4">
-                    <div class="space-y-1 px-1">
-                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">ATENCIÓN AL CLIENTE</span>
-                        <h2 class="text-xl font-bold text-black tracking-tight">Mensajes & Consultas</h2>
-                    </div>
-                    <div id="businessMessagesTabContent" class="space-y-3 pt-1"></div>
-                </div>
-
-                <div id="view-business-profile" class="view-pane px-6 pt-2 pb-28 space-y-5">
-                    <div id="businessProfileContentContainer" class="w-full"></div>
-                </div>
-
-            </div>
-
-            <!-- VISTAS FLOTANTES / SUBMENÚS -->
-            <div id="view-category" class="absolute inset-0 bg-white z-25 hidden flex-col allow-scroll px-6 pt-24 pb-28 space-y-4">
-                <div class="flex items-center space-x-3 px-1">
-                    <button onclick="switchTab('home')" class="w-10 h-10 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-black hover:bg-neutral-200 transition active:scale-95">
-                        <i data-lucide="arrow-left" class="w-5 h-5"></i>
-                    </button>
-                    <div>
-                        <h2 id="categoryViewTitle" class="text-xl font-bold text-black tracking-tight">Categoría</h2>
-                        <p class="text-[11px] text-neutral-500">Locales y servicios en Palencia.</p>
-                    </div>
-                </div>
-
-                <div class="relative flex items-center shadow-sm">
-                    <i data-lucide="search" class="absolute left-4 w-4 h-4 text-neutral-400"></i>
-                    <input type="text" id="categorySearch" onkeyup="filterCategoryView()" placeholder="Buscar en esta categoría..." class="w-full bg-neutral-50 border border-neutral-200/80 rounded-2xl py-3.5 pl-11 pr-4 text-xs text-black placeholder-neutral-400 focus:outline-none focus:border-black transition">
-                </div>
-
-                <div id="dynamicCategoryList" class="space-y-3 pt-2 pb-6"></div>
-            </div>
-
-            <!-- VISTA DE PAGO -->
-            <div id="view-payment" class="absolute inset-0 bg-white z-50 hidden flex-col justify-between px-6 pt-6 pb-12">
-                <div class="flex items-center justify-between shrink-0">
-                    <button onclick="closePaymentView()" class="w-10 h-10 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-black hover:bg-neutral-200 transition active:scale-95">
-                        <i data-lucide="arrow-left" class="w-5 h-5"></i>
-                    </button>
-                    <div class="flex items-center space-x-2 px-3.5 py-1.5 bg-emerald-50 border border-emerald-200/60 rounded-full">
-                        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                        <span class="text-[9px] font-bold text-emerald-700 uppercase tracking-widest">Conectado</span>
-                    </div>
-                    <div class="w-10"></div>
-                </div>
-
-                <div class="flex flex-col items-center space-y-2 shrink-0 pt-2">
-                    <div class="w-14 h-14 rounded-2xl bg-neutral-900 text-white flex items-center justify-center shadow-md text-xs font-bold" id="payeeInitialsBubble">NW</div>
-                    <div class="text-center">
-                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">Enviando a</span>
-                        <h2 id="payeeNameDisplay" class="text-base font-bold text-black tracking-tight mt-0.5 truncate max-w-[280px]">Destinatario</h2>
-                    </div>
-                    
-                    <div class="w-full max-w-[320px] text-center py-3 bg-neutral-50/90 rounded-[24px] border border-neutral-200/85 shadow-sm">
-                        <div class="flex items-center justify-center space-x-1.5">
-                            <span class="text-2xl font-light text-neutral-400">€</span>
-                            <span id="payAmountDisplay" class="text-4xl font-extrabold tracking-tight text-black">0,00</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="w-full max-w-[320px] mx-auto flex flex-col space-y-6 mt-auto shrink-0">
-                    <div class="grid grid-cols-3 gap-2.5 w-full">
-                        <button onclick="appendNum('1')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">1</button>
-                        <button onclick="appendNum('2')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">2</button>
-                        <button onclick="appendNum('3')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">3</button>
-                        <button onclick="appendNum('4')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">4</button>
-                        <button onclick="appendNum('5')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">5</button>
-                        <button onclick="appendNum('6')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">6</button>
-                        <button onclick="appendNum('7')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">7</button>
-                        <button onclick="appendNum('8')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">8</button>
-                        <button onclick="appendNum('9')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">9</button>
-                        <button onclick="appendNum('00')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">00</button>
-                        <button onclick="appendNum('0')" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-black transition active:scale-95 shadow-sm">0</button>
-                        <button onclick="clearNum()" class="py-3 bg-white hover:bg-neutral-50 border border-neutral-200/80 rounded-2xl text-xl font-semibold text-rose-600 transition active:scale-95 shadow-sm flex items-center justify-center"><i data-lucide="delete" class="w-6 h-6"></i></button>
-                    </div>
-
-                    <div id="holdButtonContainer" class="relative w-full h-16 bg-black rounded-2xl overflow-hidden shadow-2xl cursor-pointer flex items-center justify-center select-none" style="touch-action: none;">
-                        <div id="progressBar" class="absolute top-0 left-0 bottom-0 w-0 bg-emerald-500 pointer-events-none transition-[width] duration-75"></div>
-                        <span class="relative z-10 text-white font-bold text-xs tracking-widest uppercase pointer-events-none">MANTENER PARA CONFIRMAR</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VISTA CESTA -->
-            <div id="view-cart" class="absolute inset-0 bg-white z-50 hidden flex-col allow-scroll px-6 pt-20 pb-28 space-y-5">
-                <div class="flex items-center px-1">
-                    <button onclick="closeCartSummary()" class="w-10 h-10 rounded-2xl bg-neutral-100 flex items-center justify-center text-black active:scale-95 transition">
-                        <i data-lucide="arrow-left" class="w-5 h-5"></i>
-                    </button>
-                    <h2 class="text-xl font-bold text-black ml-4 tracking-tight">Tu Cesta</h2>
-                </div>
-                
-                <div class="bg-white p-5 rounded-3xl border border-neutral-200/80 shadow-sm space-y-4">
-                    <h3 class="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Resumen del Pedido</h3>
-                    <div id="cartItemsContainer" class="space-y-3 max-h-48 overflow-y-auto pr-1"></div>
-                    <div class="flex justify-between items-center pt-4 border-t border-neutral-100">
-                        <span class="text-sm font-bold text-neutral-600">Total a pagar</span>
-                        <span id="cartSummaryTotal" class="text-xl font-extrabold text-black">0,00 €</span>
-                    </div>
-                </div>
-
-                <div class="bg-white p-5 rounded-3xl border border-neutral-200/80 shadow-sm space-y-4">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-[10px] font-bold text-neutral-400 uppercase tracking-widest flex items-center space-x-2">
-                            <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-                            <span>Fecha de recogida / Cita</span>
-                        </h3>
-                        <button type="button" onclick="toggleScheduleSection()" id="scheduleToggleBtn" class="w-11 h-6 bg-black rounded-full transition-colors relative flex items-center p-0.5 cursor-pointer">
-                            <div id="scheduleToggleKnob" class="w-5 h-5 bg-white rounded-full transition-transform transform translate-x-5 shadow-sm"></div>
-                        </button>
-                    </div>
-
-                    <div id="scheduleInputsContainer" class="space-y-3 transition-all duration-300">
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="text-[10px] font-mono text-neutral-500 mb-1 block">Día</label>
-                                <input type="date" id="orderDate" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-3 px-3.5 text-xs text-black focus:border-black outline-none transition">
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-mono text-neutral-500 mb-1 block">Hora estimada</label>
-                                <input type="time" id="orderTime" value="12:00" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-3 px-3.5 text-xs text-black focus:border-black outline-none transition">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="space-y-3 pt-2">
-                    <button onclick="processCartChoice('pay')" class="w-full py-4 bg-black text-white font-bold rounded-2xl shadow-lg active:scale-95 transition flex justify-center items-center space-x-2">
-                        <i data-lucide="credit-card" class="w-4 h-4"></i><span>Pagar Ahora con NetWish</span>
-                    </button>
-                    <button onclick="processCartChoice('reserve')" class="w-full py-4 bg-white border border-neutral-200 text-black font-bold rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2">
-                        <i data-lucide="store" class="w-4 h-4 text-neutral-500"></i><span>Solo Reservar (Pagar en el local)</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- VISTA PÚBLICA DEL COMERCIO -->
-            <div id="view-public-business" class="absolute inset-0 bg-white z-30 hidden flex-col allow-scroll pb-28">
-                <div class="relative w-full h-[240px] bg-neutral-200 shrink-0">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent z-10"></div>
-                    <img id="publicBizImage" src="https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80" alt="Comercio" class="w-full h-full object-cover">
-                    
-                    <button onclick="goBackFromBusiness()" class="absolute top-10 left-6 z-20 w-10 h-10 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/20 shadow-sm transition active:scale-95">
-                        <i data-lucide="arrow-left" class="w-5 h-5"></i>
-                    </button>
-
-                    <div class="absolute bottom-6 left-6 right-6 z-20">
-                        <div class="flex items-center space-x-2 mb-1.5">
-                            <span id="publicBizTag" class="px-2.5 py-1 bg-white/20 backdrop-blur-md text-white text-[9px] font-bold rounded-full uppercase tracking-widest border border-white/20">Comercio</span>
-                            <div class="flex items-center space-x-1.5 text-emerald-400 text-[10px] font-bold bg-emerald-500/10 backdrop-blur-md px-2 py-1 rounded-full border border-emerald-500/20">
-                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span><span>Abierto</span>
-                            </div>
-                        </div>
-                        <h2 id="publicBizName" class="text-3xl font-extrabold text-white tracking-tight">Nombre Comercio</h2>
-                    </div>
-                </div>
-
-                <div class="px-6 pt-5 space-y-5">
-                    <!-- BOTÓN: PEDIDOS PERSONALIZADOS -->
-                    <button onclick="openCustomerChat(window.appState?.activeBusinessName)" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-98 transition group">
-                        <div class="flex items-center space-x-3.5">
-                            <div class="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center shadow-md shrink-0">
-                                <i data-lucide="message-circle" class="w-5 h-5"></i>
-                            </div>
-                            <div class="text-left">
-                                <span class="block text-xs font-bold text-black tracking-tight">Pedidos Personalizados</span>
-                                <span class="block text-[10px] text-neutral-400 mt-0.5">Contacta directamente para solicitudes a medida</span>
-                            </div>
-                        </div>
-                        <div class="w-7 h-7 rounded-full bg-white border border-neutral-200/60 flex items-center justify-center text-neutral-400 group-hover:text-black transition">
-                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
-                        </div>
-                    </button>
-
-                    <div class="flex items-center justify-between pt-1">
-                        <h3 class="text-sm font-bold text-black tracking-tight">Catálogo y Pedidos</h3>
-                        <span class="text-[10px] font-mono text-neutral-400 uppercase">Click & Collect</span>
-                    </div>
-
-                    <div class="space-y-4" id="publicBizCatalog"></div>
-                </div>
-            </div>
-
-            <!-- VISTA DEDICADA: PÁGINA DE CATÁLOGO DE BEATS -->
-            <div id="view-beats-catalog" class="absolute inset-0 bg-white z-40 hidden flex-col allow-scroll px-6 pt-24 pb-28 space-y-4">
-                <div class="flex items-center space-x-3 px-1 shrink-0">
-                    <button onclick="closeBeatsCatalogView()" class="w-10 h-10 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-black hover:bg-neutral-200 transition active:scale-95">
-                        <i data-lucide="arrow-left" class="w-5 h-5"></i>
-                    </button>
-                    <div>
-                        <h2 class="text-xl font-bold text-black tracking-tight">Catálogo de Beats</h2>
-                        <p class="text-[11px] text-neutral-500">Instrumentales finalizadas listas para compra inmediata.</p>
-                    </div>
-                </div>
-
-                <div class="relative flex items-center shadow-sm shrink-0">
-                    <i data-lucide="search" class="absolute left-4 w-4 h-4 text-neutral-400"></i>
-                    <input type="text" id="beatsCatalogSearch" onkeyup="filterBeatsCatalogView()" placeholder="Buscar beats por nombre o estilo..." class="w-full bg-neutral-50 border border-neutral-200/80 rounded-2xl py-3.5 pl-11 pr-4 text-xs text-black placeholder-neutral-400 focus:outline-none focus:border-black transition">
-                </div>
-
-                <div id="dynamicBeatsCatalogList" class="space-y-3 pt-2 pb-6"></div>
-            </div>
-
-            <!-- BARRA FLOTANTE GLOBAL DE CESTA (Z-50: VISIBLE TANTO EN EL LOCAL COMO EN BEATS) -->
-            <div id="publicBusinessCartBar" class="absolute bottom-24 left-6 right-6 z-50 transition-all duration-300 transform translate-y-64 opacity-0 pointer-events-none">
-                <button onclick="openCartSummary()" class="w-full bg-black text-white p-4 rounded-2xl flex justify-between items-center shadow-[0_20px_40px_rgba(0,0,0,0.35)] active:scale-95 transition-transform">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center text-xs font-bold" id="cartCountDisplay">0</div>
-                        <span class="text-xs font-bold tracking-widest uppercase">Ver Cesta</span>
-                    </div>
-                    <span class="text-base font-extrabold" id="cartTotalDisplay">0,00 €</span>
-                </button>
-            </div>
-
-        </main>
-
-        <!-- BARRAS DE NAVEGACIÓN INFERIORES -->
-        <nav id="personal-nav" class="absolute bottom-4 left-4 right-4 border border-neutral-200/80 bg-white/90 backdrop-blur-2xl px-6 py-3.5 rounded-[32px] flex justify-around items-center z-40 shadow-[0_10px_30px_rgba(0,0,0,0.06)]">
-            <button id="nav-btn-home" onclick="switchTab('home')" class="flex flex-col items-center text-black space-y-1 transition group"><i data-lucide="home" class="w-5 h-5 transition-transform group-active:scale-90 scale-110"></i><span class="text-[9px] font-medium tracking-tight">Inicio</span></button>
-            <button id="nav-btn-explore" onclick="switchTab('explore')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="compass" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Explorar</span></button>
-            <button id="nav-btn-scan" onclick="switchTab('scan')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="scan" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">QR</span></button>
-            <button id="nav-btn-profile" onclick="switchTab('profile')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="user" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Perfil</span></button>
-        </nav>
-
-        <nav id="business-nav" class="hidden absolute bottom-4 left-4 right-4 border border-neutral-800 bg-black/95 backdrop-blur-2xl px-4 py-3.5 rounded-[32px] flex justify-around items-center z-40 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
-            <button id="biz-nav-btn-dashboard" onclick="switchTab('business-dashboard')" class="flex flex-col items-center text-white space-y-1 transition group"><i data-lucide="layout-dashboard" class="w-5 h-5 transition-transform group-active:scale-90 scale-110"></i><span class="text-[9px] font-medium tracking-tight">Panel</span></button>
-            <button id="biz-nav-btn-orders" onclick="switchTab('business-orders')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="clipboard-list" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Pedidos</span></button>
-            
-            <button id="biz-nav-btn-messages" onclick="switchTab('business-messages')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group relative">
-                <div class="relative">
-                    <i data-lucide="message-square" class="w-5 h-5 transition-transform group-active:scale-90"></i>
-                    <span id="bizNavUnreadDot" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-black animate-pulse"></span>
-                </div>
-                <span class="text-[9px] font-medium tracking-tight">Mensajes</span>
-            </button>
-            
-            <button id="biz-nav-btn-profile" onclick="switchTab('business-profile')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="store" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Negocio</span></button>
-        </nav>
-
-        <!-- MODAL DINÁMICO -->
-        <div id="customModal" class="absolute inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
-            <div class="bg-white w-full max-w-[400px] rounded-[40px] p-7 text-center space-y-4 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100 flex flex-col overflow-hidden" id="modalContent"><div id="modalBody" class="space-y-4 text-left"></div></div>
+      <!-- Tarjetas de Comercios Destacados -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold tracking-wide uppercase text-neutral-400 font-mono">Comercios en Palencia</span>
+          <span class="text-[10px] text-neutral-400 font-mono">En directo</span>
         </div>
 
-    </div>
+        <!-- Tarjeta: JUUANCP Producción Musical -->
+        <article onclick="window.openStudioView()" class="p-4 rounded-3xl border border-neutral-200 bg-white hover:border-black transition cursor-pointer space-y-3 active:scale-[0.99]">
+          <div class="flex items-start justify-between">
+            <div class="space-y-1">
+              <span class="inline-block px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-700 text-[9px] font-mono uppercase">Record Label</span>
+              <h3 class="text-sm font-bold text-black">JUUANCP Producción Musical</h3>
+              <p class="text-[11px] text-neutral-400">Palencia Centro • Instrumentales & Beats</p>
+            </div>
+            <span class="w-8 h-8 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center text-black">
+              <i data-lucide="music" class="w-4 h-4"></i>
+            </span>
+          </div>
+          <div class="flex items-center justify-between pt-2 border-t border-neutral-100 text-xs font-medium">
+            <span class="text-neutral-500">Catálogo digital disponible</span>
+            <span class="font-bold text-black flex items-center gap-1">Ver estudio <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></span>
+          </div>
+        </article>
 
-    <!-- SCRIPTS MODULARES -->
-    <script src="js/config.js?v=30"></script>
-    <script src="js/navigation.js?v=30"></script>
-    <script src="js/auth.js?v=30"></script>
-    <script src="js/directory.js?v=30"></script>
-    <script src="js/catalog-cart.js?v=30"></script>
-    <script src="js/dashboard.js?v=30"></script>
-    <script src="js/scanner.js?v=30"></script>
-    <script src="js/payment.js?v=30"></script>
-    <script src="js/chat.js?v=30"></script>
-    <script src="js/toast.js"></script>
+        <!-- Tarjeta: Barbería -->
+        <article onclick="window.switchTab('barber')" class="p-4 rounded-3xl border border-neutral-200 bg-white hover:border-black transition cursor-pointer space-y-3 active:scale-[0.99]">
+          <div class="flex items-start justify-between">
+            <div class="space-y-1">
+              <span class="inline-block px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-700 text-[9px] font-mono uppercase">Citas & Turnos</span>
+              <h3 class="text-sm font-bold text-black">Barbería Urbana Palencia</h3>
+              <p class="text-[11px] text-neutral-400">Calle Mayor, Palencia • A 250m</p>
+            </div>
+            <span class="w-8 h-8 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center text-black">
+              <i data-lucide="scissors" class="w-4 h-4"></i>
+            </span>
+          </div>
+          <div class="flex items-center justify-between pt-2 border-t border-neutral-100 text-xs font-medium">
+            <span class="text-neutral-500">Próximo turno libre: <strong class="text-black">16:30</strong></span>
+            <span class="font-bold text-black flex items-center gap-1">Reservar <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></span>
+          </div>
+        </article>
 
+        <!-- Tarjeta: Panadería -->
+        <article onclick="window.switchTab('bakery')" class="p-4 rounded-3xl border border-neutral-200 bg-white hover:border-black transition cursor-pointer space-y-3 active:scale-[0.99]">
+          <div class="flex items-start justify-between">
+            <div class="space-y-1">
+              <span class="inline-block px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-700 text-[9px] font-mono uppercase">Click & Collect</span>
+              <h3 class="text-sm font-bold text-black">Tahona & Café San Antolín</h3>
+              <p class="text-[11px] text-neutral-400">Plaza Mayor, Palencia • A 100m</p>
+            </div>
+            <span class="w-8 h-8 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center text-black">
+              <i data-lucide="coffee" class="w-4 h-4"></i>
+            </span>
+          </div>
+          <div class="flex items-center justify-between pt-2 border-t border-neutral-100 text-xs font-medium">
+            <span class="text-neutral-500">Recogida sin esperas: <strong class="text-black">En 15 min</strong></span>
+            <span class="font-bold text-black flex items-center gap-1">Pedir <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- 2. VISTA DETALLE ESTUDIO (JUUANCP) -->
+    <section id="studioView" class="hidden max-w-md mx-auto min-h-screen bg-white text-black space-y-6 pb-28">
+      <header class="relative w-full h-80 rounded-b-[2.5rem] overflow-hidden bg-neutral-950 select-none shadow-xl">
+        <img 
+          id="businessHeaderImg"
+          src="foto.jpeg" 
+          alt="JUUANCP Producción Musical" 
+          class="absolute inset-0 w-full h-full object-cover object-center"
+          onerror="this.src='https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=1000&auto=format&fit=crop'"
+        />
+        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/30"></div>
+
+        <div class="relative z-10 h-full p-6 flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <button 
+              type="button"
+              onclick="window.switchTab('home')" 
+              class="w-10 h-10 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-md border border-white/20 text-white active:scale-95 transition"
+            >
+              <i data-lucide="arrow-left" class="w-4 h-4 text-white"></i>
+            </button>
+
+            <button 
+              type="button"
+              onclick="if(navigator.share){ navigator.share({title: 'JUUANCP en NetWish', url: window.location.href}); }"
+              class="w-10 h-10 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-md border border-white/20 text-white active:scale-95 transition"
+            >
+              <i data-lucide="share-2" class="w-4 h-4 text-white"></i>
+            </button>
+          </div>
+
+          <div class="space-y-2.5">
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/10 text-[9px] font-mono font-bold tracking-widest text-white uppercase">
+                RECORD LABEL
+              </span>
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-emerald-500/30 text-[10px] font-semibold text-emerald-400">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                Abierto
+              </span>
+            </div>
+
+            <h1 class="text-2xl font-black text-white tracking-tight leading-none">
+              JUUANCP Producción Musical
+            </h1>
+
+            <div class="flex items-center gap-4 text-[11px] text-neutral-300 font-medium pt-0.5">
+              <span class="flex items-center gap-1">
+                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-neutral-400"></i>
+                Palencia Centro
+              </span>
+              <span class="flex items-center gap-1">
+                <i data-lucide="music-2" class="w-3.5 h-3.5 text-neutral-400"></i>
+                Instrumentales & Beats
+              </span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="px-5 space-y-4">
+        <div class="p-4 rounded-2xl border border-neutral-200 bg-neutral-50 flex items-center justify-between">
+          <div class="space-y-0.5">
+            <p class="text-xs font-bold text-black">Pedidos Personalizados</p>
+            <p class="text-[10px] text-neutral-500">Contacta directamente para instrumentales a medida</p>
+          </div>
+          <button onclick="window.switchTab('pay')" class="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center active:scale-95 transition">
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. VISTA BARBERÍA (RESERVAS) -->
+    <section id="barberBookingView" class="hidden max-w-md mx-auto px-5 py-6 space-y-6 pb-28">
+      <header class="flex items-center gap-3 border-b border-neutral-100 pb-4">
+        <button onclick="window.switchTab('home')" class="w-9 h-9 flex items-center justify-center rounded-full bg-neutral-50 border border-neutral-200 active:scale-95 transition">
+          <i data-lucide="arrow-left" class="w-4 h-4 text-black"></i>
+        </button>
+        <div>
+          <h2 class="text-base font-bold">Barbería Urbana Palencia</h2>
+          <p class="text-[11px] text-neutral-400">Calle Mayor, Palencia</p>
+        </div>
+      </header>
+
+      <div class="space-y-3">
+        <span class="text-xs font-bold uppercase text-neutral-400 font-mono">1. Selecciona Servicio</span>
+        <div class="space-y-2">
+          <label class="flex items-center justify-between p-3.5 rounded-2xl border border-neutral-200 cursor-pointer">
+            <div class="flex items-center gap-3">
+              <input type="checkbox" name="barber_service" value="Corte Clásico" data-price="14.00" class="w-4 h-4 accent-black" onchange="window.updateBarberSummary()">
+              <span class="text-xs font-bold">Corte Clásico / Fade</span>
+            </div>
+            <span class="text-xs font-bold">14,00 €</span>
+          </label>
+          <label class="flex items-center justify-between p-3.5 rounded-2xl border border-neutral-200 cursor-pointer">
+            <div class="flex items-center gap-3">
+              <input type="checkbox" name="barber_service" value="Arreglo de Barba" data-price="9.00" class="w-4 h-4 accent-black" onchange="window.updateBarberSummary()">
+              <span class="text-xs font-bold">Perfilado de Barba</span>
+            </div>
+            <span class="text-xs font-bold">9,00 €</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <span class="text-xs font-bold uppercase text-neutral-400 font-mono">2. Franja Horaria</span>
+        <div class="grid grid-cols-4 gap-2">
+          <button type="button" onclick="window.selectTimeSlot(this, '10:00')" class="time-slot py-2.5 rounded-xl border border-neutral-200 text-xs font-medium">10:00</button>
+          <button type="button" onclick="window.selectTimeSlot(this, '11:30')" class="time-slot py-2.5 rounded-xl border border-neutral-200 text-xs font-medium">11:30</button>
+          <button type="button" onclick="window.selectTimeSlot(this, '16:30')" class="time-slot py-2.5 rounded-xl border border-neutral-200 text-xs font-medium">16:30</button>
+          <button type="button" onclick="window.selectTimeSlot(this, '18:00')" class="time-slot py-2.5 rounded-xl border border-neutral-200 text-xs font-medium">18:00</button>
+        </div>
+      </div>
+
+      <button id="btnConfirmBarber" onclick="window.proceedToBarberCheckout()" class="w-full py-3.5 bg-black text-white text-xs font-bold rounded-2xl disabled:opacity-30 transition" disabled>
+        Confirmar Reserva
+      </button>
+    </section>
+
+    <!-- 4. VISTA PANADERÍA (CLICK & COLLECT) -->
+    <section id="bakeryOrderView" class="hidden max-w-md mx-auto px-5 py-6 space-y-6 pb-28">
+      <header class="flex items-center gap-3 border-b border-neutral-100 pb-4">
+        <button onclick="window.switchTab('home')" class="w-9 h-9 flex items-center justify-center rounded-full bg-neutral-50 border border-neutral-200 active:scale-95 transition">
+          <i data-lucide="arrow-left" class="w-4 h-4 text-black"></i>
+        </button>
+        <div>
+          <h2 class="text-base font-bold">Tahona & Café San Antolín</h2>
+          <p class="text-[11px] text-neutral-400">Plaza Mayor, Palencia</p>
+        </div>
+      </header>
+
+      <div class="space-y-3">
+        <span class="text-xs font-bold uppercase text-neutral-400 font-mono">Productos Artesanales</span>
+        <div class="space-y-2.5">
+          <div class="flex items-center justify-between p-3.5 rounded-2xl border border-neutral-200">
+            <div>
+              <p class="text-xs font-bold">Hogaza Rústica Masa Madre</p>
+              <p class="text-[10px] text-neutral-400">2,80 € / ud</p>
+            </div>
+            <div class="flex items-center gap-2 bg-neutral-50 border border-neutral-200 rounded-xl p-1">
+              <button onclick="window.updateBakeryItem('Hogaza Rústica', 2.80, -1)" class="w-7 h-7 rounded-lg border border-neutral-200 text-xs font-bold">-</button>
+              <span id="qty-Hogaza-Rústica" class="text-xs font-bold font-mono w-5 text-center">0</span>
+              <button onclick="window.updateBakeryItem('Hogaza Rústica', 2.80, 1)" class="w-7 h-7 rounded-lg bg-black text-white text-xs font-bold">+</button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between p-3.5 rounded-2xl border border-neutral-200">
+            <div>
+              <p class="text-xs font-bold">Barra Artesana de Leña</p>
+              <p class="text-[10px] text-neutral-400">1,30 € / ud</p>
+            </div>
+            <div class="flex items-center gap-2 bg-neutral-50 border border-neutral-200 rounded-xl p-1">
+              <button onclick="window.updateBakeryItem('Barra Artesana', 1.30, -1)" class="w-7 h-7 rounded-lg border border-neutral-200 text-xs font-bold">-</button>
+              <span id="qty-Barra-Artesana" class="text-xs font-bold font-mono w-5 text-center">0</span>
+              <button onclick="window.updateBakeryItem('Barra Artesana', 1.30, 1)" class="w-7 h-7 rounded-lg bg-black text-white text-xs font-bold">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button id="btnConfirmBakery" onclick="window.proceedToBakeryCheckout()" class="w-full py-3.5 bg-black text-white text-xs font-bold rounded-2xl disabled:opacity-30 transition" disabled>
+        Confirmar Click & Collect
+      </button>
+    </section>
+
+    <!-- 5. VISTA TRANSPORTE URBANO (PALBUS) -->
+    <section id="transitView" class="hidden max-w-md mx-auto px-5 py-6 space-y-6 pb-28">
+      <header class="flex items-center gap-3 border-b border-neutral-100 pb-4">
+        <button onclick="window.switchTab('home')" class="w-9 h-9 flex items-center justify-center rounded-full bg-neutral-50 border border-neutral-200 active:scale-95 transition">
+          <i data-lucide="arrow-left" class="w-4 h-4 text-black"></i>
+        </button>
+        <div>
+          <h2 class="text-base font-bold">Transporte Palbus</h2>
+          <p class="text-[11px] text-neutral-400">Tiempos en tiempo real</p>
+        </div>
+      </header>
+
+      <div class="space-y-3">
+        <div class="p-4 rounded-2xl border border-neutral-200 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="w-7 h-7 flex items-center justify-center rounded-lg bg-black text-white text-xs font-bold font-mono">L1</span>
+            <span class="text-xs font-extrabold">3 min</span>
+          </div>
+          <p class="text-xs font-bold">San Antonio — Campus Universitario</p>
+          <p class="text-[10px] text-neutral-400">Parada: Plaza Mayor</p>
+        </div>
+
+        <div class="p-4 rounded-2xl border border-neutral-200 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="w-7 h-7 flex items-center justify-center rounded-lg bg-neutral-800 text-white text-xs font-bold font-mono">L2</span>
+            <span class="text-xs font-extrabold">8 min</span>
+          </div>
+          <p class="text-xs font-bold">Camino de la Miranda — San Telmo</p>
+          <p class="text-[10px] text-neutral-400">Parada: Estación de Renfe</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. VISTA ESCÁNER QR -->
+    <section id="qrScannerView" class="hidden max-w-md mx-auto min-h-screen bg-black text-white px-5 py-6 flex flex-col justify-between pb-28">
+      <header class="flex items-center justify-between">
+        <button onclick="window.switchTab('home')" class="w-9 h-9 flex items-center justify-center rounded-full bg-neutral-900 border border-neutral-800 text-white active:scale-95 transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+        <span class="text-xs font-bold uppercase tracking-wider font-mono text-neutral-400">Escáner NetWish</span>
+        <div class="w-9"></div>
+      </header>
+
+      <div class="relative flex flex-col items-center justify-center my-auto">
+        <div class="relative w-64 h-64 rounded-3xl overflow-hidden border-2 border-white/20 flex items-center justify-center bg-neutral-950">
+          <video id="qrVideoElement" class="absolute inset-0 w-full h-full object-cover" playsinline></video>
+          <div class="absolute inset-x-4 h-0.5 bg-white shadow-[0_0_12px_rgba(255,255,255,0.8)] animate-pulse"></div>
+        </div>
+        <p class="text-xs text-neutral-400 mt-6 text-center">Apunta al código QR del comercio</p>
+      </div>
+
+      <button onclick="window.manualQrInput()" class="w-full py-3 bg-neutral-900 border border-neutral-800 text-white text-xs font-semibold rounded-2xl active:scale-95 transition">
+        Introducir código manual
+      </button>
+    </section>
+
+    <!-- 7. VISTA TERMINAL DE PAGO -->
+    <section id="payView" class="hidden max-w-md mx-auto px-5 py-6 space-y-6 pb-28">
+      <header class="flex items-center gap-3 border-b border-neutral-100 pb-4">
+        <button onclick="window.switchTab('home')" class="w-9 h-9 flex items-center justify-center rounded-full bg-neutral-50 border border-neutral-200 active:scale-95 transition">
+          <i data-lucide="arrow-left" class="w-4 h-4 text-black"></i>
+        </button>
+        <div>
+          <h2 class="text-base font-bold">Terminal de Pago</h2>
+          <p class="text-[11px] text-neutral-400" id="activePayeeLabel">Comercio Local</p>
+        </div>
+      </header>
+
+      <div class="text-center space-y-1">
+        <div class="flex items-baseline justify-center gap-1">
+          <span class="text-4xl font-extrabold font-mono" id="payAmountDisplay">0,00</span>
+          <span class="text-xl font-bold">€</span>
+        </div>
+      </div>
+
+      <!-- Teclado Numérico -->
+      <div class="grid grid-cols-3 gap-3 max-w-xs mx-auto">
+        <button onclick="window.appendNum('1')" class="py-4 text-lg font-bold rounded-2xl bg-neutral-50 hover:bg-neutral-100 active:scale-95 transition">1</button>
+        <button onclick="window.appendNum('2')" class="py-4 text-lg font-bold rounded-2xl bg-neutral-50 hover:bg-neutral-100 active:scale-95 transition">2</button>
+        <button onclick="window.appendNum('3')" class="py-4 text-lg font-bold rounded-2xl bg-neutral-50 hover:bg-neutral-100 active:scale-95 transition">3</button>
+        <button onclick="window.appendNum('4')" class="py-4 text-lg font-bold rounded-2xl bg-neutral-50 hover:bg-neutral-100 active:scale-95 transition">4</button>
+        <button onclick="window.appendNum('5')" class="py-4 text-lg font-bold rounded-2xl bg-neutral-50 hover:bg-neutral-100 active:scale-95 transition">5</button>
+        <button onclick="window.appendNum('6')" class="py-4 text-lg font-bold rounded-2xl bg-neutral-50 hover:bg-neutral-100 active:scale-95 transition">6</button>
+        <button onclick="window.appendNum('7')" class="py-4 text-lg font-bold rounded-2xl bg-neutral-50 hover:bg-neutral-100 active:scale-95 transition">7</button>
+        <button onclick="window.appendNum('8')" class="py-4 text-lg font-bold rounded-2xl bg-neutral-50 hover:bg-neutral-100 active:scale-95 transition">8</button>
+        <button onclick="window.appendNum('9')" class="py-4 text-lg font-bold rounded-2xl bg-neutral-50 hover:bg-neutral-100 active:scale-95 transition">9</button>
+        <button onclick="window.appendNum('00')" class="py-4 text-sm font-bold rounded-2xl bg-neutral-50 hover:bg-neutral-100 active:scale-95 transition font-mono">00</button>
+        <button onclick="window.appendNum('0')" class="py-4 text-lg font-bold rounded-2xl bg-neutral-50 hover:bg-neutral-100 active:scale-95 transition">0</button>
+        <button onclick="window.clearNum()" class="py-4 flex items-center justify-center rounded-2xl bg-neutral-50 hover:bg-neutral-100 active:scale-95 transition">
+          <i data-lucide="delete" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <button id="btnExecutePayment" onclick="window.processDirectPayment()" class="w-full py-4 bg-black text-white text-xs font-bold rounded-2xl active:scale-[0.98] transition">
+        Confirmar Pago Directo
+      </button>
+    </section>
+
+    <!-- 8. VISTA PERFIL / RECIBOS -->
+    <section id="profileView" class="hidden max-w-md mx-auto px-5 py-6 space-y-6 pb-28">
+      <header class="flex items-center justify-between border-b border-neutral-100 pb-4">
+        <button onclick="window.switchTab('home')" class="w-9 h-9 flex items-center justify-center rounded-full bg-neutral-50 border border-neutral-200 active:scale-95 transition">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        </button>
+        <h2 class="text-base font-bold">Mi Cuenta NetWish</h2>
+        <div class="w-9"></div>
+      </header>
+
+      <div class="space-y-3">
+        <span class="text-xs font-bold uppercase text-neutral-400 font-mono">Recibos Guardados</span>
+        <div id="userOrdersHistoryList" class="space-y-2">
+          <div class="p-6 rounded-2xl bg-neutral-50 border border-neutral-200 text-center">
+            <p class="text-xs text-neutral-500">Tus pagos y reservas aparecerán aquí.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= BARRA DE NAVEGACIÓN FLOTANTE ================= -->
+  <nav class="fixed bottom-4 inset-x-4 max-w-md mx-auto bg-black/95 backdrop-blur-md text-white rounded-3xl px-6 py-3 flex items-center justify-between border border-white/10 shadow-2xl z-50">
+    <button onclick="window.switchTab('home')" id="nav-btn-home" class="nav-btn flex flex-col items-center gap-1 text-white transition active:scale-95">
+      <i data-lucide="layout-grid" class="w-5 h-5"></i>
+      <span class="text-[9px] font-mono">Inicio</span>
+    </button>
+    <button onclick="window.switchTab('transit')" id="nav-btn-transit" class="nav-btn flex flex-col items-center gap-1 text-neutral-400 hover:text-white transition active:scale-95">
+      <i data-lucide="bus" class="w-5 h-5"></i>
+      <span class="text-[9px] font-mono">Bus</span>
+    </button>
+    <button onclick="window.openScannerView()" class="w-10 h-10 -mt-4 flex items-center justify-center rounded-2xl bg-white text-black shadow-lg active:scale-90 transition">
+      <i data-lucide="qr-code" class="w-5 h-5"></i>
+    </button>
+    <button onclick="window.switchTab('pay')" id="nav-btn-pay" class="nav-btn flex flex-col items-center gap-1 text-neutral-400 hover:text-white transition active:scale-95">
+      <i data-lucide="credit-card" class="w-5 h-5"></i>
+      <span class="text-[9px] font-mono">Pagar</span>
+    </button>
+    <button onclick="window.switchTab('profile')" id="nav-btn-profile" class="nav-btn flex flex-col items-center gap-1 text-neutral-400 hover:text-white transition active:scale-95">
+      <i data-lucide="user" class="w-5 h-5"></i>
+      <span class="text-[9px] font-mono">Perfil</span>
+    </button>
+  </nav>
+
+  <!-- ================= SCRIPTS DEL SISTEMA ================= -->
+  <script src="js/toast.js"></script>
+  <script>
+    // ESTADO GLOBAL Y ENRUTADOR
+    window.appState = {
+      currentTab: 'home',
+      currentPayDigits: '0'
+    };
+
+    window.switchTab = function(tabName) {
+      const views = [
+        'homeView',
+        'studioView',
+        'barberBookingView',
+        'bakeryOrderView',
+        'transitView',
+        'qrScannerView',
+        'payView',
+        'profileView'
+      ];
+
+      views.forEach(v => {
+        const el = document.getElementById(v);
+        if (el) el.classList.add('hidden');
+      });
+
+      const map = {
+        'home': 'homeView',
+        'studio': 'studioView',
+        'barber': 'barberBookingView',
+        'bakery': 'bakeryOrderView',
+        'transit': 'transitView',
+        'scanner': 'qrScannerView',
+        'pay': 'payView',
+        'profile': 'profileView'
+      };
+
+      const target = document.getElementById(map[tabName] || 'homeView');
+      if (target) {
+        target.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+
+      document.querySelectorAll('.nav-btn').forEach(b => {
+        b.classList.remove('text-white');
+        b.classList.add('text-neutral-400');
+      });
+      const activeNav = document.getElementById(`nav-btn-${tabName}`);
+      if (activeNav) {
+        activeNav.classList.remove('text-neutral-400');
+        activeNav.classList.add('text-white');
+      }
+
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    };
+
+    window.openStudioView = function() { window.switchTab('studio'); };
+    window.openScannerView = function() { window.switchTab('scanner'); };
+
+    // TECLADO DE PAGO
+    window.appendNum = function(num) {
+      if (window.appState.currentPayDigits === '0') {
+        window.appState.currentPayDigits = num;
+      } else {
+        window.appState.currentPayDigits += num;
+      }
+      window.updatePayDisplay();
+    };
+
+    window.clearNum = function() {
+      window.appState.currentPayDigits = '0';
+      window.updatePayDisplay();
+    };
+
+    window.updatePayDisplay = function() {
+      const val = (parseInt(window.appState.currentPayDigits || '0', 10) / 100).toFixed(2);
+      document.getElementById('payAmountDisplay').innerText = val;
+    };
+
+    window.processDirectPayment = function() {
+      const amount = (parseInt(window.appState.currentPayDigits || '0', 10) / 100).toFixed(2);
+      if (parseFloat(amount) <= 0) {
+        if (window.showToast) window.showToast('Introduce un importe válido', 'error');
+        return;
+      }
+      if (window.showToast) window.showToast(`Pago de ${amount} € confirmado`, 'success');
+      window.clearNum();
+      window.switchTab('home');
+    };
+
+    // INICIALIZACIÓN
+    document.addEventListener('DOMContentLoaded', () => {
+      window.switchTab('home');
+    });
+  </script>
 </body>
 </html>
