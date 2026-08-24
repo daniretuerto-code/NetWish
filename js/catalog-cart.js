@@ -1,3 +1,5 @@
+// js/catalog-cart.js
+
 window.appState = window.appState || {};
 window.appState.activeBusinessName = "";
 window.appState.activeBusinessCategory = "";
@@ -14,6 +16,7 @@ window.currentPlayingBtnId = null;
 window.currentLoadedBeatsList = [];
 window.lastVisitedBeatsView = false;
 
+// 1. APERTURA Y CONFIGURACIÓN DEL COMERCIO PÚBLICO
 function openPublicBusiness(safeName, safeType) {
     window.appState.activeBusinessName = decodeURIComponent(safeName || '');
     window.appState.activeBusinessCategory = decodeURIComponent(safeType || '').toLowerCase();
@@ -35,7 +38,9 @@ function openPublicBusiness(safeName, safeType) {
     if (imgEl) {
         if (isJuanStudio) {
             imgEl.src = "https://gamjjnyomhnyswbxlhgq.supabase.co/storage/v1/object/public/public-images/juancp-cover.jpg";
-        } else if (window.appState.activeBusinessCategory.includes('pan') || window.appState.activeBusinessCategory.includes('comercio')) {
+        } else if (window.appState.activeBusinessCategory.includes('rest') || window.appState.activeBusinessCategory.includes('bar') || window.appState.activeBusinessName.toLowerCase().includes('restaurante')) {
+            imgEl.src = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80";
+        } else if (window.appState.activeBusinessCategory.includes('pan') || window.appState.activeBusinessCategory.includes('comercio') || window.appState.activeBusinessCategory.includes('bakery')) {
             imgEl.src = "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80";
         } else if (window.appState.activeBusinessCategory.includes('pel')) {
             imgEl.src = "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=800&q=80";
@@ -44,6 +49,7 @@ function openPublicBusiness(safeName, safeType) {
         }
     }
 
+    // Cargar la cesta guardada para este negocio o inicializarla vacía
     const savedCart = window.appState.cartsByBusiness[window.appState.activeBusinessName] || [];
     window.appState.cartItemsList = savedCart;
     window.appState.cartTotalValue = savedCart.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
@@ -56,9 +62,20 @@ function openPublicBusiness(safeName, safeType) {
     switchTab('public-business');
 }
 
+// 2. RENDERIZADO DINÁMICO DEL CATÁLOGO (SEGÚN CATEGORÍA)
 async function renderPublicCatalogItems() {
     const catalogEl = document.getElementById('publicBizCatalog');
     if (!catalogEl) return;
+
+    // DETECCIÓN DE RESTAURANTE: DELEGA EN EL MÓDULO JS/RESTAURANT.JS
+    const isRestaurant = window.appState.activeBusinessCategory.includes('rest') || 
+                         window.appState.activeBusinessCategory.includes('bar') || 
+                         window.appState.activeBusinessName.toLowerCase().includes('restaurante');
+
+    if (isRestaurant && typeof window.renderRestaurantHub === 'function') {
+        window.renderRestaurantHub(catalogEl);
+        return;
+    }
 
     catalogEl.innerHTML = `
         <div class="py-8 text-center space-y-2">
@@ -98,7 +115,10 @@ async function renderPublicCatalogItems() {
         return;
     }
 
-    const isMusic = window.appState.activeBusinessCategory.includes('disco') || window.appState.activeBusinessCategory.includes('music') || window.appState.activeBusinessCategory.includes('produ') || window.appState.activeBusinessCategory.includes('estudio');
+    const isMusic = window.appState.activeBusinessCategory.includes('disco') || 
+                    window.appState.activeBusinessCategory.includes('music') || 
+                    window.appState.activeBusinessCategory.includes('produ') || 
+                    window.appState.activeBusinessCategory.includes('estudio');
 
     if (isMusic) {
         const finishedBeats = items.filter(i => i.is_finished_beat === true || Boolean(i.audio_url) || (i.name || '').toLowerCase().includes('prueba1'));
@@ -150,6 +170,7 @@ async function renderPublicCatalogItems() {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// 3. VISTAS ESPECÍFICAS DEL CATÁLOGO DE BEATS
 window.openBeatsCatalogView = function() {
     stopCurrentAudio();
     window.lastVisitedBeatsView = true;
@@ -216,6 +237,7 @@ window.filterBeatsCatalogView = function() {
     renderBeatsCatalogList(filtered);
 };
 
+// 4. TARJETAS INDIVIDUALES DE PRODUCTO / SERVICIO
 function renderSingleProductCard(item, isMusicBeat) {
     const price = parseFloat(item.price) || 0;
     const itemIdStr = String(item.id);
@@ -259,6 +281,7 @@ function renderSingleProductCard(item, isMusicBeat) {
     `;
 }
 
+// 5. REPRODUCTOR DE AUDIO PARA INSTRUMENTALES
 function togglePlayPreview(encodedUrl, iconId) {
     const url = decodeURIComponent(encodedUrl);
     if (!url) return;
@@ -312,6 +335,7 @@ function stopCurrentAudio() {
     }
 }
 
+// 6. CONTROLADORES DE CANTIDAD Y CESTA
 function renderItemButtonHTML(rawId, safeItemId, safeItemName, price, qty) {
     if (qty > 0) {
         return `
@@ -397,6 +421,7 @@ function updateCartDisplay() {
     }
 }
 
+// 7. CALENDARIO Y GESTIÓN DE CITAS / RECOGIDA
 function toggleScheduleSection() {
     window.appState.isScheduleEnabled = !window.appState.isScheduleEnabled;
     const toggleBtn = document.getElementById('scheduleToggleBtn');
@@ -420,6 +445,7 @@ function toggleScheduleSection() {
     }
 }
 
+// 8. RESUMEN DE COMPRA Y PASARELA
 function openCartSummary() {
     if (window.appState.cartItemCount === 0) return;
     
