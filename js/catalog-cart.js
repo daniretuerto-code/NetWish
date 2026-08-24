@@ -25,8 +25,14 @@ function openPublicBusiness(safeName, safeType) {
     document.getElementById('publicBizName').innerText = window.appState.activeBusinessName;
     const imgEl = document.getElementById('publicBizImage');
 
-    if (window.appState.activeBusinessCategory.includes('disco') || window.appState.activeBusinessCategory.includes('music') || window.appState.activeBusinessCategory.includes('produ') || window.appState.activeBusinessCategory.includes('estudio')) {
-        imgEl.src = "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=800&q=80";
+    const isJuanStudio = window.appState.activeBusinessName.toUpperCase().includes('JUUANCP') || 
+                         window.appState.activeBusinessCategory.includes('disco') || 
+                         window.appState.activeBusinessCategory.includes('music') || 
+                         window.appState.activeBusinessCategory.includes('produ') || 
+                         window.appState.activeBusinessCategory.includes('estudio');
+
+    if (isJuanStudio) {
+        imgEl.src = "https://gamjjnyomhnyswbxlhgq.supabase.co/storage/v1/object/public/public-images/juancp-cover.jpg";
         document.getElementById('publicBizTag').innerText = "RECORD LABEL";
     } else if (window.appState.activeBusinessCategory.includes('pan') || window.appState.activeBusinessCategory.includes('comercio')) {
         imgEl.src = "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80";
