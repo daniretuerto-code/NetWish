@@ -7,7 +7,7 @@ window.appState.cartTotalValue = 0;
 window.appState.cartItemCount = 0;
 window.appState.isCartCheckout = false;
 window.appState.pendingOrderDetails = null;
-window.appState.cartsByBusiness = window.appState.cartsByBusiness || {}; // Almacén multicesta
+window.appState.cartsByBusiness = window.appState.cartsByBusiness || {};
 window.currentlyPlayingAudio = null;
 window.currentPlayingBtnId = null;
 
@@ -22,30 +22,28 @@ function openPublicBusiness(safeName, safeType) {
     
     stopCurrentAudio();
 
-    document.getElementById('publicBizName').innerText = window.appState.activeBusinessName;
-    const imgEl = document.getElementById('publicBizImage');
+    const nameEl = document.getElementById('publicBizName');
+    if (nameEl) nameEl.innerText = window.appState.activeBusinessName;
 
+    const imgEl = document.getElementById('publicBizImage');
     const isJuanStudio = window.appState.activeBusinessName.toUpperCase().includes('JUUANCP') || 
                          window.appState.activeBusinessCategory.includes('disco') || 
                          window.appState.activeBusinessCategory.includes('music') || 
                          window.appState.activeBusinessCategory.includes('produ') || 
                          window.appState.activeBusinessCategory.includes('estudio');
 
-    if (isJuanStudio) {
-        imgEl.src = "https://gamjjnyomhnyswbxlhgq.supabase.co/storage/v1/object/public/public-images/juancp-cover.jpg";
-        document.getElementById('publicBizTag').innerText = "RECORD LABEL";
-    } else if (window.appState.activeBusinessCategory.includes('pan') || window.appState.activeBusinessCategory.includes('comercio')) {
-        imgEl.src = "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80";
-        document.getElementById('publicBizTag').innerText = "Comercio Local";
-    } else if (window.appState.activeBusinessCategory.includes('pel')) {
-        imgEl.src = "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=800&q=80";
-        document.getElementById('publicBizTag').innerText = "Peluquería";
-    } else {
-        imgEl.src = "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&w=800&q=80";
-        document.getElementById('publicBizTag').innerText = "Comercio";
+    if (imgEl) {
+        if (isJuanStudio) {
+            imgEl.src = "https://gamjjnyomhnyswbxlhgq.supabase.co/storage/v1/object/public/public-images/juancp-cover.jpg";
+        } else if (window.appState.activeBusinessCategory.includes('pan') || window.appState.activeBusinessCategory.includes('comercio')) {
+            imgEl.src = "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80";
+        } else if (window.appState.activeBusinessCategory.includes('pel')) {
+            imgEl.src = "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=800&q=80";
+        } else {
+            imgEl.src = "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&w=800&q=80";
+        }
     }
 
-    // Recuperar la cesta guardada para este negocio o inicializarla vacía
     const savedCart = window.appState.cartsByBusiness[window.appState.activeBusinessName] || [];
     window.appState.cartItemsList = savedCart;
     window.appState.cartTotalValue = savedCart.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
@@ -110,7 +108,6 @@ async function renderPublicCatalogItems() {
 
         let html = '';
 
-        // BOTÓN ACCESO AL CATÁLOGO DE BEATS
         html += `
             <button onclick="openBeatsCatalogView()" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-98 transition group">
                 <div class="flex items-center space-x-3.5 overflow-hidden">
@@ -363,7 +360,6 @@ function changeItemQuantity(encodedId, encodedName, price, delta) {
     window.appState.cartTotalValue = window.appState.cartItemsList.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
     window.appState.cartItemCount = window.appState.cartItemsList.reduce((acc, curr) => acc + curr.qty, 0);
 
-    // Guardar los cambios en el almacén del comercio activo
     if (window.appState.activeBusinessName) {
         window.appState.cartsByBusiness[window.appState.activeBusinessName] = [...window.appState.cartItemsList];
     }
@@ -382,7 +378,6 @@ function updateCartDisplay() {
     const cartBar = document.getElementById('publicBusinessCartBar');
     if (!cartBar) return;
     
-    // Comprobar si estamos en una vista válida del comercio (local público o beats)
     const pubBizView = document.getElementById('view-public-business');
     const beatsView = document.getElementById('view-beats-catalog');
     const isInsideBusiness = (pubBizView && !pubBizView.classList.contains('hidden')) || 
@@ -473,7 +468,6 @@ function openCartSummary() {
         beatsView.classList.remove('flex');
     }
 
-    // Ocultar barra flotante de forma garantizada dentro del resumen
     const cartBar = document.getElementById('publicBusinessCartBar');
     if (cartBar) {
         cartBar.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
