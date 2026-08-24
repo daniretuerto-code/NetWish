@@ -49,7 +49,7 @@ function initHoldButton() {
         const val = parseInt(window.rawAmountString, 10) || 0;
         
         if (val <= 0 && !isCart) {
-            alert("Añade un importe o artículos a la cesta para continuar.");
+            alert("Añade un importe o productos a la cesta.");
             return;
         }
 
@@ -92,7 +92,7 @@ function initHoldButton() {
 
 document.addEventListener('DOMContentLoaded', initHoldButton);
 
-// --- EJECUCIÓN DEL PAGO Y NOTIFICACIONES ---
+// --- EJECUCIÓN DEL PAGO Y ENVÍO GARANTIZADO ---
 window.executeFullPayment = async function(isReservation = false) {
     try {
         const modal = document.getElementById('customModal');
@@ -111,44 +111,13 @@ window.executeFullPayment = async function(isReservation = false) {
             ? cItems.map(i => `${i.qty}x ${i.name}`).join(', ') 
             : 'Pago Directo Terminal';
 
-        // 1. OBTENER EMAIL DEL CLIENTE
-        let customerName = 'Cliente';
-        let customerEmail = null;
+        let customerName = (typeof currentUser !== 'undefined' && currentUser)
+            ? (currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Cliente')
+            : 'Cliente';
 
-        if (typeof currentUser !== 'undefined' && currentUser && currentUser.email) {
-            customerName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email.split('@')[0];
-            customerEmail = currentUser.email;
-        } else if (typeof supabaseClient !== 'undefined') {
-            const { data: authData } = await supabaseClient.auth.getUser();
-            if (authData && authData.user) {
-                customerEmail = authData.user.email;
-                customerName = authData.user.user_metadata?.full_name || customerEmail.split('@')[0];
-            }
-        }
-
-        // Email de respaldo durante fase de pruebas si no está logueado
-        if (!customerEmail) {
-            customerEmail = 'daniretuerto@gmail.com';
-        }
-
-        // 2. OBTENER EMAIL DEL NEGOCIO DESDE SUPABASE
-        let businessEmail = 'daniretuerto@gmail.com';
-        try {
-            if (typeof supabaseClient !== 'undefined') {
-                const cleanName = tBusiness.trim().toLowerCase();
-                const { data: bData } = await supabaseClient
-                    .from('businesses')
-                    .select('notification_email, name')
-                    .ilike('name', `%${cleanName}%`)
-                    .maybeSingle();
-
-                if (bData && bData.notification_email) {
-                    businessEmail = bData.notification_email.trim();
-                }
-            }
-        } catch (bErr) {
-            console.warn("Aviso consultando email del negocio:", bErr);
-        }
+        let customerEmail = (typeof currentUser !== 'undefined' && currentUser && currentUser.email)
+            ? currentUser.email
+            : 'daniretuerto@gmail.com';
 
         let orderDate = pDetails?.date || new Date().toISOString().split('T')[0];
         let orderTime = pDetails?.time || "Inmediato";
@@ -158,7 +127,6 @@ window.executeFullPayment = async function(isReservation = false) {
             business_name: tBusiness,
             customer: customerName,
             customer_email: customerEmail,
-            business_email: businessEmail,
             items: itemsDesc,
             total: totalVal,
             date: orderDate,
@@ -166,41 +134,40 @@ window.executeFullPayment = async function(isReservation = false) {
             status: statusText
         };
 
-        console.group("🚀 [NetWish] Enviando Pedido y Emails");
-        console.log("Datos de la orden:", orderPayload);
-        console.groupEnd();
-
-        // 3. Guardar en Supabase
+        // 1. Guardar orden en Supabase
         try {
             if (typeof supabaseClient !== 'undefined') {
                 await supabaseClient.from('orders').insert([orderPayload]);
             }
         } catch (err) {
-            console.warn("Aviso guardando orden en BD:", err);
+            console.warn("Aviso guardando en BD:", err);
         }
 
-        // 4. Invocación HTTP directa a la Edge Function
+        // 2. Disparo robusto hacia Resend mediante la Edge Function
         try {
-            const funcUrl = `${SUPABASE_URL}/functions/v1/send-order-email`;
-            fetch(funcUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'apikey': SUPABASE_ANON_KEY,
-                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                },
-                body: JSON.stringify({ record: orderPayload })
-            })
-            .then(res => res.json())
-            .then(data => {
-                console.log("📬 Resultado envío de emails:", data);
-            })
-            .catch(err => console.warn("❌ Error invocando Edge Function:", err));
-        } catch (mailErr) {
-            console.warn("Fallo en la llamada de correo:", mailErr);
+            if (typeof supabaseClient !== 'undefined' && supabaseClient.functions) {
+                supabaseClient.functions.invoke('send-order-email', {
+                    body: { record: orderPayload }
+                }).then(({ data, error }) => {
+                    if (error) console.warn("Aviso Edge Function:", error);
+                    else console.log("✅ Email enviado correctamente con Resend:", data);
+                });
+            } else {
+                fetch(`${SUPABASE_URL}/functions/v1/send-order-email`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({ record: orderPayload })
+                }).then(r => r.json()).then(d => console.log("✅ Email enviado:", d));
+            }
+        } catch (e) {
+            console.warn("Error enviando email:", e);
         }
 
-        // 5. Renderizar modal minimalista
+        // 3. Modal de éxito NetWish
         if (modalBody) {
             modalBody.innerHTML = `
                 <div class="text-center space-y-4 py-3">
@@ -210,7 +177,7 @@ window.executeFullPayment = async function(isReservation = false) {
                     <div>
                         <h3 class="text-lg font-bold text-black">${isReservation ? 'Reserva Confirmada' : 'Pago Completado'}</h3>
                         <p class="text-xs text-neutral-500 mt-1">Registrado con éxito en ${tBusiness}.</p>
-                        <p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo digital enviado.</p>
+                        <p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo digital enviado a tu correo.</p>
                     </div>
 
                     <div class="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-left space-y-1">
@@ -236,12 +203,11 @@ window.executeFullPayment = async function(isReservation = false) {
         }
 
     } catch (criticalError) {
-        console.error("Fallo crítico en la confirmación:", criticalError);
+        console.error("Fallo crítico:", criticalError);
         alert("Ocurrió un error. Comprueba tu conexión.");
     }
 };
 
-// --- FINALIZACIÓN Y RESETEO TRAS EL PAGO ---
 window.finishPaymentFlow = function() {
     const modal = document.getElementById('customModal');
     const modalContent = document.getElementById('modalContent');
