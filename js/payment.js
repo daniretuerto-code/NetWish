@@ -1,6 +1,6 @@
 window.rawAmountString = window.rawAmountString || "000";
 
-// --- CONTROL DEL TECLADO NUMÉRICO ---
+// --- TECLADO NUMÉRICO TÁCTIL ---
 function appendNum(num) {
     if (window.rawAmountString.length >= 8) return;
     if (window.rawAmountString === "000" || window.rawAmountString === "0") {
@@ -33,7 +33,7 @@ window.updateAmountDisplay = function() {
     display.innerText = formatted;
 };
 
-// --- MOTOR DEL BOTÓN INTERACTIVO "MANTENER PARA CONFIRMAR" ---
+// --- BOTÓN MANTENER PARA CONFIRMAR ---
 function initHoldButton() {
     const btnContainer = document.getElementById('holdButtonContainer');
     if (!btnContainer) return;
@@ -43,13 +43,13 @@ function initHoldButton() {
     let isHolding = false;
 
     const startHold = (e) => {
-        if (e.cancelable) e.preventDefault(); // Evita scroll accidental en móviles
+        if (e.cancelable) e.preventDefault();
         
         const isCart = window.appState && window.appState.isCartCheckout;
         const val = parseInt(window.rawAmountString, 10) || 0;
         
         if (val <= 0 && !isCart) {
-            alert("Añade un importe o artículos a la cesta para continuar.");
+            alert("Introduce un importe o añade artículos a la cesta.");
             return;
         }
 
@@ -81,7 +81,6 @@ function initHoldButton() {
         if (progressBar) progressBar.style.width = '0%';
     };
 
-    // Soporte táctil y ratón
     btnContainer.addEventListener('touchstart', startHold, { passive: false });
     btnContainer.addEventListener('touchend', stopHold);
     btnContainer.addEventListener('touchcancel', stopHold);
@@ -93,7 +92,7 @@ function initHoldButton() {
 
 document.addEventListener('DOMContentLoaded', initHoldButton);
 
-// --- PROCESAMIENTO DEL PAGO, GUARDADO Y NOTIFICACIÓN DUAL CON RESEND ---
+// --- EJECUCIÓN DEL PAGO Y NOTIFICACIONES ---
 window.executeFullPayment = async function(isReservation = false) {
     try {
         const modal = document.getElementById('customModal');
@@ -111,30 +110,44 @@ window.executeFullPayment = async function(isReservation = false) {
         let itemsDesc = isCart && cItems.length > 0
             ? cItems.map(i => `${i.qty}x ${i.name}`).join(', ') 
             : 'Pago Directo Terminal';
-            
-        let customerName = (typeof currentUser !== 'undefined' && currentUser) 
-            ? (currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email || 'Cliente') 
-            : 'Cliente';
 
-        let customerEmail = (typeof currentUser !== 'undefined' && currentUser && currentUser.email) 
-            ? currentUser.email 
-            : 'daniretuerto@gmail.com';
+        // 1. CAPTURA ROBUSTA DEL EMAIL DEL CLIENTE
+        let customerName = 'Cliente';
+        let customerEmail = null;
 
-        // Consultar dinámicamente el correo registrado del negocio
+        if (typeof currentUser !== 'undefined' && currentUser) {
+            customerName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Cliente';
+            customerEmail = currentUser.email;
+        } else if (typeof supabaseClient !== 'undefined') {
+            const { data: authData } = await supabaseClient.auth.getUser();
+            if (authData && authData.user) {
+                customerEmail = authData.user.email;
+                customerName = authData.user.user_metadata?.full_name || customerEmail.split('@')[0];
+            }
+        }
+
+        // Si sigue sin haber correo del cliente, usamos el registrado para las pruebas
+        if (!customerEmail) {
+            customerEmail = 'daniretuerto@gmail.com';
+        }
+
+        // 2. CAPTURA ROBUSTA DEL EMAIL DEL NEGOCIO DESDE SUPABASE
         let businessEmail = 'daniretuerto@gmail.com';
         try {
             if (typeof supabaseClient !== 'undefined') {
-                const { data: bData } = await supabaseClient
+                const cleanBizName = tBusiness.trim().toLowerCase();
+                const { data: bData, error: bError } = await supabaseClient
                     .from('businesses')
-                    .select('notification_email')
-                    .ilike('name', `%${tBusiness}%`)
+                    .select('notification_email, name')
+                    .ilike('name', `%${cleanBizName}%`)
                     .maybeSingle();
-                if (bData && bData.notification_email) {
-                    businessEmail = bData.notification_email;
+
+                if (!bError && bData && bData.notification_email) {
+                    businessEmail = bData.notification_email.trim();
                 }
             }
         } catch (bErr) {
-            console.warn("Aviso consultando email del negocio:", bErr);
+            console.warn("Aviso al consultar email del negocio:", bErr);
         }
 
         let orderDate = pDetails?.date || new Date().toISOString().split('T')[0];
@@ -153,7 +166,17 @@ window.executeFullPayment = async function(isReservation = false) {
             status: statusText
         };
 
-        // 1. Guardar el pedido en Supabase
+        // DIAGNÓSTICO EN CONSOLA (F12)
+        console.group("🧾 [NetWish] Verificación de Datos de Pedido");
+        console.log("🏢 Negocio:", tBusiness);
+        console.log("📧 Email del Negocio:", businessEmail);
+        console.log("👤 Cliente:", customerName);
+        console.log("📧 Email del Cliente:", customerEmail);
+        console.log("📦 Artículos:", itemsDesc);
+        console.log("💰 Total:", totalVal + " €");
+        console.groupEnd();
+
+        // 3. Guardar orden en Supabase
         try {
             if (typeof supabaseClient !== 'undefined') {
                 await supabaseClient.from('orders').insert([orderPayload]);
@@ -162,7 +185,7 @@ window.executeFullPayment = async function(isReservation = false) {
             console.warn("Aviso guardando orden en BD:", err);
         }
 
-        // 2. Invocar Edge Function de Resend (Notificación para Cliente y Negocio)
+        // 4. Invocación directa a la Edge Function de Resend
         try {
             const funcUrl = `${SUPABASE_URL}/functions/v1/send-order-email`;
             fetch(funcUrl, {
@@ -175,13 +198,13 @@ window.executeFullPayment = async function(isReservation = false) {
                 body: JSON.stringify({ record: orderPayload })
             })
             .then(res => res.json())
-            .then(data => console.log("Notificaciones enviadas por Resend:", data))
-            .catch(err => console.warn("Error enviando email con Edge Function:", err));
+            .then(data => console.log("📬 Respuesta Edge Function / Resend:", data))
+            .catch(err => console.warn("❌ Error invocando Edge Function:", err));
         } catch (mailErr) {
             console.warn("Fallo en la llamada de correo:", mailErr);
         }
 
-        // 3. Renderizar el modal minimalista de confirmación de NetWish
+        // 5. Renderizar modal minimalista
         if (modalBody) {
             modalBody.innerHTML = `
                 <div class="text-center space-y-4 py-3">
@@ -191,7 +214,7 @@ window.executeFullPayment = async function(isReservation = false) {
                     <div>
                         <h3 class="text-lg font-bold text-black">${isReservation ? 'Reserva Confirmada' : 'Pago Completado'}</h3>
                         <p class="text-xs text-neutral-500 mt-1">Registrado con éxito en ${tBusiness}.</p>
-                        <p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo digital enviado a ${customerEmail}</p>
+                        <p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo: ${customerEmail} | Negocio: ${businessEmail}</p>
                     </div>
 
                     <div class="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-left space-y-1">
@@ -222,7 +245,6 @@ window.executeFullPayment = async function(isReservation = false) {
     }
 };
 
-// --- FINALIZACIÓN Y LIMPIEZA DE ESTADO TRAS EL PAGO ---
 window.finishPaymentFlow = function() {
     const modal = document.getElementById('customModal');
     const modalContent = document.getElementById('modalContent');
@@ -233,7 +255,6 @@ window.finishPaymentFlow = function() {
         setTimeout(() => modal.classList.add('hidden'), 300);
     }
 
-    // Resetear importe y memoria de cestas
     window.rawAmountString = "000";
     if (window.appState) {
         window.appState.cartItemsList = [];
