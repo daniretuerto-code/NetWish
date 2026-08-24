@@ -1,5 +1,6 @@
 window.rawAmountString = window.rawAmountString || "000";
 
+// --- CONTROL DEL TECLADO NUMÉRICO ---
 function appendNum(num) {
     if (window.rawAmountString.length >= 8) return;
     if (window.rawAmountString === "000" || window.rawAmountString === "0") {
@@ -32,7 +33,7 @@ window.updateAmountDisplay = function() {
     display.innerText = formatted;
 };
 
-// --- BOTÓN MANTENER PARA CONFIRMAR ---
+// --- MOTOR DEL BOTÓN INTERACTIVO "MANTENER PARA CONFIRMAR" ---
 function initHoldButton() {
     const btnContainer = document.getElementById('holdButtonContainer');
     if (!btnContainer) return;
@@ -42,13 +43,13 @@ function initHoldButton() {
     let isHolding = false;
 
     const startHold = (e) => {
-        if (e.cancelable) e.preventDefault();
+        if (e.cancelable) e.preventDefault(); // Evita scroll accidental en móviles
         
         const isCart = window.appState && window.appState.isCartCheckout;
         const val = parseInt(window.rawAmountString, 10) || 0;
         
         if (val <= 0 && !isCart) {
-            alert("Añade un importe o productos a la cesta para continuar.");
+            alert("Añade un importe o artículos a la cesta para continuar.");
             return;
         }
 
@@ -80,6 +81,7 @@ function initHoldButton() {
         if (progressBar) progressBar.style.width = '0%';
     };
 
+    // Soporte táctil y ratón
     btnContainer.addEventListener('touchstart', startHold, { passive: false });
     btnContainer.addEventListener('touchend', stopHold);
     btnContainer.addEventListener('touchcancel', stopHold);
@@ -91,7 +93,7 @@ function initHoldButton() {
 
 document.addEventListener('DOMContentLoaded', initHoldButton);
 
-// --- EJECUCIÓN DEL PAGO Y NOTIFICACIÓN DUAL ---
+// --- PROCESAMIENTO DEL PAGO, GUARDADO Y NOTIFICACIÓN DUAL CON RESEND ---
 window.executeFullPayment = async function(isReservation = false) {
     try {
         const modal = document.getElementById('customModal');
@@ -118,6 +120,23 @@ window.executeFullPayment = async function(isReservation = false) {
             ? currentUser.email 
             : 'daniretuerto@gmail.com';
 
+        // Consultar dinámicamente el correo registrado del negocio
+        let businessEmail = 'daniretuerto@gmail.com';
+        try {
+            if (typeof supabaseClient !== 'undefined') {
+                const { data: bData } = await supabaseClient
+                    .from('businesses')
+                    .select('notification_email')
+                    .ilike('name', `%${tBusiness}%`)
+                    .maybeSingle();
+                if (bData && bData.notification_email) {
+                    businessEmail = bData.notification_email;
+                }
+            }
+        } catch (bErr) {
+            console.warn("Aviso consultando email del negocio:", bErr);
+        }
+
         let orderDate = pDetails?.date || new Date().toISOString().split('T')[0];
         let orderTime = pDetails?.time || "Inmediato";
         let statusText = isReservation ? 'Pendiente (Pago en local)' : 'Pagado Online';
@@ -126,7 +145,7 @@ window.executeFullPayment = async function(isReservation = false) {
             business_name: tBusiness,
             customer: customerName,
             customer_email: customerEmail,
-            business_email: 'daniretuerto@gmail.com', // Notificación operativa al negocio
+            business_email: businessEmail,
             items: itemsDesc,
             total: totalVal,
             date: orderDate,
@@ -134,25 +153,16 @@ window.executeFullPayment = async function(isReservation = false) {
             status: statusText
         };
 
-        // 1. Guardar orden en Supabase
+        // 1. Guardar el pedido en Supabase
         try {
             if (typeof supabaseClient !== 'undefined') {
-                await supabaseClient.from('orders').insert([{
-                    business_name: tBusiness,
-                    customer: customerName,
-                    customer_email: customerEmail,
-                    items: itemsDesc,
-                    total: totalVal,
-                    date: orderDate,
-                    time: orderTime,
-                    status: statusText
-                }]);
+                await supabaseClient.from('orders').insert([orderPayload]);
             }
         } catch (err) {
             console.warn("Aviso guardando orden en BD:", err);
         }
 
-        // 2. Disparo dual de emails a la Edge Function
+        // 2. Invocar Edge Function de Resend (Notificación para Cliente y Negocio)
         try {
             const funcUrl = `${SUPABASE_URL}/functions/v1/send-order-email`;
             fetch(funcUrl, {
@@ -165,13 +175,13 @@ window.executeFullPayment = async function(isReservation = false) {
                 body: JSON.stringify({ record: orderPayload })
             })
             .then(res => res.json())
-            .then(data => console.log("Notificaciones enviadas a cliente y negocio:", data))
-            .catch(err => console.warn("Error enviando emails:", err));
+            .then(data => console.log("Notificaciones enviadas por Resend:", data))
+            .catch(err => console.warn("Error enviando email con Edge Function:", err));
         } catch (mailErr) {
-            console.warn("Fallo en la llamada del correo:", mailErr);
+            console.warn("Fallo en la llamada de correo:", mailErr);
         }
 
-        // 3. Modal de confirmación NetWish
+        // 3. Renderizar el modal minimalista de confirmación de NetWish
         if (modalBody) {
             modalBody.innerHTML = `
                 <div class="text-center space-y-4 py-3">
@@ -181,7 +191,7 @@ window.executeFullPayment = async function(isReservation = false) {
                     <div>
                         <h3 class="text-lg font-bold text-black">${isReservation ? 'Reserva Confirmada' : 'Pago Completado'}</h3>
                         <p class="text-xs text-neutral-500 mt-1">Registrado con éxito en ${tBusiness}.</p>
-                        <p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo enviado al cliente y aviso al negocio.</p>
+                        <p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo digital enviado a ${customerEmail}</p>
                     </div>
 
                     <div class="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-left space-y-1">
@@ -207,11 +217,12 @@ window.executeFullPayment = async function(isReservation = false) {
         }
 
     } catch (criticalError) {
-        console.error("Fallo en la confirmación:", criticalError);
+        console.error("Fallo crítico en la confirmación:", criticalError);
         alert("Ocurrió un error. Comprueba tu conexión.");
     }
 };
 
+// --- FINALIZACIÓN Y LIMPIEZA DE ESTADO TRAS EL PAGO ---
 window.finishPaymentFlow = function() {
     const modal = document.getElementById('customModal');
     const modalContent = document.getElementById('modalContent');
@@ -222,6 +233,7 @@ window.finishPaymentFlow = function() {
         setTimeout(() => modal.classList.add('hidden'), 300);
     }
 
+    // Resetear importe y memoria de cestas
     window.rawAmountString = "000";
     if (window.appState) {
         window.appState.cartItemsList = [];
