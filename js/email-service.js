@@ -3,88 +3,159 @@
 window.emailService = {
     apiUrl: '/api/send-email',
 
-    // Correo 1: Recibo oficial para el Cliente
+    // 1. Justificante digital para el Cliente
     sendClientReceipt: async function(clientEmail, orderData) {
-        if (!clientEmail) {
-            console.warn("No hay email de cliente para enviar recibo");
-            return;
-        }
+        if (!clientEmail) return;
 
-        const itemsList = (orderData.items || []).map(i => `
-            <div style="display:flex; justify-content:space-between; font-size:13px; padding:8px 0; border-bottom:1px solid #fafafa;">
-                <span style="color:#171717;">${i.qty}x ${i.name}</span>
-                <span style="font-family:monospace; font-weight:700;">${(Number(i.price) * Number(i.qty)).toFixed(2)} €</span>
-            </div>
-        `).join('');
+        const totalFormatted = Number(orderData.total || 0).toLocaleString('es-ES', { 
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2 
+        });
+
+        const itemsTable = (orderData.items || []).map(i => {
+            const itemTotal = (Number(i.price || 0) * Number(i.qty || 1)).toLocaleString('es-ES', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+            });
+            return `
+                <tr>
+                    <td style="padding: 8px 0; font-size: 13px; color: #111111; border-bottom: 1px solid #f0f0f0;">
+                        ${i.qty}x ${i.name}
+                    </td>
+                    <td style="padding: 8px 0; font-size: 13px; font-weight: 700; font-family: monospace; text-align: right; color: #111111; border-bottom: 1px solid #f0f0f0;">
+                        ${itemTotal} €
+                    </td>
+                </tr>
+            `;
+        }).join('');
 
         const payload = {
             to: clientEmail,
             subject: `Justificante de pedido — ${orderData.businessName || 'NetWish'}`,
             html: `
-                <div style="font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width:460px; margin:0 auto; padding:32px 24px; color:#0a0a0a; background:#ffffff; border:1px solid #f0f0f0; border-radius:24px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-                        <h1 style="font-size:24px; font-weight:800; letter-spacing:-0.05em; font-style:italic; margin:0;">NetWish</h1>
-                        <span style="font-size:9px; font-family:monospace; text-transform:uppercase; letter-spacing:0.15em; background:#f5f5f5; padding:4px 8px; border-radius:9999px;">PALENCIA</span>
-                    </div>
-                    
-                    <div style="border-bottom:1px solid #f0f0f0; padding-bottom:16px; margin-bottom:20px;">
-                        <span style="font-size:9px; font-family:monospace; text-transform:uppercase; letter-spacing:0.15em; color:#737373;">JUSTIFICANTE DE COMPRA</span>
-                        <h2 style="font-size:18px; font-weight:700; margin:6px 0 2px 0;">${orderData.businessName}</h2>
-                        <p style="font-size:12px; color:#737373; margin:0;">Fecha: ${orderData.date} • ${orderData.time}</p>
-                    </div>
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f5f5f5; padding: 24px 0;">
+                    <tr>
+                        <td align="center">
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 440px; background-color: #ffffff; border-radius: 24px; padding: 32px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                                <tr>
+                                    <td>
+                                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 24px;">
+                                            <tr>
+                                                <td style="font-size: 22px; font-weight: 900; font-style: italic; letter-spacing: -0.05em; color: #000000;">NetWish</td>
+                                                <td align="right">
+                                                    <span style="font-size: 9px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; background: #000000; color: #ffffff; padding: 4px 10px; border-radius: 9999px;">PALENCIA</span>
+                                                </td>
+                                            </tr>
+                                        </table>
 
-                    <div style="margin-bottom:20px;">
-                        ${itemsList}
-                    </div>
+                                        <div style="border-bottom: 1px solid #eeeeee; padding-bottom: 16px; margin-bottom: 20px;">
+                                            <span style="font-size: 9px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; color: #888888;">JUSTIFICANTE DE COMPRA</span>
+                                            <h2 style="font-size: 18px; font-weight: 800; color: #000000; margin: 6px 0 2px 0;">${orderData.businessName}</h2>
+                                            <p style="font-size: 12px; color: #666666; margin: 0;">Fecha: ${orderData.date} • ${orderData.time}</p>
+                                        </div>
 
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 0; border-top:2px solid #0a0a0a; font-size:15px; font-weight:800;">
-                        <span>Total Pagado</span>
-                        <span style="font-family:monospace;">${Number(orderData.total).toFixed(2)} €</span>
-                    </div>
+                                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 24px;">
+                                            ${itemsTable}
+                                        </table>
 
-                    <div style="margin-top:28px; padding:14px; background:#f9f9f9; border-radius:16px; text-align:center;">
-                        <p style="font-size:11px; color:#737373; margin:0;">Muestra este justificante digital al acudir al establecimiento.</p>
-                    </div>
-                </div>
+                                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-top: 2px solid #000000; padding-top: 16px; margin-bottom: 28px;">
+                                            <tr>
+                                                <td style="font-size: 15px; font-weight: 800; color: #000000;">Total Pagado</td>
+                                                <td align="right" style="font-size: 18px; font-weight: 900; font-family: monospace; color: #000000;">${totalFormatted} €</td>
+                                            </tr>
+                                        </table>
+
+                                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #fafafa; border-radius: 16px; padding: 14px; text-align: center; border: 1px solid #eeeeee;">
+                                            <tr>
+                                                <td style="font-size: 11px; color: #777777;">Muestra este justificante al acudir al establecimiento.</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
             `
         };
 
         return this.triggerSend(payload);
     },
 
-    // Correo 2: Alerta inmediata de venta para el Negocio
+    // 2. Alerta de nuevo pedido para el Negocio
     sendBusinessAlert: async function(bizEmail, orderData) {
-        if (!bizEmail) {
-            console.warn("No hay email de negocio definido, usando contacto general");
-            bizEmail = 'contacto@netwish.es';
-        }
+        if (!bizEmail) return;
 
-        const itemsList = (orderData.items || []).map(i => `
-            <p style="font-size:12px; margin:4px 0; color:#333;">• ${i.qty} uds — ${i.name} (${(Number(i.price) * Number(i.qty)).toFixed(2)} €)</p>
-        `).join('');
+        const totalFormatted = Number(orderData.total || 0).toLocaleString('es-ES', { 
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2 
+        });
+
+        const itemsTable = (orderData.items || []).map(i => {
+            const itemTotal = (Number(i.price || 0) * Number(i.qty || 1)).toLocaleString('es-ES', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+            });
+            return `
+                <tr>
+                    <td style="padding: 6px 0; font-size: 12px; color: #222222; border-bottom: 1px solid #f2f2f2;">
+                        • ${i.qty} uds — ${i.name}
+                    </td>
+                    <td style="padding: 6px 0; font-size: 12px; font-weight: 700; font-family: monospace; text-align: right; color: #222222; border-bottom: 1px solid #f2f2f2;">
+                        ${itemTotal} €
+                    </td>
+                </tr>
+            `;
+        }).join('');
 
         const payload = {
             to: bizEmail,
             subject: `⚡ Nuevo Pedido Recibido — ${orderData.clientName || 'Cliente'}`,
             html: `
-                <div style="font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width:460px; margin:0 auto; padding:32px 24px; color:#0a0a0a; background:#ffffff; border:1px solid #f0f0f0; border-radius:24px;">
-                    <div style="background:#0a0a0a; color:#ffffff; padding:18px; border-radius:18px; margin-bottom:20px;">
-                        <span style="font-size:9px; font-family:monospace; text-transform:uppercase; letter-spacing:0.15em; color:#a3a3a3;">NUEVO PEDIDO CONFIRMADO</span>
-                        <h2 style="font-size:18px; font-weight:700; margin:4px 0 0 0;">${orderData.clientName || 'Cliente'}</h2>
-                    </div>
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f5f5f5; padding: 24px 0;">
+                    <tr>
+                        <td align="center">
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 440px; background-color: #ffffff; border-radius: 24px; padding: 32px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                                <tr>
+                                    <td>
+                                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #000000; border-radius: 18px; padding: 20px; margin-bottom: 24px;">
+                                            <tr>
+                                                <td>
+                                                    <span style="font-size: 9px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; color: #a3a3a3;">NUEVO PEDIDO CONFIRMADO</span>
+                                                    <h2 style="font-size: 18px; font-weight: 800; color: #ffffff; margin: 4px 0 0 0;">${orderData.clientName || 'Cliente'}</h2>
+                                                </td>
+                                            </tr>
+                                        </table>
 
-                    <p style="font-size:12px; margin:0 0 6px 0;"><strong>Fecha y Hora:</strong> ${orderData.date} • ${orderData.time}</p>
-                    <p style="font-size:12px; margin:0 0 16px 0;"><strong>Estado de Pago:</strong> ${orderData.action === 'pay' ? 'Pagado vía NetWish' : 'Pendiente de pago en local'}</p>
+                                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 18px;">
+                                            <tr>
+                                                <td style="font-size: 12px; color: #666666; padding-bottom: 6px;">
+                                                    <strong style="color: #111111;">Fecha y Hora:</strong> ${orderData.date} • ${orderData.time}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="font-size: 12px; color: #666666;">
+                                                    <strong style="color: #111111;">Estado de Pago:</strong> ${orderData.action === 'pay' ? 'Pagado vía NetWish' : 'Pendiente de pago en local'}
+                                                </td>
+                                            </tr>
+                                        </table>
 
-                    <div style="border-top:1px solid #f0f0f0; border-bottom:1px solid #f0f0f0; padding:12px 0; margin-bottom:16px;">
-                        ${itemsList}
-                    </div>
+                                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 24px; border-top: 1px solid #eeeeee;">
+                                            ${itemsTable}
+                                        </table>
 
-                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:15px; font-weight:800;">
-                        <span>Total Pedido:</span>
-                        <span style="font-family:monospace;">${Number(orderData.total).toFixed(2)} €</span>
-                    </div>
-                </div>
+                                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-top: 2px solid #000000; padding-top: 16px;">
+                                            <tr>
+                                                <td style="font-size: 15px; font-weight: 800; color: #000000;">Total Pedido</td>
+                                                <td align="right" style="font-size: 18px; font-weight: 900; font-family: monospace; color: #000000;">${totalFormatted} €</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
             `
         };
 
@@ -98,8 +169,7 @@ window.emailService = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            const data = await res.json();
-            return data;
+            return await res.json();
         } catch (err) {
             console.error("Error disparando petición de email:", err);
             return { error: err.message };
