@@ -1,16 +1,16 @@
 // js/scanner.js
 
 window.currentCameraStream = null;
-let scanningInterval = null;
+window.scanningInterval = null;
 
 // =======================================================
 // 1. GENERACIÓN DE CÓDIGO QR PERSONAL
 // =======================================================
-window.openPersonalQR = async function() {
+window.openPersonalQR = function() {
     const user = (typeof currentUser !== 'undefined') ? currentUser : null;
     if (!user) { 
         if (typeof openAuthModal === 'function') openAuthModal('login'); 
-        else alert("Debes iniciar sesión para mostrar tu código QR.");
+        else alert("Debes iniciar sesión para ver tu código QR.");
         return; 
     }
 
@@ -71,7 +71,7 @@ window.openBusinessQR = function() {
     modalBody.innerHTML = `
         <div class="space-y-4 text-center">
             <h3 class="text-base font-bold text-black">QR de Cobro Comercial</h3>
-            <p class="text-xs text-neutral-500">Muestra este código para recibir cobros en <strong class="text-black">${biz.name}</strong>.</p>
+            <p class="text-xs text-neutral-500">Muestra este código a tus clientes para recibir cobros en <strong class="text-black">${biz.name}</strong>.</p>
             <div id="businessQRCodeContainer" class="w-52 h-52 bg-white border border-neutral-200 rounded-3xl mx-auto flex items-center justify-center p-3 relative shadow-sm"></div>
             <div class="p-3 bg-neutral-50 rounded-2xl border border-neutral-200/60">
                 <span class="block text-xs font-bold text-black">${biz.name}</span>
@@ -105,7 +105,7 @@ window.openBusinessQR = function() {
 };
 
 // =======================================================
-// 3. ACTIVADOR DEL ESCÁNER QR
+// 3. ACTIVADOR ROBUSTO DEL ESCÁNER QR
 // =======================================================
 window.startCameraModal = async function() {
     const modal = document.getElementById('customModal');
@@ -121,7 +121,7 @@ window.startCameraModal = async function() {
                 <h3 class="text-base font-bold text-black">Escáner QR</h3>
             </div>
             <div class="w-full h-64 bg-black rounded-3xl overflow-hidden relative flex items-center justify-center shadow-inner">
-                <video id="cameraPreview" autoplay playsinline muted class="w-full h-full object-cover"></video>
+                <video id="cameraPreview" playsinline autoplay muted class="w-full h-full object-cover"></video>
                 <canvas id="qrCanvas" class="hidden"></canvas>
                 <div class="absolute inset-0 border border-white/20 m-6 rounded-2xl pointer-events-none flex items-center justify-center">
                     <div class="w-36 h-36 border-2 border-white rounded-2xl animate-pulse"></div>
@@ -135,13 +135,14 @@ window.startCameraModal = async function() {
     if (typeof lucide !== 'undefined') lucide.createIcons();
     
     modal.classList.remove('hidden');
+    modal.style.display = "flex";
     setTimeout(() => { 
         modal.classList.remove('opacity-0'); 
         if (modalContent) modalContent.classList.remove('scale-95'); 
     }, 10);
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert("Tu navegador no soporta acceso a cámara o no estás en una conexión segura (HTTPS/Localhost).");
+        alert("El navegador no soporta cámara en esta conexión. Recuerda usar HTTPS o Localhost.");
         window.closeCustomModal();
         return;
     }
@@ -153,12 +154,15 @@ window.startCameraModal = async function() {
         const videoElement = document.getElementById('cameraPreview');
         if (videoElement) { 
             videoElement.srcObject = window.currentCameraStream; 
+            videoElement.setAttribute("playsinline", "true");
+            videoElement.setAttribute("autoplay", "true");
+            videoElement.setAttribute("muted", "true");
             await videoElement.play(); 
             startUniversalScanningLoop(); 
         }
     } catch (error) {
-        console.warn("Error accediendo a cámara:", error);
-        alert("Permiso de cámara denegado o dispositivo no disponible.");
+        console.warn("Acceso a cámara:", error);
+        alert("Permiso de cámara no concedido o dispositivo en uso.");
         window.closeCustomModal();
     }
 };
@@ -169,9 +173,9 @@ function startUniversalScanningLoop() {
     if (!video || !canvas) return;
     const context = canvas.getContext('2d', { willReadFrequently: true });
 
-    if (scanningInterval) clearInterval(scanningInterval);
+    if (window.scanningInterval) clearInterval(window.scanningInterval);
 
-    scanningInterval = setInterval(() => {
+    window.scanningInterval = setInterval(() => {
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
             canvas.height = video.videoHeight;
             canvas.width = video.videoWidth;
@@ -181,7 +185,7 @@ function startUniversalScanningLoop() {
             if (typeof jsQR !== 'undefined') {
                 const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
                 if (code && code.data) {
-                    clearInterval(scanningInterval);
+                    clearInterval(window.scanningInterval);
                     window.stopCamera();
                     window.closeCustomModal();
                     processScannedQRData(code.data);
@@ -245,16 +249,16 @@ function processScannedQRData(qrText) {
         return;
     }
 
-    alert(`Contenido leído: ${qrText}`);
+    alert(`Código leído: ${qrText}`);
 }
 
 // =======================================================
 // 5. DETENCIÓN Y CIERRE
 // =======================================================
 window.stopCamera = function() {
-    if (scanningInterval) { 
-        clearInterval(scanningInterval); 
-        scanningInterval = null; 
+    if (window.scanningInterval) { 
+        clearInterval(window.scanningInterval); 
+        window.scanningInterval = null; 
     }
     if (window.currentCameraStream) { 
         window.currentCameraStream.getTracks().forEach(track => track.stop()); 
@@ -269,8 +273,12 @@ window.closeCustomModal = function() {
     if (!modal) return;
     modal.classList.add('opacity-0');
     if (modalContent) modalContent.classList.add('scale-95');
-    setTimeout(() => { modal.classList.add('hidden'); }, 200);
+    setTimeout(() => { 
+        modal.classList.add('hidden'); 
+        modal.style.display = "";
+    }, 200);
 };
 
-// Alias para compatibilidad con código antiguo
+// Aliases globales de compatibilidad
 window.closeModal = window.closeCustomModal;
+window.startCamera = window.startCameraModal;
