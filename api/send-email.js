@@ -2,26 +2,32 @@
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Método no permitido' });
+        return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
     const { to, subject, html } = req.body;
 
     if (!to || !subject || !html) {
-        return res.status(400).json({ error: 'Faltan parámetros obligatorios' });
+        return res.status(400).json({ error: 'Faltan parámetros obligatorios (to, subject, html)' });
+    }
+
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+        return res.status(500).json({ error: 'RESEND_API_KEY no configurada en Vercel' });
     }
 
     try {
+        const recipients = Array.isArray(to) ? to : [to];
+
         const response = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+                'Authorization': `Bearer ${apiKey.trim()}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                // Usa el remitente de tu dominio verificado
-                from: 'NetWish <notificaciones@send.netwish.es>',
-                to: Array.isArray(to) ? to : [to],
+                from: 'NetWish <notificaciones@netwish.es>',
+                to: recipients,
                 subject: subject,
                 html: html
             })
@@ -30,13 +36,13 @@ export default async function handler(req, res) {
         const data = await response.json();
 
         if (!response.ok) {
-            console.error("Error devuelto por Resend:", data);
+            console.error("Error devuelto por Resend API:", data);
             return res.status(response.status).json(data);
         }
 
         return res.status(200).json(data);
     } catch (error) {
-        console.error("Error en endpoint de email:", error);
+        console.error("Error interno del servidor de correo:", error);
         return res.status(500).json({ error: error.message });
     }
 }

@@ -1,3 +1,5 @@
+// js/payment.js
+
 window.rawAmountString = window.rawAmountString || "000";
 
 // --- CONTROL DEL TECLADO NUMÉRICO ---
@@ -111,13 +113,15 @@ window.executeFullPayment = async function(isReservation = false) {
             ? cItems.map(i => `${i.qty}x ${i.name}`).join(', ') 
             : 'Pago Directo Terminal';
 
-        let customerName = (typeof currentUser !== 'undefined' && currentUser)
-            ? (currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'Cliente')
+        let customerUser = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : null;
+
+        let customerName = customerUser
+            ? (customerUser.user_metadata?.full_name || customerUser.user_metadata?.name || customerUser.email?.split('@')[0] || 'Cliente')
             : 'Cliente';
 
-        let customerEmail = (typeof currentUser !== 'undefined' && currentUser && currentUser.email)
-            ? currentUser.email
-            : 'daniretuerto@gmail.com';
+        let customerEmail = (customerUser && customerUser.email)
+            ? customerUser.email
+            : '';
 
         let orderDate = pDetails?.date || new Date().toISOString().split('T')[0];
         let orderTime = pDetails?.time || "Inmediato";
@@ -136,35 +140,34 @@ window.executeFullPayment = async function(isReservation = false) {
 
         // 1. Guardar orden en Supabase
         try {
-            if (typeof supabaseClient !== 'undefined') {
-                await supabaseClient.from('orders').insert([orderPayload]);
+            const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
+            if (client) {
+                await client.from('orders').insert([orderPayload]);
             }
         } catch (err) {
-            console.warn("Aviso guardando en BD:", err);
+            console.warn("Aviso guardando orden en BD:", err);
         }
 
-        // 2. Disparo robusto hacia Resend mediante la Edge Function
-        try {
-            if (typeof supabaseClient !== 'undefined' && supabaseClient.functions) {
-                supabaseClient.functions.invoke('send-order-email', {
-                    body: { record: orderPayload }
-                }).then(({ data, error }) => {
-                    if (error) console.warn("Aviso Edge Function:", error);
-                    else console.log("✅ Email enviado correctamente con Resend:", data);
-                });
-            } else {
-                fetch(`${SUPABASE_URL}/functions/v1/send-order-email`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    },
-                    body: JSON.stringify({ record: orderPayload })
-                }).then(r => r.json()).then(d => console.log("✅ Email enviado:", d));
+        // 2. Envío de correos garantizado mediante emailService
+        if (window.emailService) {
+            const structuredOrder = {
+                businessName: tBusiness,
+                clientName: customerName,
+                date: orderDate,
+                time: orderTime,
+                items: (isCart && cItems.length > 0) ? cItems : [{ name: 'Pago Directo Terminal', qty: 1, price: totalVal }],
+                total: totalVal,
+                action: isReservation ? 'reserve' : 'pay'
+            };
+
+            // Enviar al cliente si tiene correo
+            if (customerEmail) {
+                window.emailService.sendClientReceipt(customerEmail, structuredOrder);
             }
-        } catch (e) {
-            console.warn("Error enviando email:", e);
+
+            // Enviar al negocio
+            const businessEmail = (window.appState && window.appState.activeBusinessEmail) || 'contacto@netwish.es';
+            window.emailService.sendBusinessAlert(businessEmail, structuredOrder);
         }
 
         // 3. Modal de éxito NetWish
@@ -177,7 +180,7 @@ window.executeFullPayment = async function(isReservation = false) {
                     <div>
                         <h3 class="text-lg font-bold text-black">${isReservation ? 'Reserva Confirmada' : 'Pago Completado'}</h3>
                         <p class="text-xs text-neutral-500 mt-1">Registrado con éxito en ${tBusiness}.</p>
-                        <p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo digital enviado a tu correo.</p>
+                        <p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo digital emitido a tu correo.</p>
                     </div>
 
                     <div class="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-left space-y-1">
@@ -203,8 +206,8 @@ window.executeFullPayment = async function(isReservation = false) {
         }
 
     } catch (criticalError) {
-        console.error("Fallo crítico:", criticalError);
-        alert("Ocurrió un error. Comprueba tu conexión.");
+        console.error("Fallo crítico en el proceso de pago:", criticalError);
+        alert("Ocurrió un error al procesar la operación.");
     }
 };
 
@@ -237,4 +240,16 @@ window.finishPaymentFlow = function() {
     window.updateAmountDisplay();
 
     if (typeof switchTab === 'function') switchTab('home');
+};
+
+window.closePaymentView = function() {
+    window.rawAmountString = "000";
+    window.updateAmountDisplay();
+    if (typeof switchTab === 'function') {
+        if (window.appState && window.appState.activeBusinessName) {
+            switchTab('public-business');
+        } else {
+            switchTab('home');
+        }
+    }
 };
