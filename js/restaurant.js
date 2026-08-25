@@ -2,36 +2,37 @@
 
 window.restaurantState = {
     selectedDate: '',
-    selectedTime: '13:30',
+    selectedTime: '',
     selectedGuests: 2,
     selectedZone: 'Sala Principal',
     allocatedTable: null,
     
-    // Inventario físico optimizado para sala y terraza
-    tablesInventory: [
-        { id: 1, table_number: 1, capacity: 2, zone: 'Sala Principal' },
-        { id: 2, table_number: 2, capacity: 4, zone: 'Sala Principal' },
-        { id: 3, table_number: 3, capacity: 6, zone: 'Sala Principal' },
-        { id: 4, table_number: 4, capacity: 8, zone: 'Sala Principal' },
-        { id: 5, table_number: 5, capacity: 2, zone: 'Terraza' },
-        { id: 6, table_number: 6, capacity: 4, zone: 'Terraza' },
-        { id: 7, table_number: 7, capacity: 6, zone: 'Terraza' },
-        { id: 8, table_number: 8, capacity: 8, zone: 'Terraza' }
-    ],
-
-    availableTimeSlots: [
-        '13:00', '13:30', '14:00', '14:30', '15:15', '15:30',
-        '20:30', '21:00', '21:30', '22:00', '22:45', '23:00'
-    ]
+    // Configuración por defecto sincronizada con Supabase
+    config: {
+        lunch_start: '13:00',
+        lunch_end: '16:00',
+        dinner_start: '20:30',
+        dinner_end: '23:30',
+        turn_duration_min: 90,
+        tables: [
+            { id: 1, table_number: 1, capacity: 2, zone: 'Sala Principal' },
+            { id: 2, table_number: 2, capacity: 4, zone: 'Sala Principal' },
+            { id: 3, table_number: 3, capacity: 6, zone: 'Sala Principal' },
+            { id: 4, table_number: 4, capacity: 8, zone: 'Sala Principal' },
+            { id: 5, table_number: 5, capacity: 2, zone: 'Terraza' },
+            { id: 6, table_number: 6, capacity: 4, zone: 'Terraza' },
+            { id: 7, table_number: 7, capacity: 6, zone: 'Terraza' },
+            { id: 8, table_number: 8, capacity: 8, zone: 'Terraza' }
+        ]
+    }
 };
 
-// 1. HUB PRINCIPAL DEL RESTAURANTE
+// 1. HUB PRINCIPAL
 window.renderRestaurantHub = function(container) {
     if (!container) return;
 
     container.innerHTML = `
         <div class="space-y-4">
-            <!-- Acceso: Menú del Día -->
             <button onclick="window.openDailyMenuModal()" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-[0.98] transition group">
                 <div class="flex items-center space-x-3.5">
                     <div class="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center shadow-md shrink-0">
@@ -50,7 +51,6 @@ window.renderRestaurantHub = function(container) {
                 </div>
             </button>
 
-            <!-- Acceso: Motor de Reservas Inteligente -->
             <button onclick="window.openModernReservationModal()" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-[0.98] transition group">
                 <div class="flex items-center space-x-3.5">
                     <div class="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center shadow-md shrink-0">
@@ -59,9 +59,9 @@ window.renderRestaurantHub = function(container) {
                     <div class="text-left">
                         <div class="flex items-center space-x-2">
                             <span class="block text-xs font-bold text-black tracking-tight">Reservar Mesa</span>
-                            <span class="text-[9px] bg-black text-white font-mono px-2 py-0.5 rounded-full">En Tiempo Real</span>
+                            <span class="text-[9px] bg-black text-white font-mono px-2 py-0.5 rounded-full">En Vivo</span>
                         </div>
-                        <span class="block text-[10px] text-neutral-400 mt-0.5">Asignación automática y confirmación directa</span>
+                        <span class="block text-[10px] text-neutral-400 mt-0.5">Gestión de aforo inteligente</span>
                     </div>
                 </div>
                 <div class="w-7 h-7 rounded-full bg-white border border-neutral-200/60 flex items-center justify-center text-neutral-400 group-hover:text-black transition shrink-0 ml-2">
@@ -69,7 +69,6 @@ window.renderRestaurantHub = function(container) {
                 </div>
             </button>
 
-            <!-- Carta Digital -->
             <div class="space-y-3 pt-2">
                 <div class="flex items-center justify-between px-1">
                     <h4 class="text-[10px] font-mono font-bold text-neutral-400 uppercase tracking-widest">Carta Digital</h4>
@@ -81,11 +80,9 @@ window.renderRestaurantHub = function(container) {
             </div>
         </div>
     `;
-
     if (typeof lucide !== 'undefined') lucide.createIcons();
 };
 
-// 2. RENDERIZADO DE PLATOS CON BOTONES REACTIVOS (+ / -)
 window.renderRestaurantMenuCards = function() {
     const dishes = [
         { id: 'rest_1', name: 'Tabla de Quesos de Cerrato', desc: 'Selección de quesos curados palentinos con mermelada artesana', price: 14.00, tag: 'Entrante' },
@@ -98,9 +95,6 @@ window.renderRestaurantMenuCards = function() {
         const itemIdStr = String(dish.id);
         const existingInCart = (window.appState?.cartItemsList || []).find(i => String(i.id) === itemIdStr);
         const qty = existingInCart ? existingInCart.qty : 0;
-        const safeItemId = encodeURIComponent(itemIdStr);
-        const safeItemName = encodeURIComponent(dish.name);
-
         return `
             <div class="p-4 rounded-3xl border border-neutral-200/80 bg-white shadow-sm flex items-center justify-between transition">
                 <div class="space-y-1 max-w-[65%]">
@@ -110,14 +104,14 @@ window.renderRestaurantMenuCards = function() {
                     <span class="text-xs font-extrabold text-black font-mono block pt-1">${dish.price.toFixed(2)} €</span>
                 </div>
                 <div id="btn-container-${dish.id}" class="flex items-center space-x-2 shrink-0">
-                    ${typeof renderItemButtonHTML === 'function' ? renderItemButtonHTML(dish.id, safeItemId, safeItemName, dish.price, qty) : ''}
+                    ${typeof renderItemButtonHTML === 'function' ? renderItemButtonHTML(dish.id, encodeURIComponent(itemIdStr), encodeURIComponent(dish.name), dish.price, qty) : ''}
                 </div>
             </div>
         `;
     }).join('');
 };
 
-// 3. MOTOR DE RESERVAS CON CONTADOR EXACTO
+// 2. MODAL Y GENERACIÓN DE INTERVALOS DINÁMICOS
 window.openModernReservationModal = async function() {
     const modal = document.getElementById('customModal');
     const modalBody = document.getElementById('modalBody');
@@ -126,33 +120,32 @@ window.openModernReservationModal = async function() {
     const today = new Date().toISOString().split('T')[0];
     if (!window.restaurantState.selectedDate) window.restaurantState.selectedDate = today;
 
+    // Cargar ajustes del negocio desde Supabase si existen
+    await window.loadRestaurantSettingsFromDB();
+
     modalBody.innerHTML = `
         <div class="space-y-4 text-left">
             <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
                 <div>
-                    <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">SISTEMA DE RESERVAS</span>
-                    <h3 class="text-sm font-bold text-black">Selecciona Día, Personas y Hora</h3>
+                    <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">NETWISH HOSTELERÍA</span>
+                    <h3 class="text-sm font-bold text-black">Reserva de Mesa</h3>
                 </div>
                 <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
 
-            <!-- Paso 1: Selector Exacto de Comensales, Fecha y Zona -->
+            <!-- Paso 1: Comensales Exactos, Fecha y Zona -->
             <div class="space-y-3">
                 <div>
-                    <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1.5">Nº Comensales Exacto</label>
+                    <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Comensales</label>
                     <div class="flex items-center justify-between p-2 rounded-2xl bg-neutral-50 border border-neutral-200/80">
-                        <button onclick="window.stepGuests(-1)" class="w-9 h-9 rounded-xl bg-white border border-neutral-200 text-black font-extrabold text-base flex items-center justify-center active:scale-90 transition shadow-sm">
-                            -
-                        </button>
+                        <button onclick="window.stepGuests(-1)" class="w-9 h-9 rounded-xl bg-white border border-neutral-200 text-black font-extrabold text-base flex items-center justify-center active:scale-90 transition shadow-sm">-</button>
                         <div class="flex items-center space-x-1.5">
                             <span id="guestsExactCount" class="text-base font-extrabold font-mono text-black">${window.restaurantState.selectedGuests}</span>
                             <span class="text-xs font-medium text-neutral-400">personas</span>
                         </div>
-                        <button onclick="window.stepGuests(1)" class="w-9 h-9 rounded-xl bg-black text-white font-extrabold text-base flex items-center justify-center active:scale-90 transition shadow-md">
-                            +
-                        </button>
+                        <button onclick="window.stepGuests(1)" class="w-9 h-9 rounded-xl bg-black text-white font-extrabold text-base flex items-center justify-center active:scale-90 transition shadow-md">+</button>
                     </div>
                 </div>
 
@@ -170,11 +163,11 @@ window.openModernReservationModal = async function() {
                     </div>
                 </div>
 
-                <!-- Paso 2: Franjas Horarias Disponibles -->
+                <!-- Paso 2: Horarios Calculados -->
                 <div>
                     <div class="flex justify-between items-center mb-1.5">
                         <label class="text-[9px] font-mono uppercase text-neutral-400 block">Horas Disponibles</label>
-                        <span class="text-[9px] font-mono text-neutral-400" id="durationHint">Estancia: 90 min</span>
+                        <span class="text-[9px] font-mono text-neutral-400" id="durationHint">Estancia: ${window.restaurantState.config.turn_duration_min} min</span>
                     </div>
                     <div class="grid grid-cols-3 gap-2" id="timeSlotsGrid">
                         <div class="col-span-3 py-4 text-center text-xs text-neutral-400">
@@ -185,10 +178,9 @@ window.openModernReservationModal = async function() {
                 </div>
             </div>
 
-            <!-- Paso 3: Confirmación de Reserva -->
             <button onclick="window.processSmartReservation()" id="btnConfirmReservation" class="w-full py-4 bg-black text-white rounded-2xl text-xs font-bold tracking-wide active:scale-95 transition shadow-lg flex items-center justify-center space-x-2">
                 <i data-lucide="check" class="w-4 h-4"></i>
-                <span id="btnConfirmReservationText">Confirmar Reserva a las ${window.restaurantState.selectedTime}</span>
+                <span id="btnConfirmReservationText">Confirmar Reserva</span>
             </button>
         </div>
     `;
@@ -200,7 +192,26 @@ window.openModernReservationModal = async function() {
     await window.recalculateSlotsAvailability();
 };
 
-// 4. CÁLCULO DE DISPONIBILIDAD Y ASIGNACIÓN
+// 3. GENERADOR DE HORARIOS Y MOTOR DE ASIGNACIÓN
+window.generateSlotsFromSettings = function() {
+    const cfg = window.restaurantState.config;
+    const slots = [];
+
+    const addRange = (startStr, endStr) => {
+        let current = window.timeToMinutes(startStr);
+        const end = window.timeToMinutes(endStr);
+        while (current + cfg.turn_duration_min <= end + 30) {
+            slots.push(window.minutesToTime(current));
+            current += 30; // Saltos de 30 minutos
+        }
+    };
+
+    if (cfg.lunch_start && cfg.lunch_end) addRange(cfg.lunch_start, cfg.lunch_end);
+    if (cfg.dinner_start && cfg.dinner_end) addRange(cfg.dinner_start, cfg.dinner_end);
+
+    return slots;
+};
+
 window.recalculateSlotsAvailability = async function() {
     const slotsGrid = document.getElementById('timeSlotsGrid');
     if (!slotsGrid) return;
@@ -208,14 +219,10 @@ window.recalculateSlotsAvailability = async function() {
     const date = window.restaurantState.selectedDate;
     const guests = window.restaurantState.selectedGuests;
     const zone = window.restaurantState.selectedZone;
-    const durationMinutes = window.getEstimatedTurnDuration(guests);
+    const duration = window.restaurantState.config.turn_duration_min;
     
-    const durationHint = document.getElementById('durationHint');
-    if (durationHint) durationHint.innerText = `Estancia: ${durationMinutes} min`;
-
-    const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
+    const client = window.supabaseClient || window.supabase;
     const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';
-    
     let existingReservations = [];
 
     if (client) {
@@ -231,7 +238,7 @@ window.recalculateSlotsAvailability = async function() {
                     const timeMatch = (row.time || '').match(/(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
                     const tableMatch = (row.items || '').match(/Mesa\s+(\d+)/i);
                     return {
-                        startTime: timeMatch ? timeMatch[1] : (row.time?.substring(0, 5) || '13:30'),
+                        startTime: timeMatch ? timeMatch[1] : (row.time?.substring(0, 5) || '13:00'),
                         endTime: timeMatch ? timeMatch[2] : null,
                         tableNumber: tableMatch ? parseInt(tableMatch[1], 10) : null
                     };
@@ -242,15 +249,16 @@ window.recalculateSlotsAvailability = async function() {
         }
     }
 
+    const availableSlots = window.generateSlotsFromSettings();
     let validSlotsHTML = '';
-    let isCurrentTimeStillAvailable = false;
+    let isCurrentTimeValid = false;
 
-    window.restaurantState.availableTimeSlots.forEach(timeSlot => {
+    availableSlots.forEach(timeSlot => {
         const slotStartMin = window.timeToMinutes(timeSlot);
-        const slotEndMin = slotStartMin + durationMinutes;
+        const slotEndMin = slotStartMin + duration;
 
-        // Filtrado por zona y capacidad suficiente
-        const candidateTables = window.restaurantState.tablesInventory
+        // Mesas válidas ordenadas por ajuste óptimo (Best-Fit)
+        const candidateTables = window.restaurantState.config.tables
             .filter(t => t.zone.toLowerCase() === zone.toLowerCase() && t.capacity >= guests)
             .sort((a, b) => a.capacity - b.capacity);
 
@@ -259,10 +267,8 @@ window.recalculateSlotsAvailability = async function() {
         for (let table of candidateTables) {
             const hasOverlap = existingReservations.some(res => {
                 if (res.tableNumber !== table.table_number) return false;
-                
                 const resStartMin = window.timeToMinutes(res.startTime);
-                const resEndMin = res.endTime ? window.timeToMinutes(res.endTime) : (resStartMin + 90);
-
+                const resEndMin = res.endTime ? window.timeToMinutes(res.endTime) : (resStartMin + duration);
                 return (slotStartMin < resEndMin && slotEndMin > resStartMin);
             });
 
@@ -273,22 +279,21 @@ window.recalculateSlotsAvailability = async function() {
         }
 
         const isAvailable = assignedTable !== null;
-        const isSelected = window.restaurantState.selectedTime === timeSlot;
-
-        if (isSelected && isAvailable) {
-            isCurrentTimeStillAvailable = true;
+        if (window.restaurantState.selectedTime === timeSlot && isAvailable) {
+            isCurrentTimeValid = true;
             window.restaurantState.allocatedTable = assignedTable;
         }
 
         if (isAvailable) {
+            const isSelected = window.restaurantState.selectedTime === timeSlot;
             validSlotsHTML += `
-                <button onclick="window.selectReservationTime('${timeSlot}', ${assignedTable.table_number})" id="slot-btn-${timeSlot.replace(':', '')}" class="py-2 px-1 rounded-xl border text-xs font-mono font-bold transition ${isSelected ? 'bg-black text-white border-black shadow-sm' : 'bg-white text-black border-neutral-200 hover:border-black'}">
+                <button onclick="window.selectReservationTime('${timeSlot}', ${assignedTable.table_number})" id="slot-btn-${timeSlot.replace(':', '')}" class="py-2.5 px-1 rounded-xl border text-xs font-mono font-bold transition ${isSelected ? 'bg-black text-white border-black shadow-sm' : 'bg-white text-black border-neutral-200 hover:border-black'}">
                     ${timeSlot}
                 </button>
             `;
         } else {
             validSlotsHTML += `
-                <div class="py-2 px-1 rounded-xl border border-neutral-200/50 bg-neutral-100/60 text-center opacity-40 cursor-not-allowed">
+                <div class="py-2.5 px-1 rounded-xl border border-neutral-200/50 bg-neutral-100/60 text-center opacity-40 cursor-not-allowed">
                     <span class="text-xs font-mono text-neutral-400 line-through">${timeSlot}</span>
                 </div>
             `;
@@ -300,17 +305,17 @@ window.recalculateSlotsAvailability = async function() {
     const confirmBtn = document.getElementById('btnConfirmReservation');
     const confirmText = document.getElementById('btnConfirmReservationText');
 
-    if (!isCurrentTimeStillAvailable) {
-        const firstAvailableBtn = slotsGrid.querySelector('button');
-        if (firstAvailableBtn) {
-            firstAvailableBtn.click();
+    if (!isCurrentTimeValid) {
+        const firstBtn = slotsGrid.querySelector('button');
+        if (firstBtn) {
+            firstBtn.click();
         } else {
             window.restaurantState.allocatedTable = null;
             if (confirmBtn) {
                 confirmBtn.disabled = true;
                 confirmBtn.classList.add('opacity-50', 'pointer-events-none');
             }
-            if (confirmText) confirmText.innerText = `Sin disponibilidad en ${zone}`;
+            if (confirmText) confirmText.innerText = `Aforo completo en ${zone}`;
         }
     } else {
         if (confirmBtn) {
@@ -319,71 +324,63 @@ window.recalculateSlotsAvailability = async function() {
         }
         if (confirmText) confirmText.innerText = `Confirmar Reserva a las ${window.restaurantState.selectedTime}`;
     }
-
-    if (typeof lucide !== 'undefined') lucide.createIcons();
 };
 
-// 5. CONTROLADORES
+// 4. CONTROLADORES
 window.stepGuests = function(delta) {
     let current = window.restaurantState.selectedGuests + delta;
     if (current < 1) current = 1;
-    if (current > 12) current = 12;
-
+    if (current > 16) current = 16;
     window.restaurantState.selectedGuests = current;
-    const countEl = document.getElementById('guestsExactCount');
-    if (countEl) countEl.innerText = current;
-
+    const el = document.getElementById('guestsExactCount');
+    if (el) el.innerText = current;
     window.recalculateSlotsAvailability();
 };
 
-window.updateReservationDate = function(dateVal) {
-    window.restaurantState.selectedDate = dateVal;
+window.updateReservationDate = function(val) {
+    window.restaurantState.selectedDate = val;
     window.recalculateSlotsAvailability();
 };
 
-window.updateReservationZone = function(zoneVal) {
-    window.restaurantState.selectedZone = zoneVal;
+window.updateReservationZone = function(val) {
+    window.restaurantState.selectedZone = val;
     window.recalculateSlotsAvailability();
 };
 
-window.selectReservationTime = function(timeStr, tableNumber) {
+window.selectReservationTime = function(timeStr, tableNum) {
     window.restaurantState.selectedTime = timeStr;
-    window.restaurantState.allocatedTable = window.restaurantState.tablesInventory.find(t => t.table_number === tableNumber);
+    window.restaurantState.allocatedTable = window.restaurantState.config.tables.find(t => t.table_number === tableNum);
 
-    const buttons = document.querySelectorAll('#timeSlotsGrid button');
-    buttons.forEach(btn => {
-        btn.className = "py-2 px-1 rounded-xl border text-xs font-mono font-bold transition bg-white text-black border-neutral-200 hover:border-black";
+    document.querySelectorAll('#timeSlotsGrid button').forEach(btn => {
+        btn.className = "py-2.5 px-1 rounded-xl border text-xs font-mono font-bold transition bg-white text-black border-neutral-200 hover:border-black";
     });
 
     const activeBtn = document.getElementById(`slot-btn-${timeStr.replace(':', '')}`);
     if (activeBtn) {
-        activeBtn.className = "py-2 px-1 rounded-xl border text-xs font-mono font-bold transition bg-black text-white border-black shadow-sm";
+        activeBtn.className = "py-2.5 px-1 rounded-xl border text-xs font-mono font-bold transition bg-black text-white border-black shadow-sm";
     }
 
     const confirmText = document.getElementById('btnConfirmReservationText');
     if (confirmText) confirmText.innerText = `Confirmar Reserva a las ${timeStr}`;
 };
 
-// 6. PROCESAR RESERVA
+// 5. GUARDAR RESERVA Y DISPARAR EMAILS
 window.processSmartReservation = async function() {
     const table = window.restaurantState.allocatedTable;
     const date = window.restaurantState.selectedDate;
     const startTime = window.restaurantState.selectedTime;
     const guests = window.restaurantState.selectedGuests;
     const zone = window.restaurantState.selectedZone;
-    const duration = window.getEstimatedTurnDuration(guests);
+    const duration = window.restaurantState.config.turn_duration_min;
     const endTime = window.minutesToTime(window.timeToMinutes(startTime) + duration);
     const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';
     
-    if (!table) {
-        alert("Selecciona una hora disponible para completar la reserva.");
-        return;
-    }
+    if (!table) return;
 
-    const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
-    const customerUser = (typeof currentUser !== 'undefined') ? currentUser : null;
+    const client = window.supabaseClient || window.supabase;
+    const customerUser = typeof currentUser !== 'undefined' ? currentUser : null;
 
-    const reservationRecord = {
+    const record = {
         business_name: bizName,
         customer: customerUser?.user_metadata?.full_name || customerUser?.email || 'Cliente NetWish',
         customer_email: customerUser?.email || '',
@@ -396,16 +393,16 @@ window.processSmartReservation = async function() {
 
     if (client) {
         try {
-            await client.from('orders').insert([reservationRecord]);
-        } catch (err) {
-            console.warn("Aviso registrando reserva en BD:", err);
+            await client.from('orders').insert([record]);
+        } catch (e) {
+            console.warn("Aviso insertando orden:", e);
         }
     }
 
     if (window.emailService) {
         const orderSummary = {
             businessName: bizName,
-            clientName: reservationRecord.customer,
+            clientName: record.customer,
             date: date,
             time: `${startTime} h (Estancia hasta ${endTime} h)`,
             items: [{ name: `Reserva para ${guests} comensales en ${zone} (Mesa ${table.table_number})`, qty: 1, price: 0 }],
@@ -416,34 +413,56 @@ window.processSmartReservation = async function() {
         if (customerUser?.email) {
             window.emailService.sendClientReceipt(customerUser.email, orderSummary);
         }
-
         const bizEmail = window.appState?.activeBusinessEmail || 'contacto@netwish.es';
         window.emailService.sendBusinessAlert(bizEmail, orderSummary);
     }
 
     window.closeCustomModal();
-    alert(`¡Reserva confirmada con éxito!\n\nFecha: ${date}\nHora: ${startTime} h\nComensales: ${guests} personas\nMesa asignada: Mesa ${table.table_number} (${zone})\n\nTe hemos enviado el justificante digital a tu correo.`);
+    alert(`¡Reserva confirmada con éxito!\n\nFecha: ${date}\nHora: ${startTime} h\nComensales: ${guests} personas\nMesa: Mesa ${table.table_number} (${zone})\n\nComprobante digital enviado a tu correo.`);
 };
 
-// 7. UTILIDADES TEMPORALES
-window.getEstimatedTurnDuration = function(guests) {
-    if (guests <= 2) return 90;
-    if (guests <= 4) return 105;
-    return 120;
+// 6. CARGAR CONFIGURACIÓN DE BASE DE DATOS
+window.loadRestaurantSettingsFromDB = async function() {
+    const client = window.supabaseClient || window.supabase;
+    const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';
+    if (!client) return;
+
+    try {
+        const { data } = await client.from('restaurant_settings').select('*').ilike('business_name', `%${bizName}%`).maybeSingle();
+        if (data) {
+            window.restaurantState.config = {
+                lunch_start: data.lunch_start || '13:00',
+                lunch_end: data.lunch_end || '16:00',
+                dinner_start: data.dinner_start || '20:30',
+                dinner_end: data.dinner_end || '23:30',
+                turn_duration_min: data.turn_duration_min || 90,
+                tables: data.tables || window.restaurantState.config.tables
+            };
+        }
+    } catch (e) {
+        console.warn("Aviso cargando configuración de BD:", e);
+    }
 };
 
-window.timeToMinutes = function(timeStr) {
-    const [h, m] = timeStr.split(':').map(Number);
+window.timeToMinutes = (str) => {
+    const [h, m] = str.split(':').map(Number);
     return h * 60 + m;
 };
 
-window.minutesToTime = function(minutes) {
-    const h = Math.floor(minutes / 60).toString().padStart(2, '0');
-    const m = (minutes % 60).toString().padStart(2, '0');
+window.minutesToTime = (min) => {
+    const h = Math.floor(min / 60).toString().padStart(2, '0');
+    const m = (min % 60).toString().padStart(2, '0');
     return `${h}:${m}`;
 };
 
-// 8. MODAL MENÚ DEL DÍA
+window.closeCustomModal = function() {
+    const modal = document.getElementById('customModal');
+    if (modal) {
+        modal.classList.add('opacity-0');
+        setTimeout(() => modal.classList.add('hidden'), 200);
+    }
+};
+
 window.openDailyMenuModal = function() {
     const modal = document.getElementById('customModal');
     const modalBody = document.getElementById('modalBody');
@@ -456,50 +475,28 @@ window.openDailyMenuModal = function() {
                     <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">MENÚ DEL DÍA</span>
                     <h3 class="text-sm font-bold text-black">14,50 € / Persona</h3>
                 </div>
-                <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
+                <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
-
             <div class="space-y-3 max-h-64 overflow-y-auto pr-1 text-xs">
                 <div>
-                    <h5 class="font-mono text-[9px] uppercase tracking-wider text-neutral-400 mb-1">Primeros (A elegir)</h5>
+                    <h5 class="font-mono text-[9px] uppercase tracking-wider text-neutral-400 mb-1">Primeros</h5>
                     <div class="space-y-1 text-neutral-700">
                         <p class="p-2 rounded-xl bg-neutral-50 border border-neutral-100">• Alubias Blancas de Saldaña con Matanza</p>
                         <p class="p-2 rounded-xl bg-neutral-50 border border-neutral-100">• Sopa Castellana Tradicional</p>
-                        <p class="p-2 rounded-xl bg-neutral-50 border border-neutral-100">• Ensalada de Cecina con Frutos Secos</p>
                     </div>
                 </div>
-
                 <div>
-                    <h5 class="font-mono text-[9px] uppercase tracking-wider text-neutral-400 mb-1">Segundos (A elegir)</h5>
+                    <h5 class="font-mono text-[9px] uppercase tracking-wider text-neutral-400 mb-1">Segundos</h5>
                     <div class="space-y-1 text-neutral-700">
                         <p class="p-2 rounded-xl bg-neutral-50 border border-neutral-100">• Carrillera Ibérica al Vino Tinto</p>
                         <p class="p-2 rounded-xl bg-neutral-50 border border-neutral-100">• Bacalao con Pimientos Asados</p>
                     </div>
                 </div>
-
-                <div>
-                    <h5 class="font-mono text-[9px] uppercase tracking-wider text-neutral-400 mb-1">Incluye</h5>
-                    <p class="text-[10px] text-neutral-500">Pan de leña, Agua o Vino de la casa y Postre casero.</p>
-                </div>
             </div>
-
-            <button onclick="window.changeItemQuantity('menu_dia', 'Menú del Día', 14.50, 1); window.closeCustomModal();" class="w-full py-3.5 bg-black text-white rounded-2xl text-xs font-bold active:scale-95 transition shadow-md">
-                Añadir Menú a Mi Pedido (14,50 €)
-            </button>
+            <button onclick="window.changeItemQuantity('menu_dia', 'Menú del Día', 14.50, 1); window.closeCustomModal();" class="w-full py-3.5 bg-black text-white rounded-2xl text-xs font-bold active:scale-95 transition shadow-md">Añadir Menú a Mi Pedido (14,50 €)</button>
         </div>
     `;
-
     modal.classList.remove('hidden', 'opacity-0');
     modal.classList.add('opacity-100');
     if (typeof lucide !== 'undefined') lucide.createIcons();
-};
-
-window.closeCustomModal = function() {
-    const modal = document.getElementById('customModal');
-    if (modal) {
-        modal.classList.add('opacity-0');
-        setTimeout(() => modal.classList.add('hidden'), 200);
-    }
 };

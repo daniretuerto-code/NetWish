@@ -1,6 +1,9 @@
+// js/dashboard.js
+
 let ordersRealtimeSubscription = null;
 let currentBusinessOrders = []; 
 let activeOrdersTab = 'pending'; // 'pending' | 'completed'
+let tempRestaurantTables = [];
 
 // ==========================================
 // 1. MODAL DE CONTROL DE STOCK / GESTOR DE BEATS
@@ -26,7 +29,7 @@ async function openStockControlModal() {
             <p class="text-xs text-neutral-500">Consultando catálogo en Supabase...</p>
         </div>
     `;
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     modal.classList.remove('hidden');
     setTimeout(() => { 
         modal.classList.remove('opacity-0'); 
@@ -65,7 +68,7 @@ async function openStockControlModal() {
                         <span class="text-xs font-bold block text-black truncate">${p.name}</span>
                         ${isFinished ? '<span class="text-[8px] bg-amber-500/10 text-amber-600 font-bold px-1.5 py-0.5 rounded-full border border-amber-500/20">Finalizado</span>' : ''}
                     </div>
-                    <span class="text-[10px] text-neutral-500 block truncate mt-0.5">${p.description || ''} • <strong class="text-black">${price.toFixed(2)} €</strong></span>
+                    <span class="text-[10px] text-neutral-500 block truncate mt-0.5">${p.description || ''} • <strong class="text-black font-mono">${price.toFixed(2)} €</strong></span>
                 </div>
                 <button onclick="deleteStockProduct('${p.id}')" class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-100 active:scale-90 shrink-0 transition shadow-xs">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
@@ -120,7 +123,7 @@ async function openStockControlModal() {
             </button>
         </div>
     `;
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // ==========================================
@@ -153,7 +156,7 @@ async function saveNewStockProduct() {
         if (saveBtn) {
             saveBtn.disabled = true;
             saveBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Subiendo Audio a Storage...</span>`;
-            lucide.createIcons();
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         }
 
         try {
@@ -173,7 +176,7 @@ async function saveNewStockProduct() {
             if (saveBtn) {
                 saveBtn.disabled = false;
                 saveBtn.innerHTML = `<i data-lucide="cloud-upload" class="w-4 h-4"></i><span>Reintentar Publicación</span>`;
-                lucide.createIcons();
+                if (typeof lucide !== 'undefined') lucide.createIcons();
             }
             return;
         }
@@ -242,7 +245,229 @@ function setOrdersTab(tab) {
 }
 
 // ==========================================
-// 5. MODAL DE HISTORIAL DE PEDIDOS CON FILTRO DE FECHA
+// 5. GESTIÓN PROFESIONAL DE SALA Y MESAS (HOSTELERÍA)
+// ==========================================
+async function openRestaurantConfigModal() {
+    if (!currentBusiness) return;
+    const modal = document.getElementById('customModal');
+    const modalContent = document.getElementById('modalContent');
+    const modalBody = document.getElementById('modalBody');
+
+    modalBody.innerHTML = `
+        <div class="space-y-4 text-center py-6">
+            <i data-lucide="loader-2" class="w-6 h-6 mx-auto animate-spin text-black mb-2"></i>
+            <p class="text-xs text-neutral-500">Cargando configuración de sala...</p>
+        </div>
+    `;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    modal.classList.remove('hidden');
+    setTimeout(() => { 
+        modal.classList.remove('opacity-0'); 
+        modalContent?.classList.remove('scale-95'); 
+    }, 10);
+
+    let settings = {
+        lunch_start: '13:00',
+        lunch_end: '16:00',
+        dinner_start: '20:30',
+        dinner_end: '23:30',
+        turn_duration_min: 90,
+        tables: [
+            { id: 1, table_number: 1, capacity: 2, zone: 'Sala Principal' },
+            { id: 2, table_number: 2, capacity: 4, zone: 'Sala Principal' },
+            { id: 3, table_number: 3, capacity: 6, zone: 'Sala Principal' },
+            { id: 4, table_number: 4, capacity: 4, zone: 'Terraza' },
+            { id: 5, table_number: 5, capacity: 6, zone: 'Terraza' }
+        ]
+    };
+
+    try {
+        const { data } = await supabaseClient
+            .from('restaurant_settings')
+            .select('*')
+            .ilike('business_name', `%${currentBusiness.name}%`)
+            .maybeSingle();
+
+        if (data) settings = data;
+    } catch (e) {
+        console.warn("Aviso cargando ajustes de sala:", e);
+    }
+
+    tempRestaurantTables = [...(settings.tables || [])];
+
+    modalBody.innerHTML = `
+        <div class="space-y-4 text-left">
+            <div class="text-center space-y-1">
+                <h3 class="text-base font-bold text-black">Ajustes de Sala & Reservas</h3>
+                <p class="text-[11px] text-neutral-500">Configura turnos de comida/cena e inventario de mesas.</p>
+            </div>
+
+            <!-- Horarios Comidas y Cenas -->
+            <div class="space-y-2.5 pt-2 border-t border-neutral-100">
+                <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">Horarios de Servicio</span>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[9px] font-mono text-neutral-500 block mb-1">Inicio Comidas</label>
+                        <input type="time" id="cfgLunchStart" value="${settings.lunch_start}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-2.5 py-2 text-xs font-mono font-bold focus:border-black outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[9px] font-mono text-neutral-500 block mb-1">Fin Comidas</label>
+                        <input type="time" id="cfgLunchEnd" value="${settings.lunch_end}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-2.5 py-2 text-xs font-mono font-bold focus:border-black outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[9px] font-mono text-neutral-500 block mb-1">Inicio Cenas</label>
+                        <input type="time" id="cfgDinnerStart" value="${settings.dinner_start}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-2.5 py-2 text-xs font-mono font-bold focus:border-black outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[9px] font-mono text-neutral-500 block mb-1">Fin Cenas</label>
+                        <input type="time" id="cfgDinnerEnd" value="${settings.dinner_end}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-2.5 py-2 text-xs font-mono font-bold focus:border-black outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Editor de Mesas -->
+            <div class="space-y-2.5 pt-2 border-t border-neutral-100">
+                <div class="flex justify-between items-center">
+                    <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Inventario de Mesas</span>
+                    <span class="text-[10px] font-mono text-neutral-500 font-bold" id="tablesCountIndicator">${tempRestaurantTables.length} mesas</span>
+                </div>
+
+                <!-- Formulario rápida de añadir mesa -->
+                <div class="grid grid-cols-3 gap-1.5 p-2.5 bg-neutral-50 rounded-2xl border border-neutral-200/60">
+                    <input type="number" id="newTableNumber" placeholder="Nº Mesa" class="bg-white border border-neutral-200 rounded-xl px-2 py-1.5 text-xs font-mono focus:border-black outline-none">
+                    <select id="newTableZone" class="bg-white border border-neutral-200 rounded-xl px-2 py-1.5 text-xs font-medium focus:border-black outline-none">
+                        <option value="Sala Principal">Sala</option>
+                        <option value="Terraza">Terraza</option>
+                    </select>
+                    <div class="flex space-x-1">
+                        <select id="newTableCapacity" class="bg-white border border-neutral-200 rounded-xl px-1.5 py-1.5 text-xs font-mono font-bold focus:border-black outline-none w-1/2">
+                            <option value="2">2p</option>
+                            <option value="4" selected>4p</option>
+                            <option value="6">6p</option>
+                            <option value="8">8p</option>
+                        </select>
+                        <button onclick="addTableToRestaurantList()" class="w-1/2 bg-black text-white rounded-xl text-xs font-bold flex items-center justify-center active:scale-90 transition">
+                            +
+                        </button>
+                    </div>
+                </div>
+
+                <div id="cfgTablesListContainer" class="space-y-1.5 max-h-36 overflow-y-auto pr-1 allow-scroll">
+                    ${renderTablesListHTML()}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-neutral-100">
+                <button onclick="if(typeof closeModal === 'function') closeModal()" class="w-full py-3 bg-neutral-100 text-black font-semibold rounded-xl text-xs hover:bg-neutral-200 transition">
+                    Cancelar
+                </button>
+                <button onclick="saveRestaurantSettingsToDB()" class="w-full py-3 bg-black text-white font-bold rounded-xl text-xs shadow-md active:scale-95 transition">
+                    Guardar Cambios
+                </button>
+            </div>
+        </div>
+    `;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function renderTablesListHTML() {
+    if (!tempRestaurantTables || tempRestaurantTables.length === 0) {
+        return `<p class="text-[11px] text-neutral-400 text-center py-2">No hay mesas configuradas.</p>`;
+    }
+
+    return tempRestaurantTables.map((t, idx) => `
+        <div class="flex items-center justify-between p-2.5 bg-neutral-50 rounded-xl border border-neutral-200/60 text-xs">
+            <div class="flex items-center space-x-2">
+                <span class="font-bold text-black font-mono">Mesa ${t.table_number}</span>
+                <span class="text-[10px] text-neutral-400">(${t.zone})</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span class="font-mono font-extrabold text-black bg-white px-2 py-0.5 rounded-lg border border-neutral-200/60">${t.capacity} pax</span>
+                <button onclick="removeTableFromRestaurantList(${idx})" class="w-6 h-6 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold flex items-center justify-center transition">
+                    ×
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function addTableToRestaurantList() {
+    const numInput = document.getElementById('newTableNumber');
+    const zoneInput = document.getElementById('newTableZone');
+    const capInput = document.getElementById('newTableCapacity');
+
+    const num = parseInt(numInput?.value || '0', 10);
+    const zone = zoneInput?.value || 'Sala Principal';
+    const cap = parseInt(capInput?.value || '4', 10);
+
+    if (num <= 0) {
+        alert("Introduce un número de mesa válido.");
+        return;
+    }
+
+    tempRestaurantTables.push({
+        id: Date.now(),
+        table_number: num,
+        zone: zone,
+        capacity: cap
+    });
+
+    tempRestaurantTables.sort((a, b) => a.table_number - b.table_number);
+
+    numInput.value = '';
+    const container = document.getElementById('cfgTablesListContainer');
+    const countEl = document.getElementById('tablesCountIndicator');
+    if (container) container.innerHTML = renderTablesListHTML();
+    if (countEl) countEl.innerText = `${tempRestaurantTables.length} mesas`;
+}
+
+function removeTableFromRestaurantList(index) {
+    tempRestaurantTables.splice(index, 1);
+    const container = document.getElementById('cfgTablesListContainer');
+    const countEl = document.getElementById('tablesCountIndicator');
+    if (container) container.innerHTML = renderTablesListHTML();
+    if (countEl) countEl.innerText = `${tempRestaurantTables.length} mesas`;
+}
+
+async function saveRestaurantSettingsToDB() {
+    if (!currentBusiness) return;
+
+    const lunchStart = document.getElementById('cfgLunchStart')?.value || '13:00';
+    const lunchEnd = document.getElementById('cfgLunchEnd')?.value || '16:00';
+    const dinnerStart = document.getElementById('cfgDinnerStart')?.value || '20:30';
+    const dinnerEnd = document.getElementById('cfgDinnerEnd')?.value || '23:30';
+
+    const payload = {
+        business_name: currentBusiness.name,
+        lunch_start: lunchStart,
+        lunch_end: lunchEnd,
+        dinner_start: dinnerStart,
+        dinner_end: dinnerEnd,
+        turn_duration_min: 90,
+        tables: tempRestaurantTables
+    };
+
+    try {
+        const { error } = await supabaseClient
+            .from('restaurant_settings')
+            .upsert([payload], { onConflict: 'business_name' });
+
+        if (error) throw error;
+
+        if (window.restaurantState) {
+            window.restaurantState.config = payload;
+        }
+
+        if (typeof closeModal === 'function') closeModal();
+        alert("Ajustes de horarios y mesas guardados correctamente.");
+        renderBusinessOrders();
+    } catch (err) {
+        alert("Error al guardar ajustes: " + err.message);
+    }
+}
+
+// ==========================================
+// 6. MODAL DE HISTORIAL DE PEDIDOS CON FILTRO DE FECHA
 // ==========================================
 function openHistoryModal(dateFilter = '') {
     if (!currentBusiness) return;
@@ -281,7 +506,7 @@ function openHistoryModal(dateFilter = '') {
                         </div>
                     </div>
                     <div class="text-right shrink-0 ml-2">
-                        <span class="block text-sm font-bold text-black">${totalVal.toFixed(2)} €</span>
+                        <span class="block text-sm font-bold text-black font-mono">${totalVal.toFixed(2)} €</span>
                         <span class="block text-[9px] ${isCompleted ? 'text-neutral-500' : (isPaid ? 'text-emerald-600' : 'text-amber-600')} font-bold">${o.status}</span>
                     </div>
                 </div>
@@ -315,7 +540,7 @@ function openHistoryModal(dateFilter = '') {
             </div>
         </div>
     `;
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     
     modal.classList.remove('hidden');
     setTimeout(() => { 
@@ -325,7 +550,7 @@ function openHistoryModal(dateFilter = '') {
 }
 
 // ==========================================
-// 6. RENDERIZADO DEL PANEL PRINCIPAL Y SECCIONES
+// 7. RENDERIZADO DEL PANEL PRINCIPAL
 // ==========================================
 async function renderBusinessOrders() {
     if (!currentBusiness) return;
@@ -336,6 +561,7 @@ async function renderBusinessOrders() {
     
     const cat = (currentBusiness.category || '').toLowerCase();
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
+    const isRestaurant = cat.includes('rest') || cat.includes('bar') || (currentBusiness.name || '').toLowerCase().includes('restaurante');
     
     // Suscripción Realtime para actualizar pedidos al instante
     if (!ordersRealtimeSubscription && typeof supabaseClient.channel === 'function') {
@@ -438,7 +664,7 @@ async function renderBusinessOrders() {
                 </div>
                 <div class="p-4 rounded-3xl bg-neutral-900 border border-amber-500/20 text-left shadow-lg">
                     <span class="text-[9px] text-amber-400/80 font-mono uppercase tracking-widest">Royalties Acumulados</span>
-                    <h3 class="text-2xl font-black text-amber-400 mt-1">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</h3>
+                    <h3 class="text-2xl font-black text-amber-400 mt-1 font-mono">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</h3>
                 </div>
             </div>
 
@@ -453,6 +679,34 @@ async function renderBusinessOrders() {
                 </button>
             </div>
         `;
+    } else if (isRestaurant) {
+        dashHtml += `
+            <div class="grid grid-cols-3 gap-3">
+                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
+                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Reservas</span>
+                    <h3 class="text-lg font-extrabold text-black font-mono">${pendingOrders.length}</h3>
+                </div>
+                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
+                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Completadas</span>
+                    <h3 class="text-lg font-extrabold text-black font-mono">${completedOrders.length}</h3>
+                </div>
+                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
+                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Caja Total</span>
+                    <h3 class="text-lg font-extrabold text-black font-mono">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€</h3>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="openRestaurantConfigModal()" class="py-3.5 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex justify-center items-center space-x-2 text-xs">
+                    <i data-lucide="layout-grid" class="w-4 h-4"></i>
+                    <span>Horarios & Mesas</span>
+                </button>
+                <button onclick="openStockControlModal()" class="py-3.5 bg-white border border-neutral-200 text-black font-bold rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2 text-xs">
+                    <i data-lucide="book-open" class="w-4 h-4"></i>
+                    <span>Carta Digital</span>
+                </button>
+            </div>
+        `;
     } else if (cat.includes('pel')) {
         dashHtml += `
             <div class="grid grid-cols-2 gap-3">
@@ -462,7 +716,7 @@ async function renderBusinessOrders() {
                 </div>
                 <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
                     <span class="text-[10px] text-neutral-400 font-mono uppercase">Caja Acumulada</span>
-                    <h3 class="text-xl font-extrabold text-black mt-1">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</h3>
+                    <h3 class="text-xl font-extrabold text-black mt-1 font-mono">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</h3>
                 </div>
             </div>
             <div class="flex space-x-3">
@@ -471,31 +725,6 @@ async function renderBusinessOrders() {
                 </button>
                 <button onclick="if(typeof openModal === 'function') openModal('Agenda de Citas')" class="flex-1 py-4 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex justify-center items-center space-x-2">
                     <i data-lucide="calendar" class="w-4 h-4"></i><span>Agenda</span>
-                </button>
-            </div>
-        `;
-    } else if (cat.includes('rest') || cat.includes('bar')) {
-        dashHtml += `
-            <div class="grid grid-cols-3 gap-3">
-                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
-                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Mesas</span>
-                    <h3 class="text-lg font-extrabold text-black">4</h3>
-                </div>
-                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
-                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Pendientes</span>
-                    <h3 class="text-lg font-extrabold text-black">${pendingOrders.length}</h3>
-                </div>
-                <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
-                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Caja</span>
-                    <h3 class="text-lg font-extrabold text-black">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€</h3>
-                </div>
-            </div>
-            <div class="flex space-x-3">
-                <button onclick="openStockControlModal()" class="flex-1 py-3 bg-white border border-neutral-200 text-black font-bold rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2">
-                    <i data-lucide="book-open" class="w-4 h-4"></i><span>Carta</span>
-                </button>
-                <button onclick="startCameraModal()" class="flex-1 py-3 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex justify-center items-center space-x-2">
-                    <i data-lucide="scan-line" class="w-4 h-4"></i><span>Escanear Mesa</span>
                 </button>
             </div>
         `;
@@ -528,7 +757,7 @@ async function renderBusinessOrders() {
                 </div>
                 <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70">
                     <span class="text-[10px] text-neutral-400 font-mono uppercase">Caja</span>
-                    <h3 class="text-xl font-extrabold text-black mt-1">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</h3>
+                    <h3 class="text-xl font-extrabold text-black mt-1 font-mono">${totalMoney.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €</h3>
                 </div>
             </div>
 
@@ -543,7 +772,7 @@ async function renderBusinessOrders() {
     dashHtml += `
         <div class="space-y-2 pt-2">
             <div class="flex justify-between items-center px-1">
-                <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Último Pedido</h3>
+                <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Último Registro</h3>
                 <button onclick="switchTab('business-orders')" class="text-[10px] font-bold text-black hover:underline">Ver todos</button>
             </div>
             <div>
@@ -570,7 +799,7 @@ async function renderBusinessOrders() {
                     </div>
                 </div>
                 <div class="text-right shrink-0">
-                    <span class="block text-sm font-bold text-black">${totalVal.toFixed(2)} €</span>
+                    <span class="block text-sm font-bold text-black font-mono">${totalVal.toFixed(2)} €</span>
                     <span class="block text-[9px] ${isCompleted ? 'text-neutral-400' : (isPaid ? 'text-emerald-600' : 'text-amber-600')} font-bold">${o.status}</span>
                 </div>
             </div>
@@ -580,7 +809,7 @@ async function renderBusinessOrders() {
     dashboardContainer.innerHTML = dashHtml;
 
     // ----------------------------------------------------
-    // PESTAÑA DEDICADA DE GESTIÓN DE PEDIDOS
+    // PESTAÑA DEDICADA DE GESTIÓN DE PEDIDOS / RESERVAS
     // ----------------------------------------------------
     if (ordersContainer) {
         const isPendingTab = activeOrdersTab === 'pending';
@@ -605,7 +834,7 @@ async function renderBusinessOrders() {
         `;
 
         if (displayList.length === 0) {
-            const emptyMsg = isPendingTab ? "No tienes pedidos pendientes de entrega." : "Aún no hay pedidos marcados como completados.";
+            const emptyMsg = isPendingTab ? "No tienes pedidos ni reservas pendientes." : "Aún no hay registros completados.";
             ordersHtml += `<p class="text-xs text-neutral-400 text-center py-8 bg-neutral-50/60 rounded-3xl border border-neutral-100">${emptyMsg}</p>`;
         } else {
             displayList.forEach(o => {
@@ -630,12 +859,12 @@ async function renderBusinessOrders() {
 
                         <div class="flex items-center space-x-2.5 shrink-0">
                             <div class="text-right">
-                                <span class="block text-sm font-bold text-black">${totalVal.toFixed(2)} €</span>
+                                <span class="block text-sm font-bold text-black font-mono">${totalVal.toFixed(2)} €</span>
                                 <span class="block text-[9px] ${isCompleted ? 'text-neutral-400' : (isPaid ? 'text-emerald-600' : 'text-amber-600')} font-bold">${o.status}</span>
                             </div>
 
                             ${!isCompleted ? `
-                                <button onclick="completeBusinessOrder('${o.id}')" title="Completar pedido" class="w-9 h-9 rounded-2xl bg-black text-white hover:bg-neutral-800 flex items-center justify-center active:scale-90 transition shadow-md shrink-0">
+                                <button onclick="completeBusinessOrder('${o.id}')" title="Marcar como atendido/completado" class="w-9 h-9 rounded-2xl bg-black text-white hover:bg-neutral-800 flex items-center justify-center active:scale-90 transition shadow-md shrink-0">
                                     <i data-lucide="check" class="w-4 h-4"></i>
                                 </button>
                             ` : `
@@ -653,5 +882,5 @@ async function renderBusinessOrders() {
         ordersContainer.innerHTML = ordersHtml;
     }
 
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
