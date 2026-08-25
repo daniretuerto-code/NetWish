@@ -281,7 +281,7 @@ function renderSingleProductCard(item, isMusicBeat) {
                         <h4 class="text-sm font-bold text-black">${item.name}</h4>
                     </div>
                     <p class="text-[10px] text-neutral-500 mt-0.5">${item.description || ''}</p>
-                    <p class="text-xs font-extrabold text-black mt-2">${price.toLocaleString('es-ES', {minimumFractionDigits:2})} €</p>
+                    <p class="text-xs font-extrabold text-black mt-2 font-mono">${price.toLocaleString('es-ES', {minimumFractionDigits:2})} €</p>
                 </div>
                 
                 <div id="btn-container-${item.id}" class="flex items-center space-x-2 shrink-0">
@@ -484,7 +484,7 @@ function openCartSummary() {
                     <span class="font-bold">${item.name}</span>
                     <span class="text-[10px] text-neutral-400 block">Cantidad: ${item.qty} uds</span>
                 </div>
-                <span class="font-bold"> ${(item.price * item.qty).toLocaleString('es-ES', {minimumFractionDigits:2})} €</span>
+                <span class="font-bold font-mono"> ${(item.price * item.qty).toLocaleString('es-ES', {minimumFractionDigits:2})} €</span>
             </div>
         `;
     });

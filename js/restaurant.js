@@ -7,6 +7,7 @@ window.restaurantState = {
     filterTime: '14:00',
     filterGuests: 2,
     hasFiltered: false,
+    realtimeSubscription: null,
     tableOrders: {
         1: { items: [{ name: 'Chuletón de Ternera', price: 24.00, qty: 1 }, { name: 'Vino Ribera del Duero', price: 16.00, qty: 1 }], total: 40.00 },
         2: { items: [{ name: 'Ensalada Burrata', price: 11.50, qty: 1 }, { name: 'Agua Mineral', price: 2.50, qty: 2 }], total: 16.50 },
@@ -16,12 +17,12 @@ window.restaurantState = {
         6: { items: [], total: 0.00 }
     },
     tablesLayout: [
-        { id: 1, name: 'Mesa 1', capacity: 4, status: 'occupied', zone: 'Sala Principal' },
-        { id: 2, name: 'Mesa 2', capacity: 2, status: 'occupied', zone: 'Sala Principal' },
-        { id: 3, name: 'Mesa 3', capacity: 4, status: 'free', zone: 'Terraza' },
-        { id: 4, name: 'Mesa 4', capacity: 6, status: 'occupied', zone: 'Sala Principal' },
-        { id: 5, name: 'Mesa 5', capacity: 2, status: 'free', zone: 'Terraza' },
-        { id: 6, name: 'Mesa 6', capacity: 8, status: 'free', zone: 'Reservado' }
+        { id: 1, table_number: 1, name: 'Mesa 1', capacity: 4, status: 'occupied', zone: 'Sala Principal', current_bill: 40.00 },
+        { id: 2, table_number: 2, name: 'Mesa 2', capacity: 2, status: 'occupied', zone: 'Sala Principal', current_bill: 16.50 },
+        { id: 3, table_number: 3, name: 'Mesa 3', capacity: 4, status: 'free', zone: 'Terraza', current_bill: 0.00 },
+        { id: 4, table_number: 4, name: 'Mesa 4', capacity: 6, status: 'occupied', zone: 'Sala Principal', current_bill: 43.50 },
+        { id: 5, table_number: 5, name: 'Mesa 5', capacity: 2, status: 'free', zone: 'Terraza', current_bill: 0.00 },
+        { id: 6, table_number: 6, name: 'Mesa 6', capacity: 8, status: 'free', zone: 'Reservado', current_bill: 0.00 }
     ]
 };
 
@@ -116,8 +117,8 @@ window.renderRestaurantMenuCards = function() {
     }).join('');
 };
 
-// 3. MAPA DE MESAS CON FILTRO PREVIO DE FECHA Y HORA
-window.openTableMapModal = function() {
+// 3. MAPA DE MESAS CON FILTRO Y SINCRONIZACIÓN SUPABASE
+window.openTableMapModal = async function() {
     const modal = document.getElementById('customModal');
     const modalBody = document.getElementById('modalBody');
     if (!modal || !modalBody) return;
@@ -175,7 +176,10 @@ window.openTableMapModal = function() {
 
             <!-- Contenedor del Mapa de Mesas -->
             <div id="tableGridContainer" class="space-y-2">
-                ${window.renderTableGridHTML()}
+                <div class="py-8 text-center text-xs text-neutral-400">
+                    <i data-lucide="loader-2" class="w-5 h-5 mx-auto animate-spin mb-2"></i>
+                    Sincronizando mesas en vivo...
+                </div>
             </div>
         </div>
     `;
@@ -183,6 +187,44 @@ window.openTableMapModal = function() {
     modal.classList.remove('hidden', 'opacity-0');
     modal.classList.add('opacity-100');
     if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    await window.fetchRestaurantTablesLive();
+    window.subscribeRestaurantRealtime();
+};
+
+window.fetchRestaurantTablesLive = async function() {
+    const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
+    const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';
+
+    if (client) {
+        try {
+            const { data, error } = await client
+                .from('restaurant_tables')
+                .select('*')
+                .ilike('business_name', `%${bizName}%`);
+
+            if (!error && data && data.length > 0) {
+                window.restaurantState.tablesLayout = data.map(t => ({
+                    id: t.table_number || t.id,
+                    db_id: t.id,
+                    table_number: t.table_number || t.id,
+                    name: `Mesa ${t.table_number || t.id}`,
+                    capacity: t.capacity || 4,
+                    status: t.status || 'free',
+                    zone: t.zone || 'Sala Principal',
+                    current_bill: parseFloat(t.current_bill || 0)
+                }));
+            }
+        } catch (e) {
+            console.warn("Consulta Supabase mesas fallida, usando estado local:", e);
+        }
+    }
+
+    const grid = document.getElementById('tableGridContainer');
+    if (grid) {
+        grid.innerHTML = window.renderTableGridHTML();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
 };
 
 window.applyTableFilter = function() {
@@ -191,11 +233,7 @@ window.applyTableFilter = function() {
     window.restaurantState.filterGuests = parseInt(document.getElementById('resvGuestsInput')?.value || '2', 10);
     window.restaurantState.hasFiltered = true;
 
-    const grid = document.getElementById('tableGridContainer');
-    if (grid) {
-        grid.innerHTML = window.renderTableGridHTML();
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
+    window.fetchRestaurantTablesLive();
 };
 
 window.renderTableGridHTML = function() {
@@ -211,7 +249,10 @@ window.renderTableGridHTML = function() {
         <div class="grid grid-cols-2 gap-2.5 max-h-56 overflow-y-auto pr-1">
             ${window.restaurantState.tablesLayout.map(table => {
                 const isFree = table.status === 'free';
-                const hasBill = window.restaurantState.tableOrders[table.id] && window.restaurantState.tableOrders[table.id].total > 0;
+                const hasBill = (table.current_bill && table.current_bill > 0) || 
+                                (window.restaurantState.tableOrders[table.id] && window.restaurantState.tableOrders[table.id].total > 0);
+                const billTotal = table.current_bill || (window.restaurantState.tableOrders[table.id]?.total || 0);
+
                 return `
                     <div onclick="window.selectTableForAction(${table.id})" class="p-3 rounded-2xl border ${isFree ? 'border-emerald-200 bg-emerald-50/40 hover:border-emerald-500' : 'border-neutral-200 bg-neutral-50/70 hover:border-black'} cursor-pointer transition active:scale-95 space-y-1 text-left">
                         <div class="flex items-center justify-between">
@@ -220,7 +261,7 @@ window.renderTableGridHTML = function() {
                         </div>
                         <p class="text-[9px] text-neutral-400 font-mono">${table.zone} • ${table.capacity} pax</p>
                         ${isFree ? `<span class="inline-block text-[9px] font-bold text-emerald-700 bg-emerald-100/60 px-2 py-0.5 rounded-md">Reservar Mesa</span>` 
-                                : `<span class="inline-block text-[9px] font-bold text-neutral-600 bg-neutral-200/60 px-2 py-0.5 rounded-md">${hasBill ? `${window.restaurantState.tableOrders[table.id].total.toFixed(2)} € pend.` : 'Ocupada'}</span>`}
+                                : `<span class="inline-block text-[9px] font-bold text-neutral-600 bg-neutral-200/60 px-2 py-0.5 rounded-md">${hasBill ? `${billTotal.toFixed(2)} € pend.` : 'Ocupada'}</span>`}
                     </div>
                 `;
             }).join('')}
@@ -230,8 +271,8 @@ window.renderTableGridHTML = function() {
 
 // 4. ACCIÓN AL PULSAR UNA MESA (RESERVAR O PAGAR CUENTA POR QR)
 window.selectTableForAction = function(tableId) {
-    const table = window.restaurantState.tablesLayout.find(t => t.id === tableId);
-    const tableOrder = window.restaurantState.tableOrders[tableId];
+    const table = window.restaurantState.tablesLayout.find(t => t.id === tableId || t.table_number === tableId);
+    const tableOrder = window.restaurantState.tableOrders[tableId] || { items: [], total: table?.current_bill || 0 };
     window.restaurantState.selectedTable = tableId;
 
     const modalBody = document.getElementById('modalBody');
@@ -254,7 +295,7 @@ window.selectTableForAction = function(tableId) {
                 <div class="p-3.5 bg-neutral-50 rounded-2xl border border-neutral-200/70 space-y-1.5 text-xs text-neutral-700">
                     <p><strong>Fecha:</strong> ${window.restaurantState.filterDate}</p>
                     <p><strong>Hora:</strong> ${window.restaurantState.filterTime}</p>
-                    <p><strong>Capacidad:</strong> Hasta ${table.capacity} personas</p>
+                    <p><strong>Comensales:</strong> ${window.restaurantState.filterGuests} personas (Capacidad: ${table.capacity})</p>
                 </div>
 
                 <button onclick="window.confirmTableReservation(${tableId})" class="w-full py-3.5 bg-black text-white rounded-2xl text-xs font-bold active:scale-95 transition shadow-md">
@@ -268,6 +309,8 @@ window.selectTableForAction = function(tableId) {
 
     // Mesa ocupada con cuenta activa: Split Bill QR
     window.restaurantState.splitDinnersCount = 1;
+    const itemsList = tableOrder.items.length > 0 ? tableOrder.items : [{ name: 'Consumo en Sala / Mesa', qty: 1, price: tableOrder.total }];
+
     modalBody.innerHTML = `
         <div class="space-y-4 text-left">
             <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
@@ -281,7 +324,7 @@ window.selectTableForAction = function(tableId) {
             </div>
 
             <div class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                ${tableOrder.items.map(it => `
+                ${itemsList.map(it => `
                     <div class="flex justify-between items-center text-xs py-1 border-b border-neutral-100/60">
                         <span class="text-neutral-700">${it.qty}x ${it.name}</span>
                         <span class="font-mono font-bold text-black">${(it.price * it.qty).toFixed(2)} €</span>
@@ -320,11 +363,49 @@ window.selectTableForAction = function(tableId) {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 };
 
-window.confirmTableReservation = function(tableId) {
-    window.closeCustomModal();
-    if (window.showToast) {
-        window.showToast(`¡Reserva confirmada en Mesa ${tableId}!`, 'success');
+window.confirmTableReservation = async function(tableId) {
+    const table = window.restaurantState.tablesLayout.find(t => t.id === tableId || t.table_number === tableId);
+    const date = window.restaurantState.filterDate || new Date().toISOString().split('T')[0];
+    const time = window.restaurantState.filterTime || '14:00';
+    const guests = window.restaurantState.filterGuests || 2;
+    const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';
+    const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
+    const customerUser = (typeof currentUser !== 'undefined') ? currentUser : null;
+
+    // Actualización en Supabase
+    if (client && table?.db_id) {
+        try {
+            await client.from('restaurant_tables').update({ status: 'reserved' }).eq('id', table.db_id);
+        } catch (e) {
+            console.warn("Aviso actualizando mesa en Supabase:", e);
+        }
     }
+
+    // Actualización local optimista
+    if (table) table.status = 'reserved';
+
+    // Disparo de confirmación por email
+    if (window.emailService) {
+        const resvData = {
+            businessName: bizName,
+            clientName: customerUser?.user_metadata?.full_name || customerUser?.email || 'Cliente NetWish',
+            date: date,
+            time: `${time} (${guests} comensales)`,
+            items: [{ name: `Reserva Mesa ${tableId} (${table?.zone || 'Sala'})`, qty: 1, price: 0 }],
+            total: 0,
+            action: 'reserve'
+        };
+
+        if (customerUser?.email) {
+            window.emailService.sendClientReceipt(customerUser.email, resvData);
+        }
+
+        const bizEmail = window.appState?.activeBusinessEmail || 'contacto@netwish.es';
+        window.emailService.sendBusinessAlert(bizEmail, resvData);
+    }
+
+    window.closeCustomModal();
+    alert(`¡Reserva confirmada en Mesa ${tableId} para el ${date} a las ${time}! Comprobante digital enviado.`);
 };
 
 window.updateBillSplit = function(delta, total) {
@@ -343,8 +424,9 @@ window.updateBillSplit = function(delta, total) {
 };
 
 window.proceedWithTablePayment = function(tableId) {
-    const tableOrder = window.restaurantState.tableOrders[tableId];
-    if (!tableOrder) return;
+    const table = window.restaurantState.tablesLayout.find(t => t.id === tableId || t.table_number === tableId);
+    const tableOrder = window.restaurantState.tableOrders[tableId] || { total: table?.current_bill || 0 };
+    if (!tableOrder || tableOrder.total <= 0) return;
 
     const amountToPay = (tableOrder.total / window.restaurantState.splitDinnersCount).toFixed(2);
     window.closeCustomModal();
@@ -425,7 +507,6 @@ window.closeCustomModal = function() {
 
 // 6. DETECCIÓN AL ESCANEAR EL QR DE UNA MESA
 window.handleRestaurantTableQRScan = function(qrContent) {
-    // Ejemplo de formato de payload QR: "netwish:restaurant:Dani:mesa:3"
     if (qrContent && qrContent.includes('mesa:')) {
         const parts = qrContent.split(':');
         const tableId = parseInt(parts[parts.length - 1], 10);
@@ -435,4 +516,17 @@ window.handleRestaurantTableQRScan = function(qrContent) {
         }
     }
     return false;
+};
+
+// 7. SUSCRIPCIÓN EN TIEMPO REAL A SUPABASE
+window.subscribeRestaurantRealtime = function() {
+    const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
+    if (!client || window.restaurantState.realtimeSubscription) return;
+
+    window.restaurantState.realtimeSubscription = client
+        .channel('realtime:restaurant_tables')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'restaurant_tables' }, () => {
+            window.fetchRestaurantTablesLive();
+        })
+        .subscribe();
 };
