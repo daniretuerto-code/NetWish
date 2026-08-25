@@ -2,27 +2,18 @@
 
 window.restaurantState = {
     selectedTable: null,
-    splitDinnersCount: 1,
     filterDate: '',
     filterTime: '14:00',
     filterGuests: 2,
     hasFiltered: false,
     realtimeSubscription: null,
-    tableOrders: {
-        1: { items: [{ name: 'Chuletón de Ternera', price: 24.00, qty: 1 }, { name: 'Vino Ribera del Duero', price: 16.00, qty: 1 }], total: 40.00 },
-        2: { items: [{ name: 'Ensalada Burrata', price: 11.50, qty: 1 }, { name: 'Agua Mineral', price: 2.50, qty: 2 }], total: 16.50 },
-        3: { items: [], total: 0.00 },
-        4: { items: [{ name: 'Menú del Día', price: 14.50, qty: 3 }], total: 43.50 },
-        5: { items: [], total: 0.00 },
-        6: { items: [], total: 0.00 }
-    },
     tablesLayout: [
-        { id: 1, table_number: 1, name: 'Mesa 1', capacity: 4, status: 'occupied', zone: 'Sala Principal', current_bill: 40.00 },
-        { id: 2, table_number: 2, name: 'Mesa 2', capacity: 2, status: 'occupied', zone: 'Sala Principal', current_bill: 16.50 },
-        { id: 3, table_number: 3, name: 'Mesa 3', capacity: 4, status: 'free', zone: 'Terraza', current_bill: 0.00 },
-        { id: 4, table_number: 4, name: 'Mesa 4', capacity: 6, status: 'occupied', zone: 'Sala Principal', current_bill: 43.50 },
-        { id: 5, table_number: 5, name: 'Mesa 5', capacity: 2, status: 'free', zone: 'Terraza', current_bill: 0.00 },
-        { id: 6, table_number: 6, name: 'Mesa 6', capacity: 8, status: 'free', zone: 'Reservado', current_bill: 0.00 }
+        { id: 1, table_number: 1, name: 'Mesa 1', capacity: 4, status: 'occupied', zone: 'Sala Principal' },
+        { id: 2, table_number: 2, name: 'Mesa 2', capacity: 2, status: 'occupied', zone: 'Sala Principal' },
+        { id: 3, table_number: 3, name: 'Mesa 3', capacity: 4, status: 'free', zone: 'Terraza' },
+        { id: 4, table_number: 4, name: 'Mesa 4', capacity: 6, status: 'occupied', zone: 'Sala Principal' },
+        { id: 5, table_number: 5, name: 'Mesa 5', capacity: 2, status: 'free', zone: 'Terraza' },
+        { id: 6, table_number: 6, name: 'Mesa 6', capacity: 8, status: 'free', zone: 'Reservado' }
     ]
 };
 
@@ -32,7 +23,6 @@ window.renderRestaurantHub = function(container) {
 
     container.innerHTML = `
         <div class="space-y-4">
-            
             <!-- Acceso: Menú del Día -->
             <button onclick="window.openDailyMenuModal()" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-[0.98] transition group">
                 <div class="flex items-center space-x-3.5">
@@ -60,7 +50,7 @@ window.renderRestaurantHub = function(container) {
                     </div>
                     <div class="text-left">
                         <span class="block text-xs font-bold text-black tracking-tight">Mapa de Mesas & Reservas</span>
-                        <span class="block text-[10px] text-neutral-400 mt-0.5">Consulta disponibilidad en vivo o gestiona tu mesa</span>
+                        <span class="block text-[10px] text-neutral-400 mt-0.5">Consulta disponibilidad en vivo y reserva tu mesa</span>
                     </div>
                 </div>
                 <div class="w-7 h-7 rounded-full bg-white border border-neutral-200/60 flex items-center justify-center text-neutral-400 group-hover:text-black transition shrink-0 ml-2">
@@ -78,14 +68,13 @@ window.renderRestaurantHub = function(container) {
                     ${window.renderRestaurantMenuCards()}
                 </div>
             </div>
-
         </div>
     `;
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
 };
 
-// 2. RENDERIZADO DE PLATOS CON BOTONES REACTIVOS (+ / -)
+// 2. RENDERIZADO DE PLATOS CON BOTONES REACTIVOS
 window.renderRestaurantMenuCards = function() {
     const dishes = [
         { id: 'rest_1', name: 'Tabla de Quesos de Cerrato', desc: 'Selección de quesos curados palentinos con mermelada artesana', price: 14.00, tag: 'Entrante' },
@@ -138,15 +127,15 @@ window.openTableMapModal = async function() {
                 </button>
             </div>
 
-            <!-- Selector de Fecha, Turno y Personas -->
+            <!-- Selector de Fecha, Turno y Comensales -->
             <div class="p-3.5 bg-neutral-50 rounded-2xl border border-neutral-200/80 space-y-3">
                 <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Fecha</label>
+                        <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">FECHA</label>
                         <input type="date" id="resvDateInput" value="${window.restaurantState.filterDate}" min="${today}" class="w-full bg-white border border-neutral-200 rounded-xl px-2.5 py-2 text-xs text-black font-medium focus:border-black outline-none">
                     </div>
                     <div>
-                        <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Hora / Turno</label>
+                        <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">HORA / TURNO</label>
                         <select id="resvTimeInput" class="w-full bg-white border border-neutral-200 rounded-xl px-2.5 py-2 text-xs text-black font-medium focus:border-black outline-none">
                             <option value="13:30" ${window.restaurantState.filterTime === '13:30' ? 'selected' : ''}>13:30 (Comida)</option>
                             <option value="14:00" ${window.restaurantState.filterTime === '14:00' ? 'selected' : ''}>14:00 (Comida)</option>
@@ -160,7 +149,7 @@ window.openTableMapModal = async function() {
 
                 <div class="flex items-center justify-between pt-1">
                     <div class="flex items-center space-x-2">
-                        <label class="text-[9px] font-mono uppercase text-neutral-400">Comensales:</label>
+                        <label class="text-[9px] font-mono uppercase text-neutral-400">COMENSALES:</label>
                         <select id="resvGuestsInput" class="bg-white border border-neutral-200 rounded-xl px-2 py-1 text-xs text-black font-bold outline-none">
                             <option value="2" ${window.restaurantState.filterGuests == 2 ? 'selected' : ''}>2 pax</option>
                             <option value="4" ${window.restaurantState.filterGuests == 4 ? 'selected' : ''}>4 pax</option>
@@ -211,8 +200,7 @@ window.fetchRestaurantTablesLive = async function() {
                     name: `Mesa ${t.table_number || t.id}`,
                     capacity: t.capacity || 4,
                     status: t.status || 'free',
-                    zone: t.zone || 'Sala Principal',
-                    current_bill: parseFloat(t.current_bill || 0)
+                    zone: t.zone || 'Sala Principal'
                 }));
             }
         } catch (e) {
@@ -236,32 +224,36 @@ window.applyTableFilter = function() {
     window.fetchRestaurantTablesLive();
 };
 
+// 4. MAPA VISUAL DE MESAS (SOLO LIBRE / OCUPADA)
 window.renderTableGridHTML = function() {
     return `
         <div class="flex items-center justify-between text-[10px] font-mono text-neutral-500 pt-1">
             <span>Mesas para ${window.restaurantState.filterDate} (${window.restaurantState.filterTime})</span>
             <div class="flex items-center space-x-3">
-                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Libre</span>
-                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-neutral-300"></span>Ocupada</span>
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Libre</span>
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-neutral-300"></span>Ocupada</span>
             </div>
         </div>
 
         <div class="grid grid-cols-2 gap-2.5 max-h-56 overflow-y-auto pr-1">
             ${window.restaurantState.tablesLayout.map(table => {
                 const isFree = table.status === 'free';
-                const hasBill = (table.current_bill && table.current_bill > 0) || 
-                                (window.restaurantState.tableOrders[table.id] && window.restaurantState.tableOrders[table.id].total > 0);
-                const billTotal = table.current_bill || (window.restaurantState.tableOrders[table.id]?.total || 0);
-
                 return `
-                    <div onclick="window.selectTableForAction(${table.id})" class="p-3 rounded-2xl border ${isFree ? 'border-emerald-200 bg-emerald-50/40 hover:border-emerald-500' : 'border-neutral-200 bg-neutral-50/70 hover:border-black'} cursor-pointer transition active:scale-95 space-y-1 text-left">
+                    <div onclick="${isFree ? `window.selectTableForAction(${table.id})` : ''}" class="p-3 rounded-2xl border ${isFree ? 'border-emerald-200 bg-emerald-50/40 hover:border-emerald-500 cursor-pointer active:scale-95' : 'border-neutral-200/80 bg-neutral-50/70 cursor-not-allowed opacity-80'} transition space-y-1.5 text-left">
                         <div class="flex items-center justify-between">
                             <span class="text-xs font-bold text-black">${table.name}</span>
                             <span class="w-2 h-2 rounded-full ${isFree ? 'bg-emerald-500 animate-pulse' : 'bg-neutral-400'}"></span>
                         </div>
                         <p class="text-[9px] text-neutral-400 font-mono">${table.zone} • ${table.capacity} pax</p>
-                        ${isFree ? `<span class="inline-block text-[9px] font-bold text-emerald-700 bg-emerald-100/60 px-2 py-0.5 rounded-md">Reservar Mesa</span>` 
-                                : `<span class="inline-block text-[9px] font-bold text-neutral-600 bg-neutral-200/60 px-2 py-0.5 rounded-md">${hasBill ? `${billTotal.toFixed(2)} € pend.` : 'Ocupada'}</span>`}
+                        ${isFree ? `
+                            <button class="w-full py-1.5 bg-emerald-600 text-white rounded-xl text-[10px] font-bold shadow-sm transition">
+                                Reservar Mesa
+                            </button>
+                        ` : `
+                            <div class="py-1 px-2 rounded-lg bg-neutral-200/70 text-center">
+                                <span class="text-[9px] font-mono font-bold text-neutral-500">Ocupada</span>
+                            </div>
+                        `}
                     </div>
                 `;
             }).join('')}
@@ -269,93 +261,35 @@ window.renderTableGridHTML = function() {
     `;
 };
 
-// 4. ACCIÓN AL PULSAR UNA MESA (RESERVAR O PAGAR CUENTA POR QR)
+// 5. CONFIRMACIÓN DE RESERVA DE MESA
 window.selectTableForAction = function(tableId) {
     const table = window.restaurantState.tablesLayout.find(t => t.id === tableId || t.table_number === tableId);
-    const tableOrder = window.restaurantState.tableOrders[tableId] || { items: [], total: table?.current_bill || 0 };
-    window.restaurantState.selectedTable = tableId;
+    if (!table || table.status !== 'free') return;
 
+    window.restaurantState.selectedTable = tableId;
     const modalBody = document.getElementById('modalBody');
     if (!modalBody) return;
-
-    if (table && table.status === 'free') {
-        // Reservar mesa libre
-        modalBody.innerHTML = `
-            <div class="space-y-4 text-left">
-                <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
-                    <div>
-                        <span class="text-[9px] font-mono uppercase tracking-widest text-emerald-600">CONFIRMAR RESERVA</span>
-                        <h3 class="text-sm font-bold text-black">${table.name} (${table.zone})</h3>
-                    </div>
-                    <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500">
-                        <i data-lucide="x" class="w-4 h-4"></i>
-                    </button>
-                </div>
-
-                <div class="p-3.5 bg-neutral-50 rounded-2xl border border-neutral-200/70 space-y-1.5 text-xs text-neutral-700">
-                    <p><strong>Fecha:</strong> ${window.restaurantState.filterDate}</p>
-                    <p><strong>Hora:</strong> ${window.restaurantState.filterTime}</p>
-                    <p><strong>Comensales:</strong> ${window.restaurantState.filterGuests} personas (Capacidad: ${table.capacity})</p>
-                </div>
-
-                <button onclick="window.confirmTableReservation(${tableId})" class="w-full py-3.5 bg-black text-white rounded-2xl text-xs font-bold active:scale-95 transition shadow-md">
-                    Confirmar Reserva en ${table.name}
-                </button>
-            </div>
-        `;
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-        return;
-    }
-
-    // Mesa ocupada con cuenta activa: Split Bill QR
-    window.restaurantState.splitDinnersCount = 1;
-    const itemsList = tableOrder.items.length > 0 ? tableOrder.items : [{ name: 'Consumo en Sala / Mesa', qty: 1, price: tableOrder.total }];
 
     modalBody.innerHTML = `
         <div class="space-y-4 text-left">
             <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
                 <div>
-                    <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">QR MESA ACTIVA</span>
-                    <h3 class="text-sm font-bold text-black">Mesa ${tableId} — Cuenta en Directo</h3>
+                    <span class="text-[9px] font-mono uppercase tracking-widest text-emerald-600 font-bold">CONFIRMAR RESERVA</span>
+                    <h3 class="text-sm font-bold text-black">${table.name} (${table.zone})</h3>
                 </div>
                 <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
 
-            <div class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                ${itemsList.map(it => `
-                    <div class="flex justify-between items-center text-xs py-1 border-b border-neutral-100/60">
-                        <span class="text-neutral-700">${it.qty}x ${it.name}</span>
-                        <span class="font-mono font-bold text-black">${(it.price * it.qty).toFixed(2)} €</span>
-                    </div>
-                `).join('')}
+            <div class="p-3.5 bg-neutral-50 rounded-2xl border border-neutral-200/70 space-y-1.5 text-xs text-neutral-700">
+                <p><strong>Fecha:</strong> ${window.restaurantState.filterDate}</p>
+                <p><strong>Hora:</strong> ${window.restaurantState.filterTime}</p>
+                <p><strong>Comensales:</strong> ${window.restaurantState.filterGuests} personas (Capacidad: ${table.capacity})</p>
             </div>
 
-            <div class="p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200/80 space-y-2">
-                <div class="flex justify-between items-center text-xs">
-                    <span class="text-neutral-500 font-medium">Total de la mesa:</span>
-                    <span class="font-extrabold font-mono text-base text-black">${tableOrder.total.toFixed(2)} €</span>
-                </div>
-
-                <div class="pt-2 border-t border-neutral-200/60 flex items-center justify-between">
-                    <span class="text-[10px] text-neutral-500 font-mono">Dividir entre comensales:</span>
-                    <div class="flex items-center space-x-2">
-                        <button onclick="window.updateBillSplit(-1, ${tableOrder.total})" class="w-6 h-6 rounded-lg bg-white border border-neutral-200 text-xs font-bold text-black">-</button>
-                        <span class="font-mono font-extrabold text-xs" id="splitCountLabel">1</span>
-                        <button onclick="window.updateBillSplit(1, ${tableOrder.total})" class="w-6 h-6 rounded-lg bg-black text-white text-xs font-bold">+</button>
-                    </div>
-                </div>
-
-                <div class="flex justify-between items-center text-xs pt-1">
-                    <span class="text-xs font-bold text-neutral-700">Tu parte a pagar:</span>
-                    <span class="font-mono font-extrabold text-sm text-emerald-600" id="splitIndividualAmount">${tableOrder.total.toFixed(2)} €</span>
-                </div>
-            </div>
-
-            <button onclick="window.proceedWithTablePayment(${tableId})" class="w-full py-3.5 bg-black text-white rounded-2xl text-xs font-bold tracking-wide active:scale-95 transition shadow-md flex items-center justify-center space-x-2">
-                <i data-lucide="credit-card" class="w-4 h-4"></i>
-                <span>Pagar Mi Parte con NetWish</span>
+            <button onclick="window.confirmTableReservation(${tableId})" class="w-full py-3.5 bg-black text-white rounded-2xl text-xs font-bold active:scale-95 transition shadow-md">
+                Confirmar Reserva en ${table.name}
             </button>
         </div>
     `;
@@ -372,19 +306,19 @@ window.confirmTableReservation = async function(tableId) {
     const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
     const customerUser = (typeof currentUser !== 'undefined') ? currentUser : null;
 
-    // Actualización en Supabase
+    // Actualización de estado en Supabase
     if (client && table?.db_id) {
         try {
-            await client.from('restaurant_tables').update({ status: 'reserved' }).eq('id', table.db_id);
+            await client.from('restaurant_tables').update({ status: 'occupied' }).eq('id', table.db_id);
         } catch (e) {
             console.warn("Aviso actualizando mesa en Supabase:", e);
         }
     }
 
-    // Actualización local optimista
-    if (table) table.status = 'reserved';
+    // Actualización optimista en memoria
+    if (table) table.status = 'occupied';
 
-    // Disparo de confirmación por email
+    // Disparo automático de emails (Cliente + Negocio)
     if (window.emailService) {
         const resvData = {
             businessName: bizName,
@@ -405,46 +339,10 @@ window.confirmTableReservation = async function(tableId) {
     }
 
     window.closeCustomModal();
-    alert(`¡Reserva confirmada en Mesa ${tableId} para el ${date} a las ${time}! Comprobante digital enviado.`);
+    alert(`¡Mesa ${tableId} reservada con éxito para el ${date} a las ${time}! Justificante digital emitido.`);
 };
 
-window.updateBillSplit = function(delta, total) {
-    let current = window.restaurantState.splitDinnersCount + delta;
-    if (current < 1) current = 1;
-    if (current > 12) current = 12;
-
-    window.restaurantState.splitDinnersCount = current;
-    const splitAmount = (total / current).toFixed(2);
-
-    const countEl = document.getElementById('splitCountLabel');
-    const amountEl = document.getElementById('splitIndividualAmount');
-
-    if (countEl) countEl.innerText = current;
-    if (amountEl) amountEl.innerText = `${splitAmount} €`;
-};
-
-window.proceedWithTablePayment = function(tableId) {
-    const table = window.restaurantState.tablesLayout.find(t => t.id === tableId || t.table_number === tableId);
-    const tableOrder = window.restaurantState.tableOrders[tableId] || { total: table?.current_bill || 0 };
-    if (!tableOrder || tableOrder.total <= 0) return;
-
-    const amountToPay = (tableOrder.total / window.restaurantState.splitDinnersCount).toFixed(2);
-    window.closeCustomModal();
-
-    window.rawAmountString = Math.round(parseFloat(amountToPay) * 100).toString();
-    if (typeof window.updateAmountDisplay === 'function') {
-        window.updateAmountDisplay();
-    }
-
-    const payeeNameEl = document.getElementById('payeeNameDisplay');
-    if (payeeNameEl) payeeNameEl.innerText = `${window.appState?.activeBusinessName || 'Restaurante'} (Mesa ${tableId})`;
-
-    if (typeof switchTab === 'function') {
-        switchTab('payment');
-    }
-};
-
-// 5. MODAL DEL MENÚ DEL DÍA
+// 6. MODAL DEL MENÚ DEL DÍA
 window.openDailyMenuModal = function() {
     const modal = document.getElementById('customModal');
     const modalBody = document.getElementById('modalBody');
@@ -503,19 +401,6 @@ window.closeCustomModal = function() {
         modal.classList.add('opacity-0');
         setTimeout(() => modal.classList.add('hidden'), 200);
     }
-};
-
-// 6. DETECCIÓN AL ESCANEAR EL QR DE UNA MESA
-window.handleRestaurantTableQRScan = function(qrContent) {
-    if (qrContent && qrContent.includes('mesa:')) {
-        const parts = qrContent.split(':');
-        const tableId = parseInt(parts[parts.length - 1], 10);
-        if (!isNaN(tableId)) {
-            window.selectTableForAction(tableId);
-            return true;
-        }
-    }
-    return false;
 };
 
 // 7. SUSCRIPCIÓN EN TIEMPO REAL A SUPABASE
