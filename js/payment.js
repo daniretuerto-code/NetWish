@@ -127,24 +127,28 @@ window.executeFullPayment = async function(isReservation = false) {
 
         const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
 
-        // 1. Obtener el email del comercio registrado en Supabase
+        // 1. Obtener notification_email exacto del comercio desde Supabase
         let targetBizEmail = (window.appState && window.appState.activeBusinessEmail) || '';
         
-        if (client && (!targetBizEmail || targetBizEmail === 'contacto@netwish.es')) {
+        if (client) {
             try {
                 const cleanName = tBusiness.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                const { data: bizData } = await client
+                const { data: bizList } = await client
                     .from('businesses')
-                    .select('email, contact_email, name')
-                    .ilike('name', `%${cleanName}%`)
-                    .limit(1)
-                    .maybeSingle();
+                    .select('name, notification_email');
 
-                if (bizData && (bizData.email || bizData.contact_email)) {
-                    targetBizEmail = bizData.email || bizData.contact_email;
+                if (bizList && bizList.length > 0) {
+                    const match = bizList.find(b => {
+                        const bName = (b.name || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        return bName.includes(cleanName) || cleanName.includes(bName);
+                    });
+
+                    if (match && match.notification_email) {
+                        targetBizEmail = match.notification_email;
+                    }
                 }
             } catch (errBiz) {
-                console.warn("Consulta alternativa de email del comercio fallida:", errBiz);
+                console.warn("Aviso obteniendo notification_email:", errBiz);
             }
         }
 
@@ -169,7 +173,7 @@ window.executeFullPayment = async function(isReservation = false) {
             }
         }
 
-        // 3. Envío transaccional dual (Cliente + Negocio)
+        // 3. Disparo dual garantizado (Cliente + Negocio)
         if (window.emailService) {
             const structuredOrder = {
                 businessName: tBusiness,
