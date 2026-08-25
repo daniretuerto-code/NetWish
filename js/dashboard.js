@@ -333,7 +333,6 @@ async function openRestaurantConfigModal() {
                     <span class="text-[10px] font-mono text-neutral-500 font-bold" id="tablesCountIndicator">${tempRestaurantTables.length} mesas</span>
                 </div>
 
-                <!-- Formulario de añadir mesa -->
                 <div class="grid grid-cols-3 gap-1.5 p-2.5 bg-neutral-50 rounded-2xl border border-neutral-200/60">
                     <input type="number" id="newTableNumber" placeholder="Nº Mesa" class="bg-white border border-neutral-200 rounded-xl px-2 py-1.5 text-xs font-mono focus:border-black outline-none">
                     <select id="newTableZone" class="bg-white border border-neutral-200 rounded-xl px-2 py-1.5 text-xs font-medium focus:border-black outline-none">
@@ -468,7 +467,7 @@ async function saveRestaurantSettingsToDB() {
 }
 
 // ==========================================
-// 6. GESTOR E IMPRESIÓN DE QR POR MESA
+// 6. GESTOR E IMPRESIÓN OFICIAL DE QR POR MESA
 // ==========================================
 async function openTablesQRManagerModal() {
     if (!currentBusiness) return;
@@ -553,7 +552,7 @@ function showSingleTableQRModal(tableNumber, encodedZone, capacity) {
 
     modalBody.innerHTML = `
         <div class="space-y-4 text-center">
-            <!-- Ficha física de la mesa -->
+            <!-- Ficha de la mesa centrada -->
             <div id="printableTableQRCard" class="p-6 bg-white border border-neutral-200/80 rounded-[32px] shadow-sm space-y-4 text-center">
                 <div>
                     <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 font-bold block">NETWISH • ${bizName.toUpperCase()}</span>
@@ -592,8 +591,8 @@ function showSingleTableQRModal(tableNumber, encodedZone, capacity) {
             qrContainer.innerHTML = '';
             new QRCode(qrContainer, {
                 text: qrPayload,
-                width: 160,
-                height: 160,
+                width: 170,
+                height: 170,
                 colorDark: "#000000",
                 colorLight: "#ffffff",
                 correctLevel: QRCode.CorrectLevel.H
@@ -602,23 +601,130 @@ function showSingleTableQRModal(tableNumber, encodedZone, capacity) {
     }, 50);
 }
 
+// Disparador de impresión en ventana limpia aislada (100% libre de cortes o marcos de móvil)
 function printTableQRCard() {
     const card = document.getElementById('printableTableQRCard');
     if (!card) return;
 
-    const oldContainer = document.getElementById('netwishPrintContainer');
-    if (oldContainer) oldContainer.remove();
+    const qrImg = card.querySelector('img') || card.querySelector('canvas');
+    let qrSrc = '';
+    if (qrImg) {
+        if (qrImg.tagName.toLowerCase() === 'img') {
+            qrSrc = qrImg.src;
+        } else if (qrImg.tagName.toLowerCase() === 'canvas') {
+            qrSrc = qrImg.toDataURL();
+        }
+    }
 
-    const printContainer = document.createElement('div');
-    printContainer.id = 'netwishPrintContainer';
-    printContainer.innerHTML = card.innerHTML;
-    document.body.appendChild(printContainer);
+    const tableTitle = card.querySelector('h2')?.innerText || 'MESA';
+    const subTitle = card.querySelector('span.font-mono')?.innerText || '';
+    const bizName = currentBusiness?.name || 'NetWish';
 
-    window.print();
+    const printWindow = window.open('', '_blank', 'width=600,height=700');
+    if (!printWindow) {
+        window.print();
+        return;
+    }
 
-    setTimeout(() => {
-        printContainer.remove();
-    }, 500);
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Imprimir QR - ${tableTitle}</title>
+            <style>
+                @page { margin: 0; size: auto; }
+                body {
+                    margin: 0;
+                    padding: 40px;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                    background: #ffffff;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                    box-sizing: border-box;
+                }
+                .card {
+                    width: 300px;
+                    padding: 32px 24px;
+                    border: 3px solid #000000;
+                    border-radius: 28px;
+                    text-align: center;
+                    background: #ffffff;
+                    box-sizing: border-box;
+                }
+                .header-tag {
+                    font-size: 10px;
+                    font-family: monospace;
+                    font-weight: 800;
+                    letter-spacing: 2px;
+                    text-transform: uppercase;
+                    color: #000000;
+                    margin-bottom: 6px;
+                }
+                h1 {
+                    font-size: 28px;
+                    font-weight: 900;
+                    margin: 0 0 4px 0;
+                    color: #000000;
+                    letter-spacing: -0.5px;
+                }
+                .zone {
+                    font-size: 11px;
+                    color: #555555;
+                    font-family: monospace;
+                    margin-bottom: 20px;
+                }
+                .qr-box {
+                    display: inline-block;
+                    padding: 12px;
+                    border: 2px solid #000000;
+                    border-radius: 20px;
+                    margin-bottom: 20px;
+                    background: #ffffff;
+                }
+                .qr-box img {
+                    display: block;
+                    width: 180px;
+                    height: 180px;
+                }
+                .footer-title {
+                    font-size: 12px;
+                    font-weight: 800;
+                    color: #000000;
+                    margin: 0 0 2px 0;
+                }
+                .footer-sub {
+                    font-size: 9px;
+                    font-family: monospace;
+                    color: #666666;
+                    margin: 0;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="header-tag">NETWISH • ${bizName.toUpperCase()}</div>
+                <h1>${tableTitle}</h1>
+                <div class="zone">${subTitle}</div>
+                <div class="qr-box">
+                    <img src="${qrSrc}" alt="QR Mesa" />
+                </div>
+                <div class="footer-title">Escanea para Carta & Pedidos</div>
+                <div class="footer-sub">Sin esperas desde tu móvil</div>
+            </div>
+            <script>
+                window.onload = function() {
+                    window.focus();
+                    window.print();
+                    window.close();
+                };
+            <\/script>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
 }
 
 // ==========================================
