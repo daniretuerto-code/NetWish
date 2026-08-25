@@ -1,20 +1,26 @@
 // js/restaurant.js
 
 window.restaurantState = {
-    selectedTable: null,
-    filterDate: '',
-    filterTime: '14:00',
-    filterGuests: 2,
-    hasFiltered: false,
-    realtimeSubscription: null,
-    // Todas las mesas inicializadas como 'free' (libres) por defecto
-    tablesLayout: [
-        { id: 1, table_number: 1, name: 'Mesa 1', capacity: 4, status: 'free', zone: 'Sala Principal' },
-        { id: 2, table_number: 2, name: 'Mesa 2', capacity: 2, status: 'free', zone: 'Sala Principal' },
-        { id: 3, table_number: 3, name: 'Mesa 3', capacity: 4, status: 'free', zone: 'Terraza' },
-        { id: 4, table_number: 4, name: 'Mesa 4', capacity: 6, status: 'free', zone: 'Sala Principal' },
-        { id: 5, table_number: 5, name: 'Mesa 5', capacity: 2, status: 'free', zone: 'Terraza' },
-        { id: 6, table_number: 6, name: 'Mesa 6', capacity: 8, status: 'free', zone: 'Reservado' }
+    selectedDate: '',
+    selectedTime: '13:30',
+    selectedGuests: 2,
+    selectedZone: 'Sala Principal',
+    allocatedTable: null,
+    
+    // Inventario físico de mesas del local
+    tablesInventory: [
+        { id: 1, table_number: 1, capacity: 2, zone: 'Sala Principal' },
+        { id: 2, table_number: 2, capacity: 2, zone: 'Sala Principal' },
+        { id: 3, table_number: 3, capacity: 4, zone: 'Sala Principal' },
+        { id: 4, table_number: 4, capacity: 4, zone: 'Terraza' },
+        { id: 5, table_number: 5, capacity: 6, zone: 'Sala Principal' },
+        { id: 6, table_number: 6, capacity: 8, zone: 'Sala Principal' }
+    ],
+
+    // Horarios disponibles (Comidas y Cenas)
+    availableTimeSlots: [
+        '13:00', '13:30', '14:00', '14:30', '15:15', '15:30',
+        '20:30', '21:00', '21:30', '22:00', '22:45', '23:00'
     ]
 };
 
@@ -24,6 +30,7 @@ window.renderRestaurantHub = function(container) {
 
     container.innerHTML = `
         <div class="space-y-4">
+            
             <!-- Acceso: Menú del Día -->
             <button onclick="window.openDailyMenuModal()" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-[0.98] transition group">
                 <div class="flex items-center space-x-3.5">
@@ -43,15 +50,18 @@ window.renderRestaurantHub = function(container) {
                 </div>
             </button>
 
-            <!-- Acceso: Mapa de Mesas y Reservas -->
-            <button onclick="window.openTableMapModal()" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-[0.98] transition group">
+            <!-- Acceso: Motor de Reservas Inteligente -->
+            <button onclick="window.openModernReservationModal()" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-[0.98] transition group">
                 <div class="flex items-center space-x-3.5">
                     <div class="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center shadow-md shrink-0">
-                        <i data-lucide="layout-grid" class="w-5 h-5 text-white"></i>
+                        <i data-lucide="calendar-check" class="w-5 h-5 text-white"></i>
                     </div>
                     <div class="text-left">
-                        <span class="block text-xs font-bold text-black tracking-tight">Mapa de Mesas & Reservas</span>
-                        <span class="block text-[10px] text-neutral-400 mt-0.5">Consulta disponibilidad en vivo y reserva tu mesa</span>
+                        <div class="flex items-center space-x-2">
+                            <span class="block text-xs font-bold text-black tracking-tight">Reservar Mesa</span>
+                            <span class="text-[9px] bg-black text-white font-mono px-2 py-0.5 rounded-full">En Tiempo Real</span>
+                        </div>
+                        <span class="block text-[10px] text-neutral-400 mt-0.5">Asignación automática y confirmación directa</span>
                     </div>
                 </div>
                 <div class="w-7 h-7 rounded-full bg-white border border-neutral-200/60 flex items-center justify-center text-neutral-400 group-hover:text-black transition shrink-0 ml-2">
@@ -69,13 +79,14 @@ window.renderRestaurantHub = function(container) {
                     ${window.renderRestaurantMenuCards()}
                 </div>
             </div>
+
         </div>
     `;
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
 };
 
-// 2. RENDERIZADO DE PLATOS CON BOTONES REACTIVOS
+// 2. RENDERIZADO DE PLATOS CON BOTONES REACTIVOS (+ / -)
 window.renderRestaurantMenuCards = function() {
     const dishes = [
         { id: 'rest_1', name: 'Tabla de Quesos de Cerrato', desc: 'Selección de quesos curados palentinos con mermelada artesana', price: 14.00, tag: 'Entrante' },
@@ -107,70 +118,74 @@ window.renderRestaurantMenuCards = function() {
     }).join('');
 };
 
-// 3. MAPA DE MESAS CON FILTRO
-window.openTableMapModal = async function() {
+// 3. MOTOR DE RESERVAS MODERNO
+window.openModernReservationModal = async function() {
     const modal = document.getElementById('customModal');
     const modalBody = document.getElementById('modalBody');
     if (!modal || !modalBody) return;
 
     const today = new Date().toISOString().split('T')[0];
-    if (!window.restaurantState.filterDate) window.restaurantState.filterDate = today;
+    if (!window.restaurantState.selectedDate) window.restaurantState.selectedDate = today;
 
     modalBody.innerHTML = `
         <div class="space-y-4 text-left">
             <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
                 <div>
-                    <h3 class="text-sm font-bold text-black">Reserva & Mapa de Mesas</h3>
-                    <p class="text-[10px] text-neutral-400">Selecciona franja horaria para ver disponibilidad</p>
+                    <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">SISTEMA DE RESERVAS</span>
+                    <h3 class="text-sm font-bold text-black">Selecciona Día y Hora</h3>
                 </div>
                 <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
 
-            <!-- Selector de Fecha, Turno y Comensales -->
-            <div class="p-3.5 bg-neutral-50 rounded-2xl border border-neutral-200/80 space-y-3">
+            <!-- Paso 1: Comensales, Fecha y Zona -->
+            <div class="space-y-3">
+                <div>
+                    <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Nº Comensales</label>
+                    <div class="grid grid-cols-5 gap-1.5" id="guestsBtnGrid">
+                        ${[2, 3, 4, 6, 8].map(num => `
+                            <button onclick="window.selectReservationGuests(${num})" id="guest-opt-${num}" class="py-2.5 rounded-xl border text-xs font-bold transition ${window.restaurantState.selectedGuests === num ? 'bg-black text-white border-black shadow-sm' : 'bg-white text-black border-neutral-200/80 hover:bg-neutral-50'}">
+                                ${num} pax
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">FECHA</label>
-                        <input type="date" id="resvDateInput" value="${window.restaurantState.filterDate}" min="${today}" class="w-full bg-white border border-neutral-200 rounded-xl px-2.5 py-2 text-xs text-black font-medium focus:border-black outline-none">
+                        <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Fecha</label>
+                        <input type="date" id="resvDateInput" value="${window.restaurantState.selectedDate}" min="${today}" onchange="window.updateReservationDate(this.value)" class="w-full bg-white border border-neutral-200 rounded-xl px-2.5 py-2 text-xs text-black font-medium focus:border-black outline-none">
                     </div>
                     <div>
-                        <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">HORA / TURNO</label>
-                        <select id="resvTimeInput" class="w-full bg-white border border-neutral-200 rounded-xl px-2.5 py-2 text-xs text-black font-medium focus:border-black outline-none">
-                            <option value="13:30" ${window.restaurantState.filterTime === '13:30' ? 'selected' : ''}>13:30 (Comida)</option>
-                            <option value="14:00" ${window.restaurantState.filterTime === '14:00' ? 'selected' : ''}>14:00 (Comida)</option>
-                            <option value="14:30" ${window.restaurantState.filterTime === '14:30' ? 'selected' : ''}>14:30 (Comida)</option>
-                            <option value="21:00" ${window.restaurantState.filterTime === '21:00' ? 'selected' : ''}>21:00 (Cena)</option>
-                            <option value="21:30" ${window.restaurantState.filterTime === '21:30' ? 'selected' : ''}>21:30 (Cena)</option>
-                            <option value="22:00" ${window.restaurantState.filterTime === '22:00' ? 'selected' : ''}>22:00 (Cena)</option>
+                        <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Zona</label>
+                        <select id="resvZoneInput" onchange="window.updateReservationZone(this.value)" class="w-full bg-white border border-neutral-200 rounded-xl px-2 py-2 text-xs text-black font-medium focus:border-black outline-none">
+                            <option value="Sala Principal" ${window.restaurantState.selectedZone === 'Sala Principal' ? 'selected' : ''}>Sala Principal</option>
+                            <option value="Terraza" ${window.restaurantState.selectedZone === 'Terraza' ? 'selected' : ''}>Terraza</option>
                         </select>
                     </div>
                 </div>
 
-                <div class="flex items-center justify-between pt-1">
-                    <div class="flex items-center space-x-2">
-                        <label class="text-[9px] font-mono uppercase text-neutral-400">COMENSALES:</label>
-                        <select id="resvGuestsInput" class="bg-white border border-neutral-200 rounded-xl px-2 py-1 text-xs text-black font-bold outline-none">
-                            <option value="2" ${window.restaurantState.filterGuests == 2 ? 'selected' : ''}>2 pax</option>
-                            <option value="4" ${window.restaurantState.filterGuests == 4 ? 'selected' : ''}>4 pax</option>
-                            <option value="6" ${window.restaurantState.filterGuests == 6 ? 'selected' : ''}>6 pax</option>
-                            <option value="8" ${window.restaurantState.filterGuests == 8 ? 'selected' : ''}>8 pax</option>
-                        </select>
+                <!-- Paso 2: Franjas Horarias Dinámicas -->
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label class="text-[9px] font-mono uppercase text-neutral-400 block">Horas Disponibles</label>
+                        <span class="text-[9px] font-mono text-neutral-400" id="durationHint">Estancia: 90 min</span>
                     </div>
-                    <button onclick="window.applyTableFilter()" class="px-4 py-2 bg-black text-white text-[11px] font-bold rounded-xl active:scale-95 transition shadow-sm">
-                        Buscar Mesas
-                    </button>
+                    <div class="grid grid-cols-3 gap-2" id="timeSlotsGrid">
+                        <div class="col-span-3 py-4 text-center text-xs text-neutral-400">
+                            <i data-lucide="loader-2" class="w-4 h-4 mx-auto animate-spin mb-1"></i>
+                            Calculando disponibilidad...
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Contenedor del Mapa de Mesas -->
-            <div id="tableGridContainer" class="space-y-2">
-                <div class="py-8 text-center text-xs text-neutral-400">
-                    <i data-lucide="loader-2" class="w-5 h-5 mx-auto animate-spin mb-2"></i>
-                    Sincronizando mesas en vivo...
-                </div>
-            </div>
+            <!-- Paso 3: Confirmación de Reserva -->
+            <button onclick="window.processSmartReservation()" id="btnConfirmReservation" class="w-full py-4 bg-black text-white rounded-2xl text-xs font-bold tracking-wide active:scale-95 transition shadow-lg flex items-center justify-center space-x-2">
+                <i data-lucide="check" class="w-4 h-4"></i>
+                <span id="btnConfirmReservationText">Confirmar Reserva a las ${window.restaurantState.selectedTime}</span>
+            </button>
         </div>
     `;
 
@@ -178,172 +193,259 @@ window.openTableMapModal = async function() {
     modal.classList.add('opacity-100');
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
-    await window.fetchRestaurantTablesLive();
-    window.subscribeRestaurantRealtime();
+    await window.recalculateSlotsAvailability();
 };
 
-window.fetchRestaurantTablesLive = async function() {
+// 4. ALGORITMO DE ASIGNACIÓN ÓPTIMA Y CÁLCULO DE SOLAPAMIENTO
+window.recalculateSlotsAvailability = async function() {
+    const slotsGrid = document.getElementById('timeSlotsGrid');
+    if (!slotsGrid) return;
+
+    const date = window.restaurantState.selectedDate;
+    const guests = window.restaurantState.selectedGuests;
+    const zone = window.restaurantState.selectedZone;
+    const durationMinutes = window.getEstimatedTurnDuration(guests);
+    
+    const durationHint = document.getElementById('durationHint');
+    if (durationHint) durationHint.innerText = `Estancia: ${durationMinutes} min`;
+
     const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
     const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';
+    
+    let existingReservations = [];
 
     if (client) {
         try {
-            const { data, error } = await client
-                .from('restaurant_tables')
-                .select('*')
-                .ilike('business_name', `%${bizName}%`);
+            const { data } = await client
+                .from('orders')
+                .select('items, time, date')
+                .ilike('business_name', `%${bizName}%`)
+                .eq('date', date);
 
-            if (!error && data && data.length > 0) {
-                window.restaurantState.tablesLayout = data.map(t => ({
-                    id: t.table_number || t.id,
-                    db_id: t.id,
-                    table_number: t.table_number || t.id,
-                    name: `Mesa ${t.table_number || t.id}`,
-                    capacity: t.capacity || 4,
-                    status: t.status || 'free',
-                    zone: t.zone || 'Sala Principal'
-                }));
+            if (data) {
+                existingReservations = data.map(row => {
+                    const timeMatch = (row.time || '').match(/(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
+                    const tableMatch = (row.items || '').match(/Mesa\s+(\d+)/i);
+                    return {
+                        startTime: timeMatch ? timeMatch[1] : (row.time?.substring(0, 5) || '13:30'),
+                        endTime: timeMatch ? timeMatch[2] : null,
+                        tableNumber: tableMatch ? parseInt(tableMatch[1], 10) : null
+                    };
+                });
             }
         } catch (e) {
-            console.warn("Consulta Supabase mesas fallida:", e);
+            console.warn("Aviso consultando reservas previas:", e);
         }
     }
 
-    const grid = document.getElementById('tableGridContainer');
-    if (grid) {
-        grid.innerHTML = window.renderTableGridHTML();
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
-};
+    // Comprobamos disponibilidad para cada hora
+    let validSlotsHTML = '';
+    let isCurrentTimeStillAvailable = false;
 
-window.applyTableFilter = function() {
-    window.restaurantState.filterDate = document.getElementById('resvDateInput')?.value || '';
-    window.restaurantState.filterTime = document.getElementById('resvTimeInput')?.value || '14:00';
-    window.restaurantState.filterGuests = parseInt(document.getElementById('resvGuestsInput')?.value || '2', 10);
-    window.restaurantState.hasFiltered = true;
+    window.restaurantState.availableTimeSlots.forEach(timeSlot => {
+        const slotStartMin = window.timeToMinutes(timeSlot);
+        const slotEndMin = slotStartMin + durationMinutes;
 
-    window.fetchRestaurantTablesLive();
-};
+        // Buscar una mesa que cumpla: zona + capacidad + sin solapamiento
+        const candidateTables = window.restaurantState.tablesInventory
+            .filter(t => t.zone === zone && t.capacity >= guests)
+            .sort((a, b) => a.capacity - b.capacity); // Best-fit (menor capacidad suficiente)
 
-// 4. MAPA VISUAL DE MESAS (TODAS VERDES / LIBRES SI NO HAY RESERVA)
-window.renderTableGridHTML = function() {
-    return `
-        <div class="flex items-center justify-between text-[10px] font-mono text-neutral-500 pt-1">
-            <span>Mesas para ${window.restaurantState.filterDate} (${window.restaurantState.filterTime})</span>
-            <div class="flex items-center space-x-3">
-                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Libre</span>
-                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-neutral-300"></span>Ocupada</span>
-            </div>
-        </div>
+        let assignedTable = null;
 
-        <div class="grid grid-cols-2 gap-2.5 max-h-56 overflow-y-auto pr-1">
-            ${window.restaurantState.tablesLayout.map(table => {
-                const isFree = table.status === 'free';
-                return `
-                    <div onclick="${isFree ? `window.selectTableForAction(${table.id})` : ''}" class="p-3 rounded-2xl border ${isFree ? 'border-emerald-200 bg-emerald-50/40 hover:border-emerald-500 cursor-pointer active:scale-95' : 'border-neutral-200/80 bg-neutral-50/70 cursor-not-allowed opacity-80'} transition space-y-1.5 text-left">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold text-black">${table.name}</span>
-                            <span class="w-2 h-2 rounded-full ${isFree ? 'bg-emerald-500 animate-pulse' : 'bg-neutral-400'}"></span>
-                        </div>
-                        <p class="text-[9px] text-neutral-400 font-mono">${table.zone} • ${table.capacity} pax</p>
-                        ${isFree ? `
-                            <button class="w-full py-1.5 bg-emerald-600 text-white rounded-xl text-[10px] font-bold shadow-sm transition">
-                                Reservar Mesa
-                            </button>
-                        ` : `
-                            <div class="py-1 px-2 rounded-lg bg-neutral-200/70 text-center">
-                                <span class="text-[9px] font-mono font-bold text-neutral-500">Ocupada</span>
-                            </div>
-                        `}
-                    </div>
-                `;
-            }).join('')}
-        </div>
-    `;
-};
+        for (let table of candidateTables) {
+            const hasOverlap = existingReservations.some(res => {
+                if (res.tableNumber !== table.table_number) return false;
+                
+                const resStartMin = window.timeToMinutes(res.startTime);
+                const resEndMin = res.endTime ? window.timeToMinutes(res.endTime) : (resStartMin + 90);
 
-// 5. CONFIRMACIÓN DE RESERVA DE MESA
-window.selectTableForAction = function(tableId) {
-    const table = window.restaurantState.tablesLayout.find(t => t.id === tableId || t.table_number === tableId);
-    if (!table || table.status !== 'free') return;
+                // Condición de solapamiento de intervalos: (StartA < EndB) y (EndA > StartB)
+                return (slotStartMin < resEndMin && slotEndMin > resStartMin);
+            });
 
-    window.restaurantState.selectedTable = tableId;
-    const modalBody = document.getElementById('modalBody');
-    if (!modalBody) return;
+            if (!hasOverlap) {
+                assignedTable = table;
+                break;
+            }
+        }
 
-    modalBody.innerHTML = `
-        <div class="space-y-4 text-left">
-            <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
-                <div>
-                    <span class="text-[9px] font-mono uppercase tracking-widest text-emerald-600 font-bold">CONFIRMAR RESERVA</span>
-                    <h3 class="text-sm font-bold text-black">${table.name} (${table.zone})</h3>
-                </div>
-                <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black">
-                    <i data-lucide="x" class="w-4 h-4"></i>
+        const isAvailable = assignedTable !== null;
+        const isSelected = window.restaurantState.selectedTime === timeSlot;
+
+        if (isSelected && isAvailable) {
+            isCurrentTimeStillAvailable = true;
+            window.restaurantState.allocatedTable = assignedTable;
+        }
+
+        if (isAvailable) {
+            validSlotsHTML += `
+                <button onclick="window.selectReservationTime('${timeSlot}', ${assignedTable.table_number})" id="slot-btn-${timeSlot.replace(':', '')}" class="py-2 px-1 rounded-xl border text-xs font-mono font-bold transition ${isSelected ? 'bg-black text-white border-black shadow-sm' : 'bg-white text-black border-neutral-200 hover:border-black'}">
+                    ${timeSlot}
                 </button>
-            </div>
+            `;
+        } else {
+            validSlotsHTML += `
+                <div class="py-2 px-1 rounded-xl border border-neutral-200/50 bg-neutral-100/60 text-center opacity-40 cursor-not-allowed">
+                    <span class="text-xs font-mono text-neutral-400 line-through">${timeSlot}</span>
+                </div>
+            `;
+        }
+    });
 
-            <div class="p-3.5 bg-neutral-50 rounded-2xl border border-neutral-200/70 space-y-1.5 text-xs text-neutral-700">
-                <p><strong>Fecha:</strong> ${window.restaurantState.filterDate}</p>
-                <p><strong>Hora:</strong> ${window.restaurantState.filterTime}</p>
-                <p><strong>Comensales:</strong> ${window.restaurantState.filterGuests} personas (Capacidad: ${table.capacity})</p>
-            </div>
+    slotsGrid.innerHTML = validSlotsHTML;
 
-            <button onclick="window.confirmTableReservation(${tableId})" class="w-full py-3.5 bg-black text-white rounded-2xl text-xs font-bold active:scale-95 transition shadow-md">
-                Confirmar Reserva en ${table.name}
-            </button>
-        </div>
-    `;
+    const confirmBtn = document.getElementById('btnConfirmReservation');
+    const confirmText = document.getElementById('btnConfirmReservationText');
+
+    if (!isCurrentTimeStillAvailable) {
+        const firstAvailableBtn = slotsGrid.querySelector('button');
+        if (firstAvailableBtn) {
+            firstAvailableBtn.click();
+        } else {
+            window.restaurantState.allocatedTable = null;
+            if (confirmBtn) {
+                confirmBtn.disabled = true;
+                confirmBtn.classList.add('opacity-50', 'pointer-events-none');
+            }
+            if (confirmText) confirmText.innerText = 'No hay mesas disponibles en esta fecha';
+        }
+    } else {
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.classList.remove('opacity-50', 'pointer-events-none');
+        }
+        if (confirmText) confirmText.innerText = `Confirmar Reserva a las ${window.restaurantState.selectedTime}`;
+    }
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
 };
 
-window.confirmTableReservation = async function(tableId) {
-    const table = window.restaurantState.tablesLayout.find(t => t.id === tableId || t.table_number === tableId);
-    const date = window.restaurantState.filterDate || new Date().toISOString().split('T')[0];
-    const time = window.restaurantState.filterTime || '14:00';
-    const guests = window.restaurantState.filterGuests || 2;
+// 5. CONTROLADORES REACTIVOS DE INTERFAZ
+window.selectReservationGuests = function(num) {
+    window.restaurantState.selectedGuests = num;
+    [2, 3, 4, 6, 8].forEach(n => {
+        const btn = document.getElementById(`guest-opt-${n}`);
+        if (!btn) return;
+        if (n === num) {
+            btn.className = "py-2.5 rounded-xl border text-xs font-bold transition bg-black text-white border-black shadow-sm";
+        } else {
+            btn.className = "py-2.5 rounded-xl border text-xs font-bold transition bg-white text-black border-neutral-200/80 hover:bg-neutral-50";
+        }
+    });
+    window.recalculateSlotsAvailability();
+};
+
+window.updateReservationDate = function(dateVal) {
+    window.restaurantState.selectedDate = dateVal;
+    window.recalculateSlotsAvailability();
+};
+
+window.updateReservationZone = function(zoneVal) {
+    window.restaurantState.selectedZone = zoneVal;
+    window.recalculateSlotsAvailability();
+};
+
+window.selectReservationTime = function(timeStr, tableNumber) {
+    window.restaurantState.selectedTime = timeStr;
+    window.restaurantState.allocatedTable = window.restaurantState.tablesInventory.find(t => t.table_number === tableNumber);
+
+    const buttons = document.querySelectorAll('#timeSlotsGrid button');
+    buttons.forEach(btn => {
+        btn.className = "py-2 px-1 rounded-xl border text-xs font-mono font-bold transition bg-white text-black border-neutral-200 hover:border-black";
+    });
+
+    const activeBtn = document.getElementById(`slot-btn-${timeStr.replace(':', '')}`);
+    if (activeBtn) {
+        activeBtn.className = "py-2 px-1 rounded-xl border text-xs font-mono font-bold transition bg-black text-white border-black shadow-sm";
+    }
+
+    const confirmText = document.getElementById('btnConfirmReservationText');
+    if (confirmText) confirmText.innerText = `Confirmar Reserva a las ${timeStr}`;
+};
+
+// 6. PROCESAR RESERVA, GUARDAR Y DISPARAR EMAIL
+window.processSmartReservation = async function() {
+    const table = window.restaurantState.allocatedTable;
+    const date = window.restaurantState.selectedDate;
+    const startTime = window.restaurantState.selectedTime;
+    const guests = window.restaurantState.selectedGuests;
+    const zone = window.restaurantState.selectedZone;
+    const duration = window.getEstimatedTurnDuration(guests);
+    const endTime = window.minutesToTime(window.timeToMinutes(startTime) + duration);
     const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';
+    
+    if (!table) {
+        alert("Selecciona una hora disponible para completar la reserva.");
+        return;
+    }
+
     const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
     const customerUser = (typeof currentUser !== 'undefined') ? currentUser : null;
 
-    // Actualización de estado en Supabase
-    if (client && table?.db_id) {
+    const reservationRecord = {
+        business_name: bizName,
+        customer: customerUser?.user_metadata?.full_name || customerUser?.email || 'Cliente NetWish',
+        customer_email: customerUser?.email || '',
+        items: `Reserva ${guests} pax — Mesa ${table.table_number} (${zone})`,
+        total: 0.00,
+        date: date,
+        time: `${startTime} - ${endTime}`,
+        status: 'Mesa Confirmada'
+    };
+
+    // 1. Guardar en Supabase
+    if (client) {
         try {
-            await client.from('restaurant_tables').update({ status: 'occupied' }).eq('id', table.db_id);
-        } catch (e) {
-            console.warn("Aviso actualizando mesa en Supabase:", e);
+            await client.from('orders').insert([reservationRecord]);
+        } catch (err) {
+            console.warn("Aviso registrando reserva en BD:", err);
         }
     }
 
-    // Actualización optimista en memoria
-    if (table) table.status = 'occupied';
-
-    // Disparo automático de emails
+    // 2. Disparo de correo con justificación y detalles
     if (window.emailService) {
-        const resvData = {
+        const orderSummary = {
             businessName: bizName,
-            clientName: customerUser?.user_metadata?.full_name || customerUser?.email || 'Cliente NetWish',
+            clientName: reservationRecord.customer,
             date: date,
-            time: `${time} (${guests} comensales)`,
-            items: [{ name: `Reserva Mesa ${tableId} (${table?.zone || 'Sala'})`, qty: 1, price: 0 }],
+            time: `${startTime} h (Acceso hasta ${endTime} h)`,
+            items: [{ name: `Reserva para ${guests} comensales en ${zone} (Mesa ${table.table_number})`, qty: 1, price: 0 }],
             total: 0,
             action: 'reserve'
         };
 
         if (customerUser?.email) {
-            window.emailService.sendClientReceipt(customerUser.email, resvData);
+            window.emailService.sendClientReceipt(customerUser.email, orderSummary);
         }
 
         const bizEmail = window.appState?.activeBusinessEmail || 'contacto@netwish.es';
-        window.emailService.sendBusinessAlert(bizEmail, resvData);
+        window.emailService.sendBusinessAlert(bizEmail, orderSummary);
     }
 
     window.closeCustomModal();
-    alert(`¡Mesa ${tableId} reservada con éxito para el ${date} a las ${time}! Justificante digital emitido.`);
+    alert(`¡Reserva confirmada con éxito!\n\nFecha: ${date}\nHora: ${startTime} h\nComensales: ${guests} personas\nMesa asignada: Mesa ${table.table_number} (${zone})\n\nTe hemos enviado el justificante digital a tu correo.`);
 };
 
-// 6. MODAL DEL MENÚ DEL DÍA
+// 7. FUNCIONES AUXILIARES DE TIEMPO
+window.getEstimatedTurnDuration = function(guests) {
+    if (guests <= 2) return 90;   // 1h 30m
+    if (guests <= 4) return 105;  // 1h 45m
+    return 120;                  // 2h
+};
+
+window.timeToMinutes = function(timeStr) {
+    const [h, m] = timeStr.split(':').map(Number);
+    return h * 60 + m;
+};
+
+window.minutesToTime = function(minutes) {
+    const h = Math.floor(minutes / 60).toString().padStart(2, '0');
+    const m = (minutes % 60).toString().padStart(2, '0');
+    return `${h}:${m}`;
+};
+
+// 8. MODAL DEL MENÚ DEL DÍA
 window.openDailyMenuModal = function() {
     const modal = document.getElementById('customModal');
     const modalBody = document.getElementById('modalBody');
@@ -402,17 +504,4 @@ window.closeCustomModal = function() {
         modal.classList.add('opacity-0');
         setTimeout(() => modal.classList.add('hidden'), 200);
     }
-};
-
-// 7. SUSCRIPCIÓN EN TIEMPO REAL A SUPABASE
-window.subscribeRestaurantRealtime = function() {
-    const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
-    if (!client || window.restaurantState.realtimeSubscription) return;
-
-    window.restaurantState.realtimeSubscription = client
-        .channel('realtime:restaurant_tables')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'restaurant_tables' }, () => {
-            window.fetchRestaurantTablesLive();
-        })
-        .subscribe();
 };
