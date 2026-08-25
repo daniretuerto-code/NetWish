@@ -7,11 +7,12 @@ window.restaurantState = {
     filterGuests: 2,
     hasFiltered: false,
     realtimeSubscription: null,
+    // Todas las mesas inicializadas como 'free' (libres) por defecto
     tablesLayout: [
-        { id: 1, table_number: 1, name: 'Mesa 1', capacity: 4, status: 'occupied', zone: 'Sala Principal' },
-        { id: 2, table_number: 2, name: 'Mesa 2', capacity: 2, status: 'occupied', zone: 'Sala Principal' },
+        { id: 1, table_number: 1, name: 'Mesa 1', capacity: 4, status: 'free', zone: 'Sala Principal' },
+        { id: 2, table_number: 2, name: 'Mesa 2', capacity: 2, status: 'free', zone: 'Sala Principal' },
         { id: 3, table_number: 3, name: 'Mesa 3', capacity: 4, status: 'free', zone: 'Terraza' },
-        { id: 4, table_number: 4, name: 'Mesa 4', capacity: 6, status: 'occupied', zone: 'Sala Principal' },
+        { id: 4, table_number: 4, name: 'Mesa 4', capacity: 6, status: 'free', zone: 'Sala Principal' },
         { id: 5, table_number: 5, name: 'Mesa 5', capacity: 2, status: 'free', zone: 'Terraza' },
         { id: 6, table_number: 6, name: 'Mesa 6', capacity: 8, status: 'free', zone: 'Reservado' }
     ]
@@ -106,7 +107,7 @@ window.renderRestaurantMenuCards = function() {
     }).join('');
 };
 
-// 3. MAPA DE MESAS CON FILTRO Y SINCRONIZACIÓN SUPABASE
+// 3. MAPA DE MESAS CON FILTRO
 window.openTableMapModal = async function() {
     const modal = document.getElementById('customModal');
     const modalBody = document.getElementById('modalBody');
@@ -122,7 +123,7 @@ window.openTableMapModal = async function() {
                     <h3 class="text-sm font-bold text-black">Reserva & Mapa de Mesas</h3>
                     <p class="text-[10px] text-neutral-400">Selecciona franja horaria para ver disponibilidad</p>
                 </div>
-                <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500">
+                <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
@@ -204,7 +205,7 @@ window.fetchRestaurantTablesLive = async function() {
                 }));
             }
         } catch (e) {
-            console.warn("Consulta Supabase mesas fallida, usando estado local:", e);
+            console.warn("Consulta Supabase mesas fallida:", e);
         }
     }
 
@@ -224,7 +225,7 @@ window.applyTableFilter = function() {
     window.fetchRestaurantTablesLive();
 };
 
-// 4. MAPA VISUAL DE MESAS (SOLO LIBRE / OCUPADA)
+// 4. MAPA VISUAL DE MESAS (TODAS VERDES / LIBRES SI NO HAY RESERVA)
 window.renderTableGridHTML = function() {
     return `
         <div class="flex items-center justify-between text-[10px] font-mono text-neutral-500 pt-1">
@@ -277,7 +278,7 @@ window.selectTableForAction = function(tableId) {
                     <span class="text-[9px] font-mono uppercase tracking-widest text-emerald-600 font-bold">CONFIRMAR RESERVA</span>
                     <h3 class="text-sm font-bold text-black">${table.name} (${table.zone})</h3>
                 </div>
-                <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500">
+                <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
@@ -318,7 +319,7 @@ window.confirmTableReservation = async function(tableId) {
     // Actualización optimista en memoria
     if (table) table.status = 'occupied';
 
-    // Disparo automático de emails (Cliente + Negocio)
+    // Disparo automático de emails
     if (window.emailService) {
         const resvData = {
             businessName: bizName,
@@ -355,7 +356,7 @@ window.openDailyMenuModal = function() {
                     <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">MENÚ DEL DÍA</span>
                     <h3 class="text-sm font-bold text-black">14,50 € / Persona</h3>
                 </div>
-                <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500">
+                <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
