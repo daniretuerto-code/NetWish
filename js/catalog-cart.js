@@ -61,7 +61,7 @@ function openPublicBusiness(safeName, safeType) {
     updateCartDisplay();
     renderPublicCatalogItems();
     
-    switchTab('public-business');
+    if (typeof switchTab === 'function') switchTab('public-business');
 }
 
 // Actualiza el texto del botón según si es estudio o comercio general
@@ -105,20 +105,22 @@ async function renderPublicCatalogItems() {
 
     let items = [];
     try {
-        const { data, error } = await supabaseClient.from('products').select('*');
-        if (error) throw error;
-        
-        const cleanActiveName = window.appState.activeBusinessName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const activeTokens = cleanActiveName.split(/\s+/).filter(t => t.length > 2);
+        const client = window.supabaseClient || window.supabase;
+        if (client) {
+            const { data, error } = await client.from('products').select('*');
+            if (error) throw error;
+            
+            const cleanActiveName = window.appState.activeBusinessName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const activeTokens = cleanActiveName.split(/\s+/).filter(t => t.length > 2);
 
-        items = (data || []).filter(item => {
-            const bId = String(item.business_id || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            if (bId === cleanActiveName || bId === 'biz_db') return true;
-            return activeTokens.some(token => bId.includes(token));
-        });
-
+            items = (data || []).filter(item => {
+                const bId = String(item.business_id || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                if (bId === cleanActiveName || bId === 'biz_db') return true;
+                return activeTokens.some(token => bId.includes(token));
+            });
+        }
     } catch (err) {
-        console.error("Error consultando Supabase:", err);
+        console.error("Error consultando catálogo en Supabase:", err);
     }
 
     if (items.length === 0) {
@@ -328,7 +330,7 @@ function togglePlayPreview(encodedUrl, iconId) {
     }
 
     window.currentlyPlayingAudio.play().catch(e => {
-        console.error("Error reproduciendo audio:", e);
+        console.error("Error reproduciendo preview:", e);
         stopCurrentAudio();
     });
 
@@ -431,8 +433,10 @@ function updateCartDisplay() {
     if (window.appState.cartItemCount > 0 && isInsideBusiness && !isCartOpen) {
         cartBar.classList.remove('translate-y-64', 'opacity-0', 'pointer-events-none');
         cartBar.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
-        document.getElementById('cartTotalDisplay').innerText = window.appState.cartTotalValue.toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' €';
-        document.getElementById('cartCountDisplay').innerText = window.appState.cartItemCount;
+        const totalEl = document.getElementById('cartTotalDisplay');
+        const countEl = document.getElementById('cartCountDisplay');
+        if (totalEl) totalEl.innerText = window.appState.cartTotalValue.toLocaleString('es-ES', { minimumFractionDigits: 2 }) + ' €';
+        if (countEl) countEl.innerText = window.appState.cartItemCount;
     } else {
         cartBar.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
         cartBar.classList.add('translate-y-64', 'opacity-0', 'pointer-events-none');
@@ -481,8 +485,10 @@ function openCartSummary() {
             </div>
         `;
     });
-    document.getElementById('cartItemsContainer').innerHTML = html;
-    document.getElementById('cartSummaryTotal').innerText = window.appState.cartTotalValue.toLocaleString('es-ES', {minimumFractionDigits:2}) + ' €';
+    const itemsCont = document.getElementById('cartItemsContainer');
+    const sumTotal = document.getElementById('cartSummaryTotal');
+    if (itemsCont) itemsCont.innerHTML = html;
+    if (sumTotal) sumTotal.innerText = window.appState.cartTotalValue.toLocaleString('es-ES', {minimumFractionDigits:2}) + ' €';
     
     const today = new Date().toISOString().split('T')[0];
     const dateInput = document.getElementById('orderDate');
@@ -566,6 +572,24 @@ function processCartChoice(action) {
     const cartView = document.getElementById('view-cart');
     if (cartView) cartView.classList.add('hidden');
 
+    // Envío de correos para reservas directas (pago en local)
+    if (action !== 'pay' && window.emailService) {
+        const user = (typeof currentUser !== 'undefined') ? currentUser : null;
+        const orderSummary = {
+            businessName: window.appState.activeBusinessName || 'Comercio NetWish',
+            clientName: user?.user_metadata?.full_name || user?.email || 'Cliente',
+            date: date,
+            time: time,
+            items: [...window.appState.cartItemsList],
+            total: window.appState.cartTotalValue,
+            action: action
+        };
+
+        if (user?.email) {
+            window.emailService.sendClientReceipt(user.email, orderSummary);
+        }
+    }
+
     if (action === 'pay') {
         window.rawAmountString = Math.round(window.appState.cartTotalValue * 100).toString(); 
         if (typeof window.updateAmountDisplay === 'function') {
@@ -579,7 +603,7 @@ function processCartChoice(action) {
         const bubbleEl = document.getElementById('payeeInitialsBubble');
         if (bubbleEl) bubbleEl.innerText = targetName.substring(0, 2).toUpperCase();
         
-        switchTab('payment');
+        if (typeof switchTab === 'function') switchTab('payment');
     } else {
         if (typeof window.executeFullPayment === 'function') window.executeFullPayment(true);
     }
