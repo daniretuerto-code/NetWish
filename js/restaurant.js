@@ -7,7 +7,7 @@ window.restaurantState = {
     selectedZone: 'Sala Principal',
     allocatedTable: null,
     
-    // Configuración por defecto sincronizada con Supabase
+    // Configuración inicial reactiva (se sincroniza con restaurant_settings)
     config: {
         lunch_start: '13:00',
         lunch_end: '16:00',
@@ -27,12 +27,13 @@ window.restaurantState = {
     }
 };
 
-// 1. HUB PRINCIPAL
+// 1. HUB PRINCIPAL DEL RESTAURANTE
 window.renderRestaurantHub = function(container) {
     if (!container) return;
 
     container.innerHTML = `
         <div class="space-y-4">
+            <!-- Acceso: Menú del Día -->
             <button onclick="window.openDailyMenuModal()" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-[0.98] transition group">
                 <div class="flex items-center space-x-3.5">
                     <div class="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center shadow-md shrink-0">
@@ -51,6 +52,7 @@ window.renderRestaurantHub = function(container) {
                 </div>
             </button>
 
+            <!-- Acceso: Motor de Reservas Inteligente -->
             <button onclick="window.openModernReservationModal()" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-[0.98] transition group">
                 <div class="flex items-center space-x-3.5">
                     <div class="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center shadow-md shrink-0">
@@ -61,7 +63,7 @@ window.renderRestaurantHub = function(container) {
                             <span class="block text-xs font-bold text-black tracking-tight">Reservar Mesa</span>
                             <span class="text-[9px] bg-black text-white font-mono px-2 py-0.5 rounded-full">En Vivo</span>
                         </div>
-                        <span class="block text-[10px] text-neutral-400 mt-0.5">Gestión de aforo inteligente</span>
+                        <span class="block text-[10px] text-neutral-400 mt-0.5">Gestión de aforo y confirmación directa</span>
                     </div>
                 </div>
                 <div class="w-7 h-7 rounded-full bg-white border border-neutral-200/60 flex items-center justify-center text-neutral-400 group-hover:text-black transition shrink-0 ml-2">
@@ -69,6 +71,7 @@ window.renderRestaurantHub = function(container) {
                 </div>
             </button>
 
+            <!-- Carta Digital -->
             <div class="space-y-3 pt-2">
                 <div class="flex items-center justify-between px-1">
                     <h4 class="text-[10px] font-mono font-bold text-neutral-400 uppercase tracking-widest">Carta Digital</h4>
@@ -80,6 +83,7 @@ window.renderRestaurantHub = function(container) {
             </div>
         </div>
     `;
+
     if (typeof lucide !== 'undefined') lucide.createIcons();
 };
 
@@ -111,7 +115,7 @@ window.renderRestaurantMenuCards = function() {
     }).join('');
 };
 
-// 2. MODAL Y GENERACIÓN DE INTERVALOS DINÁMICOS
+// 2. MODAL DE RESERVA DINÁMICA
 window.openModernReservationModal = async function() {
     const modal = document.getElementById('customModal');
     const modalBody = document.getElementById('modalBody');
@@ -120,7 +124,6 @@ window.openModernReservationModal = async function() {
     const today = new Date().toISOString().split('T')[0];
     if (!window.restaurantState.selectedDate) window.restaurantState.selectedDate = today;
 
-    // Cargar ajustes del negocio desde Supabase si existen
     await window.loadRestaurantSettingsFromDB();
 
     modalBody.innerHTML = `
@@ -135,10 +138,10 @@ window.openModernReservationModal = async function() {
                 </button>
             </div>
 
-            <!-- Paso 1: Comensales Exactos, Fecha y Zona -->
+            <!-- Selector de Comensales, Fecha y Zona -->
             <div class="space-y-3">
                 <div>
-                    <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Comensales</label>
+                    <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Nº Comensales Exacto</label>
                     <div class="flex items-center justify-between p-2 rounded-2xl bg-neutral-50 border border-neutral-200/80">
                         <button onclick="window.stepGuests(-1)" class="w-9 h-9 rounded-xl bg-white border border-neutral-200 text-black font-extrabold text-base flex items-center justify-center active:scale-90 transition shadow-sm">-</button>
                         <div class="flex items-center space-x-1.5">
@@ -163,7 +166,7 @@ window.openModernReservationModal = async function() {
                     </div>
                 </div>
 
-                <!-- Paso 2: Horarios Calculados -->
+                <!-- Horas Calculadas -->
                 <div>
                     <div class="flex justify-between items-center mb-1.5">
                         <label class="text-[9px] font-mono uppercase text-neutral-400 block">Horas Disponibles</label>
@@ -192,7 +195,7 @@ window.openModernReservationModal = async function() {
     await window.recalculateSlotsAvailability();
 };
 
-// 3. GENERADOR DE HORARIOS Y MOTOR DE ASIGNACIÓN
+// 3. GENERADOR DE HORAS Y COMPROBACIÓN DE SOLAPAMIENTO
 window.generateSlotsFromSettings = function() {
     const cfg = window.restaurantState.config;
     const slots = [];
@@ -202,7 +205,7 @@ window.generateSlotsFromSettings = function() {
         const end = window.timeToMinutes(endStr);
         while (current + cfg.turn_duration_min <= end + 30) {
             slots.push(window.minutesToTime(current));
-            current += 30; // Saltos de 30 minutos
+            current += 30;
         }
     };
 
@@ -257,7 +260,7 @@ window.recalculateSlotsAvailability = async function() {
         const slotStartMin = window.timeToMinutes(timeSlot);
         const slotEndMin = slotStartMin + duration;
 
-        // Mesas válidas ordenadas por ajuste óptimo (Best-Fit)
+        // Mesas válidas por Best-Fit
         const candidateTables = window.restaurantState.config.tables
             .filter(t => t.zone.toLowerCase() === zone.toLowerCase() && t.capacity >= guests)
             .sort((a, b) => a.capacity - b.capacity);
@@ -364,7 +367,7 @@ window.selectReservationTime = function(timeStr, tableNum) {
     if (confirmText) confirmText.innerText = `Confirmar Reserva a las ${timeStr}`;
 };
 
-// 5. GUARDAR RESERVA Y DISPARAR EMAILS
+// 5. REGISTRAR RESERVA
 window.processSmartReservation = async function() {
     const table = window.restaurantState.allocatedTable;
     const date = window.restaurantState.selectedDate;
@@ -395,7 +398,7 @@ window.processSmartReservation = async function() {
         try {
             await client.from('orders').insert([record]);
         } catch (e) {
-            console.warn("Aviso insertando orden:", e);
+            console.warn("Aviso insertando reserva:", e);
         }
     }
 
@@ -421,7 +424,7 @@ window.processSmartReservation = async function() {
     alert(`¡Reserva confirmada con éxito!\n\nFecha: ${date}\nHora: ${startTime} h\nComensales: ${guests} personas\nMesa: Mesa ${table.table_number} (${zone})\n\nComprobante digital enviado a tu correo.`);
 };
 
-// 6. CARGAR CONFIGURACIÓN DE BASE DE DATOS
+// 6. CARGAR AJUSTES DESDE SUPABASE
 window.loadRestaurantSettingsFromDB = async function() {
     const client = window.supabaseClient || window.supabase;
     const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';

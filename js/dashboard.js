@@ -553,12 +553,12 @@ function showSingleTableQRModal(tableNumber, encodedZone, capacity) {
 
     modalBody.innerHTML = `
         <div class="space-y-4 text-center">
-            <!-- Ficha física de la mesa (Área imprimible) -->
+            <!-- Ficha física de la mesa -->
             <div id="printableTableQRCard" class="p-6 bg-white border border-neutral-200/80 rounded-[32px] shadow-sm space-y-4 text-center">
                 <div>
                     <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 font-bold block">NETWISH • ${bizName.toUpperCase()}</span>
                     <h2 class="text-2xl font-black text-black tracking-tight mt-0.5">MESA ${tableNumber}</h2>
-                    <span class="text-[10px] font-mono text-neutral-500">${zone}</span>
+                    <span class="text-[10px] font-mono text-neutral-500">${zone} • Hasta ${capacity} personas</span>
                 </div>
 
                 <div class="p-4 bg-white rounded-2xl border border-neutral-100 inline-block shadow-inner">
@@ -576,7 +576,7 @@ function showSingleTableQRModal(tableNumber, encodedZone, capacity) {
                 <button onclick="openTablesQRManagerModal()" class="w-full py-3 bg-neutral-100 text-black font-bold rounded-xl text-xs hover:bg-neutral-200 transition">
                     Volver
                 </button>
-                <button onclick="window.print()" class="w-full py-3 bg-black text-white font-bold rounded-xl text-xs shadow-md active:scale-95 transition flex items-center justify-center space-x-1.5">
+                <button onclick="printTableQRCard()" class="w-full py-3 bg-black text-white font-bold rounded-xl text-xs shadow-md active:scale-95 transition flex items-center justify-center space-x-1.5">
                     <i data-lucide="printer" class="w-4 h-4"></i>
                     <span>Imprimir QR</span>
                 </button>
@@ -600,6 +600,25 @@ function showSingleTableQRModal(tableNumber, encodedZone, capacity) {
             });
         }
     }, 50);
+}
+
+function printTableQRCard() {
+    const card = document.getElementById('printableTableQRCard');
+    if (!card) return;
+
+    const oldContainer = document.getElementById('netwishPrintContainer');
+    if (oldContainer) oldContainer.remove();
+
+    const printContainer = document.createElement('div');
+    printContainer.id = 'netwishPrintContainer';
+    printContainer.innerHTML = card.innerHTML;
+    document.body.appendChild(printContainer);
+
+    window.print();
+
+    setTimeout(() => {
+        printContainer.remove();
+    }, 500);
 }
 
 // ==========================================
