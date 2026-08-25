@@ -298,8 +298,9 @@ async function openRestaurantConfigModal() {
     modalBody.innerHTML = `
         <div class="space-y-4 text-left">
             <div class="text-center space-y-1">
+                <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">HOSTELERÍA NETWISH</span>
                 <h3 class="text-base font-bold text-black">Ajustes de Sala & Reservas</h3>
-                <p class="text-[11px] text-neutral-500">Configura turnos de comida/cena e inventario de mesas.</p>
+                <p class="text-[11px] text-neutral-500">Configura turnos de servicio y capacidad de mesas.</p>
             </div>
 
             <!-- Horarios Comidas y Cenas -->
@@ -332,7 +333,7 @@ async function openRestaurantConfigModal() {
                     <span class="text-[10px] font-mono text-neutral-500 font-bold" id="tablesCountIndicator">${tempRestaurantTables.length} mesas</span>
                 </div>
 
-                <!-- Formulario rápida de añadir mesa -->
+                <!-- Formulario de añadir mesa -->
                 <div class="grid grid-cols-3 gap-1.5 p-2.5 bg-neutral-50 rounded-2xl border border-neutral-200/60">
                     <input type="number" id="newTableNumber" placeholder="Nº Mesa" class="bg-white border border-neutral-200 rounded-xl px-2 py-1.5 text-xs font-mono focus:border-black outline-none">
                     <select id="newTableZone" class="bg-white border border-neutral-200 rounded-xl px-2 py-1.5 text-xs font-medium focus:border-black outline-none">
@@ -346,7 +347,7 @@ async function openRestaurantConfigModal() {
                             <option value="6">6p</option>
                             <option value="8">8p</option>
                         </select>
-                        <button onclick="addTableToRestaurantList()" class="w-1/2 bg-black text-white rounded-xl text-xs font-bold flex items-center justify-center active:scale-90 transition">
+                        <button onclick="addTableToRestaurantList()" class="w-1/2 bg-black text-white rounded-xl text-xs font-bold flex items-center justify-center active:scale-90 transition shadow-sm">
                             +
                         </button>
                     </div>
@@ -467,7 +468,142 @@ async function saveRestaurantSettingsToDB() {
 }
 
 // ==========================================
-// 6. MODAL DE HISTORIAL DE PEDIDOS CON FILTRO DE FECHA
+// 6. GESTOR E IMPRESIÓN DE QR POR MESA
+// ==========================================
+async function openTablesQRManagerModal() {
+    if (!currentBusiness) return;
+    const modal = document.getElementById('customModal');
+    const modalContent = document.getElementById('modalContent');
+    const modalBody = document.getElementById('modalBody');
+
+    modalBody.innerHTML = `
+        <div class="space-y-4 text-center py-6">
+            <i data-lucide="loader-2" class="w-6 h-6 mx-auto animate-spin text-black mb-2"></i>
+            <p class="text-xs text-neutral-500">Cargando mesas del establecimiento...</p>
+        </div>
+    `;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    modal.classList.remove('hidden');
+    setTimeout(() => { 
+        modal.classList.remove('opacity-0'); 
+        modalContent?.classList.remove('scale-95'); 
+    }, 10);
+
+    let tables = [
+        { id: 1, table_number: 1, capacity: 2, zone: 'Sala Principal' },
+        { id: 2, table_number: 2, capacity: 4, zone: 'Sala Principal' },
+        { id: 3, table_number: 3, capacity: 6, zone: 'Sala Principal' },
+        { id: 4, table_number: 4, capacity: 4, zone: 'Terraza' },
+        { id: 5, table_number: 5, capacity: 6, zone: 'Terraza' }
+    ];
+
+    try {
+        const { data } = await supabaseClient
+            .from('restaurant_settings')
+            .select('tables')
+            .ilike('business_name', `%${currentBusiness.name}%`)
+            .maybeSingle();
+
+        if (data && data.tables && data.tables.length > 0) {
+            tables = data.tables;
+        }
+    } catch (e) {
+        console.warn("Aviso cargando mesas para QR:", e);
+    }
+
+    modalBody.innerHTML = `
+        <div class="space-y-4 text-left">
+            <div class="text-center space-y-1">
+                <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">HOSTELERÍA NETWISH</span>
+                <h3 class="text-base font-bold text-black">QRs Oficiales de Mesa</h3>
+                <p class="text-[11px] text-neutral-500">Genera e imprime el identificador QR de cada mesa.</p>
+            </div>
+
+            <div class="space-y-2 max-h-64 overflow-y-auto pr-1 allow-scroll pt-2 border-t border-neutral-100">
+                ${tables.map(t => `
+                    <div class="p-3.5 bg-neutral-50 rounded-2xl border border-neutral-200/70 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-bold text-black font-mono block">Mesa ${t.table_number}</span>
+                            <span class="text-[10px] text-neutral-400 font-mono">${t.zone} • ${t.capacity} comensales</span>
+                        </div>
+                        <button onclick="showSingleTableQRModal(${t.table_number}, '${encodeURIComponent(t.zone)}', ${t.capacity})" class="px-3 py-2 bg-black text-white text-[11px] font-bold rounded-xl active:scale-95 transition shadow-sm flex items-center space-x-1.5">
+                            <i data-lucide="qr-code" class="w-3.5 h-3.5"></i>
+                            <span>Ver QR</span>
+                        </button>
+                    </div>
+                `).join('')}
+            </div>
+
+            <button onclick="if(typeof closeModal === 'function') closeModal()" class="w-full py-2.5 bg-neutral-100 hover:bg-neutral-200 text-black font-bold rounded-xl text-xs transition">
+                Cerrar
+            </button>
+        </div>
+    `;
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function showSingleTableQRModal(tableNumber, encodedZone, capacity) {
+    const zone = decodeURIComponent(encodedZone);
+    const modalBody = document.getElementById('modalBody');
+    if (!modalBody || !currentBusiness) return;
+
+    const bizName = currentBusiness.name;
+    const qrPayload = `https://netwish.es/?biz=${encodeURIComponent(bizName)}&table=${tableNumber}`;
+
+    modalBody.innerHTML = `
+        <div class="space-y-4 text-center">
+            <!-- Ficha física de la mesa (Área imprimible) -->
+            <div id="printableTableQRCard" class="p-6 bg-white border border-neutral-200/80 rounded-[32px] shadow-sm space-y-4 text-center">
+                <div>
+                    <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 font-bold block">NETWISH • ${bizName.toUpperCase()}</span>
+                    <h2 class="text-2xl font-black text-black tracking-tight mt-0.5">MESA ${tableNumber}</h2>
+                    <span class="text-[10px] font-mono text-neutral-500">${zone}</span>
+                </div>
+
+                <div class="p-4 bg-white rounded-2xl border border-neutral-100 inline-block shadow-inner">
+                    <div id="tableQRCodeTarget" class="flex justify-center items-center"></div>
+                </div>
+
+                <div class="space-y-0.5">
+                    <p class="text-[11px] font-bold text-black">Escanea para Carta & Pedidos</p>
+                    <p class="text-[9px] text-neutral-400 font-mono">Sin esperas desde tu móvil</p>
+                </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="grid grid-cols-2 gap-2 pt-1">
+                <button onclick="openTablesQRManagerModal()" class="w-full py-3 bg-neutral-100 text-black font-bold rounded-xl text-xs hover:bg-neutral-200 transition">
+                    Volver
+                </button>
+                <button onclick="window.print()" class="w-full py-3 bg-black text-white font-bold rounded-xl text-xs shadow-md active:scale-95 transition flex items-center justify-center space-x-1.5">
+                    <i data-lucide="printer" class="w-4 h-4"></i>
+                    <span>Imprimir QR</span>
+                </button>
+            </div>
+        </div>
+    `;
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    setTimeout(() => {
+        const qrContainer = document.getElementById('tableQRCodeTarget');
+        if (qrContainer && typeof QRCode !== 'undefined') {
+            qrContainer.innerHTML = '';
+            new QRCode(qrContainer, {
+                text: qrPayload,
+                width: 160,
+                height: 160,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+    }, 50);
+}
+
+// ==========================================
+// 7. MODAL DE HISTORIAL DE PEDIDOS CON FILTRO
 // ==========================================
 function openHistoryModal(dateFilter = '') {
     if (!currentBusiness) return;
@@ -550,7 +686,7 @@ function openHistoryModal(dateFilter = '') {
 }
 
 // ==========================================
-// 7. RENDERIZADO DEL PANEL PRINCIPAL
+// 8. RENDERIZADO DEL PANEL PRINCIPAL
 // ==========================================
 async function renderBusinessOrders() {
     if (!currentBusiness) return;
@@ -563,7 +699,6 @@ async function renderBusinessOrders() {
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
     const isRestaurant = cat.includes('rest') || cat.includes('bar') || (currentBusiness.name || '').toLowerCase().includes('restaurante');
     
-    // Suscripción Realtime para actualizar pedidos al instante
     if (!ordersRealtimeSubscription && typeof supabaseClient.channel === 'function') {
         ordersRealtimeSubscription = supabaseClient
             .channel('public:orders')
@@ -620,9 +755,6 @@ async function renderBusinessOrders() {
         }
     });
 
-    // ----------------------------------------------------
-    // VISTA DINÁMICA DEL DASHBOARD SEGÚN EL TIPO DE NEGOCIO
-    // ----------------------------------------------------
     let dashHtml = '';
 
     if (isMusic) {
@@ -696,14 +828,18 @@ async function renderBusinessOrders() {
                 </div>
             </div>
             
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="openRestaurantConfigModal()" class="py-3.5 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex justify-center items-center space-x-2 text-xs">
-                    <i data-lucide="layout-grid" class="w-4 h-4"></i>
-                    <span>Horarios & Mesas</span>
+            <div class="grid grid-cols-3 gap-2">
+                <button onclick="openRestaurantConfigModal()" class="py-3 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex flex-col justify-center items-center text-[10px] space-y-1">
+                    <i data-lucide="sliders" class="w-4 h-4"></i>
+                    <span>Horarios</span>
                 </button>
-                <button onclick="openStockControlModal()" class="py-3.5 bg-white border border-neutral-200 text-black font-bold rounded-2xl shadow-sm active:scale-95 transition flex justify-center items-center space-x-2 text-xs">
+                <button onclick="openTablesQRManagerModal()" class="py-3 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex flex-col justify-center items-center text-[10px] space-y-1">
+                    <i data-lucide="qr-code" class="w-4 h-4"></i>
+                    <span>QRs Mesas</span>
+                </button>
+                <button onclick="openStockControlModal()" class="py-3 bg-white border border-neutral-200 text-black font-bold rounded-2xl shadow-sm active:scale-95 transition flex flex-col justify-center items-center text-[10px] space-y-1">
                     <i data-lucide="book-open" class="w-4 h-4"></i>
-                    <span>Carta Digital</span>
+                    <span>Carta</span>
                 </button>
             </div>
         `;
@@ -768,7 +904,6 @@ async function renderBusinessOrders() {
         `;
     }
 
-    // ÚLTIMO PEDIDO
     dashHtml += `
         <div class="space-y-2 pt-2">
             <div class="flex justify-between items-center px-1">
@@ -808,9 +943,6 @@ async function renderBusinessOrders() {
     dashHtml += `</div></div>`;
     dashboardContainer.innerHTML = dashHtml;
 
-    // ----------------------------------------------------
-    // PESTAÑA DEDICADA DE GESTIÓN DE PEDIDOS / RESERVAS
-    // ----------------------------------------------------
     if (ordersContainer) {
         const isPendingTab = activeOrdersTab === 'pending';
         const displayList = isPendingTab ? pendingOrders : completedOrders;
