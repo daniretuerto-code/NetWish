@@ -3,13 +3,13 @@
 window.emailService = {
     apiUrl: '/api/send-email',
 
-    // 1. Justificante digital para el cliente
+    // Enviar confirmación al cliente
     sendClientReceipt: async function(clientEmail, orderData) {
         if (!clientEmail) return;
 
         const payload = {
             to: clientEmail,
-            subject: `Justificante de pedido — ${orderData.businessName || 'Comercio Palencia'}`,
+            subject: `Justificante de pedido — ${orderData.businessName || 'NetWish'}`,
             html: `
                 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 460px; margin: 0 auto; padding: 32px 24px; color: #0a0a0a; background: #ffffff; border: 1px solid #f0f0f0; border-radius: 24px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
@@ -18,7 +18,7 @@ window.emailService = {
                     </div>
                     
                     <div style="border-bottom: 1px solid #f0f0f0; padding-bottom: 16px; margin-bottom: 20px;">
-                        <span style="font-size: 9px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; color: #737373;">DETALLES DEL PEDIDO</span>
+                        <span style="font-size: 9px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; color: #737373;">JUSTIFICANTE DE PEDIDO</span>
                         <h2 style="font-size: 18px; font-weight: 700; margin: 6px 0 2px 0;">${orderData.businessName}</h2>
                         <p style="font-size: 12px; color: #737373; margin: 0;">Fecha: ${orderData.date} • ${orderData.time}</p>
                     </div>
@@ -38,7 +38,7 @@ window.emailService = {
                     </div>
 
                     <div style="margin-top: 28px; padding: 14px; background: #f9f9f9; border-radius: 16px; text-align: center;">
-                        <p style="font-size: 11px; color: #737373; margin: 0;">Muestra este justificante al recoger o acudir al local.</p>
+                        <p style="font-size: 11px; color: #737373; margin: 0;">Muestra este justificante al acudir al establecimiento.</p>
                     </div>
                 </div>
             `
@@ -47,17 +47,17 @@ window.emailService = {
         return this.triggerSend(payload);
     },
 
-    // 2. Alerta para el comercio
+    // Enviar alerta de nuevo pedido al negocio
     sendBusinessAlert: async function(bizEmail, orderData) {
         if (!bizEmail) return;
 
         const payload = {
             to: bizEmail,
-            subject: `⚡ Nuevo Pedido Recibido — ${orderData.clientName || 'Cliente NetWish'}`,
+            subject: `⚡ Nuevo Pedido Recibido — ${orderData.clientName || 'Cliente'}`,
             html: `
                 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 460px; margin: 0 auto; padding: 32px 24px; color: #0a0a0a; background: #ffffff; border: 1px solid #f0f0f0; border-radius: 24px;">
                     <div style="background: #0a0a0a; color: #ffffff; padding: 18px; border-radius: 18px; margin-bottom: 20px;">
-                        <span style="font-size: 9px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; color: #a3a3a3;">NUEVO PEDIDO / CITA</span>
+                        <span style="font-size: 9px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; color: #a3a3a3;">NUEVO PEDIDO ENTRANTE</span>
                         <h2 style="font-size: 18px; font-weight: 700; margin: 4px 0 0 0;">${orderData.clientName || 'Cliente'}</h2>
                     </div>
 
@@ -88,9 +88,10 @@ window.emailService = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            return await res.json();
+            const resData = await res.json();
+            return resData;
         } catch (err) {
-            console.error("Error al disparar email:", err);
+            console.error("Error disparando email:", err);
             return { error: err.message };
         }
     }

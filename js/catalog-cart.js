@@ -3,6 +3,7 @@
 window.appState = window.appState || {};
 window.appState.activeBusinessName = "";
 window.appState.activeBusinessCategory = "";
+window.appState.activeBusinessEmail = "";
 window.appState.isScheduleEnabled = true;
 window.appState.cartItemsList = [];
 window.appState.cartTotalValue = 0;
@@ -17,9 +18,10 @@ window.currentLoadedBeatsList = [];
 window.lastVisitedBeatsView = false;
 
 // 1. APERTURA Y CONFIGURACIÓN DEL COMERCIO PÚBLICO
-function openPublicBusiness(safeName, safeType) {
+function openPublicBusiness(safeName, safeType, safeEmail) {
     window.appState.activeBusinessName = decodeURIComponent(safeName || '');
     window.appState.activeBusinessCategory = decodeURIComponent(safeType || '').toLowerCase();
+    window.appState.activeBusinessEmail = decodeURIComponent(safeEmail || 'contacto@netwish.es');
     window.activePayee = window.appState.activeBusinessName;
     window.lastVisitedBeatsView = false;
     
@@ -566,28 +568,30 @@ function processCartChoice(action) {
         time = t;
     }
 
-    window.appState.pendingOrderDetails = { date, time, action };
+    const user = (typeof currentUser !== 'undefined') ? currentUser : null;
+    const orderSummary = {
+        businessName: window.appState.activeBusinessName || 'Comercio NetWish',
+        clientName: user?.user_metadata?.full_name || user?.email || 'Cliente NetWish',
+        date: date,
+        time: time,
+        items: [...window.appState.cartItemsList],
+        total: window.appState.cartTotalValue,
+        action: action
+    };
+
+    window.appState.pendingOrderDetails = orderSummary;
     window.appState.isCartCheckout = true;
     
     const cartView = document.getElementById('view-cart');
     if (cartView) cartView.classList.add('hidden');
 
-    // Envío de correos para reservas directas (pago en local)
+    // Disparo inmediato a cliente y negocio para pedidos sin pasarela (pago en local / reserva)
     if (action !== 'pay' && window.emailService) {
-        const user = (typeof currentUser !== 'undefined') ? currentUser : null;
-        const orderSummary = {
-            businessName: window.appState.activeBusinessName || 'Comercio NetWish',
-            clientName: user?.user_metadata?.full_name || user?.email || 'Cliente',
-            date: date,
-            time: time,
-            items: [...window.appState.cartItemsList],
-            total: window.appState.cartTotalValue,
-            action: action
-        };
-
         if (user?.email) {
             window.emailService.sendClientReceipt(user.email, orderSummary);
         }
+        const bizEmail = window.appState.activeBusinessEmail || 'contacto@netwish.es';
+        window.emailService.sendBusinessAlert(bizEmail, orderSummary);
     }
 
     if (action === 'pay') {
