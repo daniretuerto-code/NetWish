@@ -94,7 +94,7 @@ function initHoldButton() {
 
 document.addEventListener('DOMContentLoaded', initHoldButton);
 
-// --- EJECUCIÓN DEL PAGO Y ENVÍO GARANTIZADO ---
+// --- EJECUCIÓN DEL PAGO Y ENVÍO GARANTIZADO A AMBOS ---
 window.executeFullPayment = async function(isReservation = false) {
     try {
         const modal = document.getElementById('customModal');
@@ -119,16 +119,38 @@ window.executeFullPayment = async function(isReservation = false) {
             ? (customerUser.user_metadata?.full_name || customerUser.user_metadata?.name || customerUser.email?.split('@')[0] || 'Cliente')
             : 'Cliente';
 
-        let customerEmail = (customerUser && customerUser.email)
-            ? customerUser.email
-            : '';
+        let customerEmail = (customerUser && customerUser.email) ? customerUser.email : '';
 
         let orderDate = pDetails?.date || new Date().toISOString().split('T')[0];
         let orderTime = pDetails?.time || "Inmediato";
         let statusText = isReservation ? 'Pendiente (Pago en local)' : 'Pagado Online';
 
+        const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
+
+        // 1. Obtener el email del comercio registrado en Supabase
+        let targetBizEmail = (window.appState && window.appState.activeBusinessEmail) || '';
+        
+        if (client && (!targetBizEmail || targetBizEmail === 'contacto@netwish.es')) {
+            try {
+                const cleanName = tBusiness.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const { data: bizData } = await client
+                    .from('businesses')
+                    .select('email, contact_email, name')
+                    .ilike('name', `%${cleanName}%`)
+                    .limit(1)
+                    .maybeSingle();
+
+                if (bizData && (bizData.email || bizData.contact_email)) {
+                    targetBizEmail = bizData.email || bizData.contact_email;
+                }
+            } catch (errBiz) {
+                console.warn("Consulta alternativa de email del comercio fallida:", errBiz);
+            }
+        }
+
         const orderPayload = {
             business_name: tBusiness,
+            business_email: targetBizEmail || null,
             customer: customerName,
             customer_email: customerEmail,
             items: itemsDesc,
@@ -138,17 +160,16 @@ window.executeFullPayment = async function(isReservation = false) {
             status: statusText
         };
 
-        // 1. Guardar orden en Supabase
-        try {
-            const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
-            if (client) {
+        // 2. Guardar orden en Supabase
+        if (client) {
+            try {
                 await client.from('orders').insert([orderPayload]);
+            } catch (err) {
+                console.warn("Aviso guardando orden en BD:", err);
             }
-        } catch (err) {
-            console.warn("Aviso guardando orden en BD:", err);
         }
 
-        // 2. Envío de correos garantizado mediante emailService
+        // 3. Envío transaccional dual (Cliente + Negocio)
         if (window.emailService) {
             const structuredOrder = {
                 businessName: tBusiness,
@@ -160,17 +181,18 @@ window.executeFullPayment = async function(isReservation = false) {
                 action: isReservation ? 'reserve' : 'pay'
             };
 
-            // Enviar al cliente si tiene correo
+            // Notificación al cliente
             if (customerEmail) {
                 window.emailService.sendClientReceipt(customerEmail, structuredOrder);
             }
 
-            // Enviar al negocio
-            const businessEmail = (window.appState && window.appState.activeBusinessEmail) || 'contacto@netwish.es';
-            window.emailService.sendBusinessAlert(businessEmail, structuredOrder);
+            // Notificación al comercio
+            if (targetBizEmail) {
+                window.emailService.sendBusinessAlert(targetBizEmail, structuredOrder);
+            }
         }
 
-        // 3. Modal de éxito NetWish
+        // 4. Modal de confirmación en la UI
         if (modalBody) {
             modalBody.innerHTML = `
                 <div class="text-center space-y-4 py-3">
