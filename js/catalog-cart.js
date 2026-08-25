@@ -3,7 +3,7 @@
 window.appState = window.appState || {};
 window.appState.activeBusinessName = "";
 window.appState.activeBusinessCategory = "";
-window.appState.activeBusinessEmail = "";
+window.appState.activeBusinessEmail = "contacto@netwish.es";
 window.appState.isScheduleEnabled = true;
 window.appState.cartItemsList = [];
 window.appState.cartTotalValue = 0;
@@ -21,7 +21,9 @@ window.lastVisitedBeatsView = false;
 function openPublicBusiness(safeName, safeType, safeEmail) {
     window.appState.activeBusinessName = decodeURIComponent(safeName || '');
     window.appState.activeBusinessCategory = decodeURIComponent(safeType || '').toLowerCase();
-    window.appState.activeBusinessEmail = decodeURIComponent(safeEmail || 'contacto@netwish.es');
+    if (safeEmail) {
+        window.appState.activeBusinessEmail = decodeURIComponent(safeEmail);
+    }
     window.activePayee = window.appState.activeBusinessName;
     window.lastVisitedBeatsView = false;
     
@@ -37,7 +39,6 @@ function openPublicBusiness(safeName, safeType, safeEmail) {
                          window.appState.activeBusinessCategory.includes('produ') || 
                          window.appState.activeBusinessCategory.includes('estudio');
 
-    // Adaptación dinámica del botón de contacto/pedidos
     updateContactButtonLabel(isJuanStudio);
 
     if (imgEl) {
@@ -66,7 +67,6 @@ function openPublicBusiness(safeName, safeType, safeEmail) {
     if (typeof switchTab === 'function') switchTab('public-business');
 }
 
-// Actualiza el texto del botón según si es estudio o comercio general
 function updateContactButtonLabel(isMusicStudio) {
     const contactBtn = document.querySelector('#view-public-business button[onclick*="openCustomerChat"]');
     if (!contactBtn) return;
@@ -107,7 +107,7 @@ async function renderPublicCatalogItems() {
 
     let items = [];
     try {
-        const client = window.supabaseClient || window.supabase;
+        const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
         if (client) {
             const { data, error } = await client.from('products').select('*');
             if (error) throw error;
@@ -122,7 +122,7 @@ async function renderPublicCatalogItems() {
             });
         }
     } catch (err) {
-        console.error("Error consultando catálogo en Supabase:", err);
+        console.error("Error consultando Supabase:", err);
     }
 
     if (items.length === 0) {
@@ -140,7 +140,8 @@ async function renderPublicCatalogItems() {
     const isMusic = window.appState.activeBusinessCategory.includes('disco') || 
                     window.appState.activeBusinessCategory.includes('music') || 
                     window.appState.activeBusinessCategory.includes('produ') || 
-                    window.appState.activeBusinessCategory.includes('estudio');
+                    window.appState.activeBusinessCategory.includes('estudio') ||
+                    window.appState.activeBusinessName.toUpperCase().includes('JUUANCP');
 
     if (isMusic) {
         const finishedBeats = items.filter(i => i.is_finished_beat === true || Boolean(i.audio_url) || (i.name || '').toLowerCase().includes('prueba1'));
@@ -332,7 +333,7 @@ function togglePlayPreview(encodedUrl, iconId) {
     }
 
     window.currentlyPlayingAudio.play().catch(e => {
-        console.error("Error reproduciendo preview:", e);
+        console.error("Error reproduciendo audio:", e);
         stopCurrentAudio();
     });
 
@@ -585,7 +586,6 @@ function processCartChoice(action) {
     const cartView = document.getElementById('view-cart');
     if (cartView) cartView.classList.add('hidden');
 
-    // Disparo inmediato a cliente y negocio para pedidos sin pasarela (pago en local / reserva)
     if (action !== 'pay' && window.emailService) {
         if (user?.email) {
             window.emailService.sendClientReceipt(user.email, orderSummary);
