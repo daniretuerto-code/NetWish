@@ -7,7 +7,16 @@ window.restaurantState = {
     selectedZone: 'Sala Principal',
     allocatedTable: null,
     
-    // Configuración inicial reactiva (se sincroniza con restaurant_settings)
+    dailyMenu: {
+        active: true,
+        price: 14.50,
+        first_courses: ["Alubias Blancas de Saldaña con Matanza", "Sopa Castellana Tradicional", "Ensalada de Cecina con Frutos Secos"],
+        second_courses: ["Lechazo Churro Guisado", "Bacalao con Pimientos Asados", "Carrillera Ibérica al Vino Tinto"],
+        includes: "Pan de leña, Agua o Vino de la casa y Postre casero"
+    },
+
+    catalogDishes: [],
+
     config: {
         lunch_start: '13:00',
         lunch_end: '16:00',
@@ -27,9 +36,15 @@ window.restaurantState = {
     }
 };
 
-// 1. HUB PRINCIPAL DEL RESTAURANTE
-window.renderRestaurantHub = function(container) {
+// 1. HUB PRINCIPAL
+window.renderRestaurantHub = async function(container) {
     if (!container) return;
+
+    await window.loadRestaurantLiveCatalog();
+    await window.loadRestaurantSettingsFromDB();
+
+    const isMenuActive = window.restaurantState.dailyMenu?.active;
+    const menuPrice = window.restaurantState.dailyMenu?.price || 14.50;
 
     container.innerHTML = `
         <div class="space-y-4">
@@ -42,7 +57,9 @@ window.renderRestaurantHub = function(container) {
                     <div class="text-left">
                         <div class="flex items-center space-x-2">
                             <span class="block text-xs font-bold text-black tracking-tight">Menú del Día</span>
-                            <span class="text-[9px] bg-emerald-500/10 text-emerald-600 font-bold px-2 py-0.5 rounded-full border border-emerald-500/20">Disponible Hoy</span>
+                            ${isMenuActive 
+                                ? `<span class="text-[9px] bg-emerald-500/10 text-emerald-600 font-bold px-2 py-0.5 rounded-full border border-emerald-500/20">${menuPrice.toFixed(2)} €</span>` 
+                                : '<span class="text-[9px] bg-neutral-200 text-neutral-600 font-bold px-2 py-0.5 rounded-full">No disponible</span>'}
                         </div>
                         <span class="block text-[10px] text-neutral-400 mt-0.5">Primero, segundo, postre y bebida incluida</span>
                     </div>
@@ -52,7 +69,7 @@ window.renderRestaurantHub = function(container) {
                 </div>
             </button>
 
-            <!-- Acceso: Motor de Reservas Inteligente -->
+            <!-- Acceso: Reserva de Mesa -->
             <button onclick="window.openModernReservationModal()" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-[0.98] transition group">
                 <div class="flex items-center space-x-3.5">
                     <div class="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center shadow-md shrink-0">
@@ -63,7 +80,7 @@ window.renderRestaurantHub = function(container) {
                             <span class="block text-xs font-bold text-black tracking-tight">Reservar Mesa</span>
                             <span class="text-[9px] bg-black text-white font-mono px-2 py-0.5 rounded-full">En Vivo</span>
                         </div>
-                        <span class="block text-[10px] text-neutral-400 mt-0.5">Gestión de aforo y confirmación directa</span>
+                        <span class="block text-[10px] text-neutral-400 mt-0.5">Disponibilidad por turnos y aforo</span>
                     </div>
                 </div>
                 <div class="w-7 h-7 rounded-full bg-white border border-neutral-200/60 flex items-center justify-center text-neutral-400 group-hover:text-black transition shrink-0 ml-2">
@@ -71,7 +88,7 @@ window.renderRestaurantHub = function(container) {
                 </div>
             </button>
 
-            <!-- Carta Digital -->
+            <!-- Carta Digital Dinámica -->
             <div class="space-y-3 pt-2">
                 <div class="flex items-center justify-between px-1">
                     <h4 class="text-[10px] font-mono font-bold text-neutral-400 uppercase tracking-widest">Carta Digital</h4>
@@ -87,35 +104,60 @@ window.renderRestaurantHub = function(container) {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 };
 
+// 2. CARGA DE LA CARTA DIGITAL DESDE SUPABASE
+window.loadRestaurantLiveCatalog = async function() {
+    const client = window.supabaseClient || window.supabase;
+    const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';
+    if (!client) return;
+
+    try {
+        const { data, error } = await client.from('products').select('*');
+        if (!error && data) {
+            const cleanName = bizName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const filtered = data.filter(p => {
+                const bId = String(p.business_id || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                return bId === cleanName || bId.includes('restaurante') || cleanName.includes(bId);
+            });
+
+            if (filtered.length > 0) {
+                window.restaurantState.catalogDishes = filtered;
+            }
+        }
+    } catch (e) {
+        console.warn("Aviso consultando carta de productos:", e);
+    }
+};
+
 window.renderRestaurantMenuCards = function() {
-    const dishes = [
-        { id: 'rest_1', name: 'Tabla de Quesos de Cerrato', desc: 'Selección de quesos curados palentinos con mermelada artesana', price: 14.00, tag: 'Entrante' },
-        { id: 'rest_2', name: 'Lechazo Asado de Palencia', desc: 'Cuarto de lechazo churro asado en horno tradicional', price: 26.50, tag: 'Principal' },
-        { id: 'rest_3', name: 'Croquetas de Jamón Ibérico (6 uds)', desc: 'Rebozado crujiente y bechamel melosa', price: 9.50, tag: 'Tapa' },
-        { id: 'rest_4', name: 'Brazo de San Antolín', desc: 'Postre tradicional hojaldrado con crema pastelera', price: 5.50, tag: 'Postre' }
+    const dishes = window.restaurantState.catalogDishes.length > 0 ? window.restaurantState.catalogDishes : [
+        { id: 'rest_1', name: 'Tabla de Quesos de Cerrato', description: 'Selección de quesos curados palentinos con mermelada artesana', price: 14.00 },
+        { id: 'rest_2', name: 'Lechazo Asado de Palencia', description: 'Cuarto de lechazo churro asado en horno tradicional', price: 26.50 },
+        { id: 'rest_3', name: 'Croquetas de Jamón Ibérico (6 uds)', description: 'Rebozado crujiente y bechamel melosa', price: 9.50 },
+        { id: 'rest_4', name: 'Brazo de San Antolín', description: 'Postre tradicional hojaldrado con crema pastelera', price: 5.50 }
     ];
 
     return dishes.map(dish => {
         const itemIdStr = String(dish.id);
         const existingInCart = (window.appState?.cartItemsList || []).find(i => String(i.id) === itemIdStr);
         const qty = existingInCart ? existingInCart.qty : 0;
+        const price = parseFloat(dish.price) || 0;
+
         return `
             <div class="p-4 rounded-3xl border border-neutral-200/80 bg-white shadow-sm flex items-center justify-between transition">
                 <div class="space-y-1 max-w-[65%]">
-                    <span class="inline-block px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-600 text-[8px] font-mono uppercase tracking-wider">${dish.tag}</span>
                     <h4 class="text-xs font-bold text-black truncate">${dish.name}</h4>
-                    <p class="text-[10px] text-neutral-400 line-clamp-2">${dish.desc}</p>
-                    <span class="text-xs font-extrabold text-black font-mono block pt-1">${dish.price.toFixed(2)} €</span>
+                    <p class="text-[10px] text-neutral-400 line-clamp-2">${dish.description || ''}</p>
+                    <span class="text-xs font-extrabold text-black font-mono block pt-1">${price.toFixed(2)} €</span>
                 </div>
                 <div id="btn-container-${dish.id}" class="flex items-center space-x-2 shrink-0">
-                    ${typeof renderItemButtonHTML === 'function' ? renderItemButtonHTML(dish.id, encodeURIComponent(itemIdStr), encodeURIComponent(dish.name), dish.price, qty) : ''}
+                    ${typeof renderItemButtonHTML === 'function' ? renderItemButtonHTML(dish.id, encodeURIComponent(itemIdStr), encodeURIComponent(dish.name), price, qty) : ''}
                 </div>
             </div>
         `;
     }).join('');
 };
 
-// 2. MODAL DE RESERVA DINÁMICA
+// 3. MODAL DE RESERVA DINÁMICA
 window.openModernReservationModal = async function() {
     const modal = document.getElementById('customModal');
     const modalBody = document.getElementById('modalBody');
@@ -195,7 +237,7 @@ window.openModernReservationModal = async function() {
     await window.recalculateSlotsAvailability();
 };
 
-// 3. GENERADOR DE HORAS Y COMPROBACIÓN DE SOLAPAMIENTO
+// 4. GENERADOR DE HORAS Y SOLAPAMIENTOS
 window.generateSlotsFromSettings = function() {
     const cfg = window.restaurantState.config;
     const slots = [];
@@ -260,7 +302,6 @@ window.recalculateSlotsAvailability = async function() {
         const slotStartMin = window.timeToMinutes(timeSlot);
         const slotEndMin = slotStartMin + duration;
 
-        // Mesas válidas por Best-Fit
         const candidateTables = window.restaurantState.config.tables
             .filter(t => t.zone.toLowerCase() === zone.toLowerCase() && t.capacity >= guests)
             .sort((a, b) => a.capacity - b.capacity);
@@ -329,7 +370,7 @@ window.recalculateSlotsAvailability = async function() {
     }
 };
 
-// 4. CONTROLADORES
+// 5. CONTROLADORES
 window.stepGuests = function(delta) {
     let current = window.restaurantState.selectedGuests + delta;
     if (current < 1) current = 1;
@@ -367,7 +408,7 @@ window.selectReservationTime = function(timeStr, tableNum) {
     if (confirmText) confirmText.innerText = `Confirmar Reserva a las ${timeStr}`;
 };
 
-// 5. REGISTRAR RESERVA
+// 6. REGISTRAR RESERVA
 window.processSmartReservation = async function() {
     const table = window.restaurantState.allocatedTable;
     const date = window.restaurantState.selectedDate;
@@ -424,14 +465,77 @@ window.processSmartReservation = async function() {
     alert(`¡Reserva confirmada con éxito!\n\nFecha: ${date}\nHora: ${startTime} h\nComensales: ${guests} personas\nMesa: Mesa ${table.table_number} (${zone})\n\nComprobante digital enviado a tu correo.`);
 };
 
-// 6. CARGAR AJUSTES DESDE SUPABASE
+// 7. MODAL DEL MENÚ DEL DÍA (SINCRONIZADO EN DIRECTO)
+window.openDailyMenuModal = function() {
+    const modal = document.getElementById('customModal');
+    const modalBody = document.getElementById('modalBody');
+    if (!modal || !modalBody) return;
+
+    const menu = window.restaurantState.dailyMenu;
+    const price = menu?.price || 14.50;
+
+    modalBody.innerHTML = `
+        <div class="space-y-4 text-left">
+            <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
+                <div>
+                    <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 font-bold">MENÚ DEL DÍA</span>
+                    <h3 class="text-sm font-bold text-black font-mono">${price.toFixed(2)} € / Persona</h3>
+                </div>
+                <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3 max-h-64 overflow-y-auto pr-1 allow-scroll text-xs">
+                <div>
+                    <h5 class="font-mono text-[9px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">Primeros Platos (A elegir)</h5>
+                    <div class="space-y-1 text-neutral-700">
+                        ${(menu?.first_courses || []).map(fc => `
+                            <p class="p-2 rounded-xl bg-neutral-50 border border-neutral-100/80 font-medium">• ${fc}</p>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div>
+                    <h5 class="font-mono text-[9px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">Segundos Platos (A elegir)</h5>
+                    <div class="space-y-1 text-neutral-700">
+                        ${(menu?.second_courses || []).map(sc => `
+                            <p class="p-2 rounded-xl bg-neutral-50 border border-neutral-100/80 font-medium">• ${sc}</p>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div>
+                    <h5 class="font-mono text-[9px] uppercase tracking-wider text-neutral-400 mb-1 font-bold">Incluye</h5>
+                    <p class="text-[10px] text-neutral-500">${menu?.includes || 'Pan, bebida y postre incluido.'}</p>
+                </div>
+            </div>
+
+            <button onclick="window.changeItemQuantity('menu_dia', 'Menú del Día', ${price}, 1); window.closeCustomModal();" class="w-full py-3.5 bg-black text-white rounded-2xl text-xs font-bold active:scale-95 transition shadow-md flex items-center justify-center space-x-2">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Añadir Menú a Mi Pedido (${price.toFixed(2)} €)</span>
+            </button>
+        </div>
+    `;
+
+    modal.classList.remove('hidden', 'opacity-0');
+    modal.classList.add('opacity-100');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+};
+
+// 8. CARGA DE AJUSTES DESDE SUPABASE
 window.loadRestaurantSettingsFromDB = async function() {
     const client = window.supabaseClient || window.supabase;
     const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';
     if (!client) return;
 
     try {
-        const { data } = await client.from('restaurant_settings').select('*').ilike('business_name', `%${bizName}%`).maybeSingle();
+        const { data } = await client
+            .from('restaurant_settings')
+            .select('*')
+            .ilike('business_name', `%${bizName}%`)
+            .maybeSingle();
+
         if (data) {
             window.restaurantState.config = {
                 lunch_start: data.lunch_start || '13:00',
@@ -441,6 +545,9 @@ window.loadRestaurantSettingsFromDB = async function() {
                 turn_duration_min: data.turn_duration_min || 90,
                 tables: data.tables || window.restaurantState.config.tables
             };
+            if (data.daily_menu) {
+                window.restaurantState.dailyMenu = data.daily_menu;
+            }
         }
     } catch (e) {
         console.warn("Aviso cargando configuración de BD:", e);
@@ -464,42 +571,4 @@ window.closeCustomModal = function() {
         modal.classList.add('opacity-0');
         setTimeout(() => modal.classList.add('hidden'), 200);
     }
-};
-
-window.openDailyMenuModal = function() {
-    const modal = document.getElementById('customModal');
-    const modalBody = document.getElementById('modalBody');
-    if (!modal || !modalBody) return;
-
-    modalBody.innerHTML = `
-        <div class="space-y-4 text-left">
-            <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
-                <div>
-                    <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">MENÚ DEL DÍA</span>
-                    <h3 class="text-sm font-bold text-black">14,50 € / Persona</h3>
-                </div>
-                <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black"><i data-lucide="x" class="w-4 h-4"></i></button>
-            </div>
-            <div class="space-y-3 max-h-64 overflow-y-auto pr-1 text-xs">
-                <div>
-                    <h5 class="font-mono text-[9px] uppercase tracking-wider text-neutral-400 mb-1">Primeros</h5>
-                    <div class="space-y-1 text-neutral-700">
-                        <p class="p-2 rounded-xl bg-neutral-50 border border-neutral-100">• Alubias Blancas de Saldaña con Matanza</p>
-                        <p class="p-2 rounded-xl bg-neutral-50 border border-neutral-100">• Sopa Castellana Tradicional</p>
-                    </div>
-                </div>
-                <div>
-                    <h5 class="font-mono text-[9px] uppercase tracking-wider text-neutral-400 mb-1">Segundos</h5>
-                    <div class="space-y-1 text-neutral-700">
-                        <p class="p-2 rounded-xl bg-neutral-50 border border-neutral-100">• Carrillera Ibérica al Vino Tinto</p>
-                        <p class="p-2 rounded-xl bg-neutral-50 border border-neutral-100">• Bacalao con Pimientos Asados</p>
-                    </div>
-                </div>
-            </div>
-            <button onclick="window.changeItemQuantity('menu_dia', 'Menú del Día', 14.50, 1); window.closeCustomModal();" class="w-full py-3.5 bg-black text-white rounded-2xl text-xs font-bold active:scale-95 transition shadow-md">Añadir Menú a Mi Pedido (14,50 €)</button>
-        </div>
-    `;
-    modal.classList.remove('hidden', 'opacity-0');
-    modal.classList.add('opacity-100');
-    if (typeof lucide !== 'undefined') lucide.createIcons();
 };

@@ -6,7 +6,7 @@ let activeOrdersTab = 'pending'; // 'pending' | 'completed'
 let tempRestaurantTables = [];
 
 // ==========================================
-// 1. MODAL DE CONTROL DE STOCK / GESTOR DE BEATS
+// 1. MODAL DE CONTROL DE STOCK / CARTA / BEATS
 // ==========================================
 async function openStockControlModal() {
     if (!currentBusiness) return;
@@ -16,12 +16,27 @@ async function openStockControlModal() {
 
     const cat = (currentBusiness.category || '').toLowerCase();
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
+    const isRestaurant = cat.includes('rest') || cat.includes('bar') || (currentBusiness.name || '').toLowerCase().includes('restaurante');
 
-    const title = isMusic ? "Gestor de Beats & Tracks" : "Control de Stock y Catálogo";
-    const subtitle = isMusic ? "Publica licencias, beats con preview y servicios." : "Añade o elimina productos del catálogo digital.";
-    const phName = isMusic ? "Nombre del Beat (ej. Drill Beat Vol.1)" : "Nombre (ej. Barra de Pan Rústica)";
-    const phDesc = isMusic ? "Detalles (ej. 140 BPM, Key C Minor)" : "Descripción corta (ej. Elaboración artesanal)";
-    const btnText = isMusic ? "Publicar Beat con Preview" : "Publicar Producto";
+    let title = "Control de Stock y Catálogo";
+    let subtitle = "Añade o elimina productos del catálogo digital.";
+    let phName = "Nombre (ej. Barra de Pan Rústica)";
+    let phDesc = "Descripción corta (ej. Elaboración artesanal)";
+    let btnText = "Publicar Producto";
+
+    if (isMusic) {
+        title = "Gestor de Beats & Tracks";
+        subtitle = "Publica licencias, beats con preview y servicios.";
+        phName = "Nombre del Beat (ej. Drill Beat Vol.1)";
+        phDesc = "Detalles (ej. 140 BPM, Key C Minor)";
+        btnText = "Publicar Beat con Preview";
+    } else if (isRestaurant) {
+        title = "Gestor de Carta Digital";
+        subtitle = "Añade platos, raciones y bebidas a la carta online.";
+        phName = "Nombre del Plato (ej. Lechazo Asado)";
+        phDesc = "Descripción e ingredientes (ej. Cuarto con patatas)";
+        btnText = "Añadir a la Carta";
+    }
 
     modalBody.innerHTML = `
         <div class="space-y-4 text-center py-6">
@@ -88,7 +103,7 @@ async function openStockControlModal() {
                 <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">Nuevo Registro</span>
                 <input type="text" id="newProdName" placeholder="${phName}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black transition">
                 <input type="text" id="newProdDesc" placeholder="${phDesc}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black transition">
-                <input type="number" step="0.01" id="newProdPrice" placeholder="Precio en € (ej. 29.99)" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black transition">
+                <input type="number" step="0.01" id="newProdPrice" placeholder="Precio en € (ej. 14.50)" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black transition">
                 
                 ${isMusic ? `
                 <div class="p-3 bg-amber-500/5 rounded-2xl border border-amber-500/20 space-y-2">
@@ -100,7 +115,7 @@ async function openStockControlModal() {
                     
                     <label class="flex items-center space-x-2 pt-1 cursor-pointer select-none">
                         <input type="checkbox" id="newProdIsFinishedBeat" checked class="w-4 h-4 rounded text-black border-neutral-300 focus:ring-0">
-                        <span class="text-xs font-bold text-neutral-800">Marcar como Beat Finalizado (Listo para comprar)</span>
+                        <span class="text-xs font-bold text-neutral-800">Marcar como Beat Finalizado</span>
                     </label>
                 </div>
                 ` : ''}
@@ -127,7 +142,7 @@ async function openStockControlModal() {
 }
 
 // ==========================================
-// 2. GUARDAR PRODUCTO O BEAT EN SUPABASE
+// 2. GUARDAR PRODUCTO EN SUPABASE
 // ==========================================
 async function saveNewStockProduct() {
     if (!currentBusiness) return;
@@ -245,7 +260,142 @@ function setOrdersTab(tab) {
 }
 
 // ==========================================
-// 5. GESTIÓN PROFESIONAL DE SALA Y MESAS (HOSTELERÍA)
+// 5. GESTIÓN DEL MENÚ DEL DÍA (HOSTELERÍA)
+// ==========================================
+async function openDailyMenuConfigModal() {
+    if (!currentBusiness) return;
+    const modal = document.getElementById('customModal');
+    const modalContent = document.getElementById('modalContent');
+    const modalBody = document.getElementById('modalBody');
+
+    modalBody.innerHTML = `
+        <div class="space-y-4 text-center py-6">
+            <i data-lucide="loader-2" class="w-6 h-6 mx-auto animate-spin text-black mb-2"></i>
+            <p class="text-xs text-neutral-500">Cargando Menú del Día...</p>
+        </div>
+    `;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    modal.classList.remove('hidden');
+    setTimeout(() => { 
+        modal.classList.remove('opacity-0'); 
+        modalContent?.classList.remove('scale-95'); 
+    }, 10);
+
+    let menu = {
+        active: true,
+        price: 14.50,
+        first_courses: ["Alubias Blancas de Saldaña con Matanza", "Sopa Castellana Tradicional", "Ensalada de Cecina con Frutos Secos"],
+        second_courses: ["Lechazo Churro Guisado", "Bacalao con Pimientos Asados", "Carrillera Ibérica al Vino Tinto"],
+        includes: "Pan de leña, Agua o Vino de la casa y Postre casero"
+    };
+
+    try {
+        const { data } = await supabaseClient
+            .from('restaurant_settings')
+            .select('daily_menu')
+            .ilike('business_name', `%${currentBusiness.name}%`)
+            .maybeSingle();
+
+        if (data && data.daily_menu) menu = data.daily_menu;
+    } catch (e) {
+        console.warn("Aviso cargando menú del día:", e);
+    }
+
+    modalBody.innerHTML = `
+        <div class="space-y-4 text-left">
+            <div class="text-center space-y-1">
+                <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">HOSTELERÍA NETWISH</span>
+                <h3 class="text-base font-bold text-black">Editar Menú del Día</h3>
+                <p class="text-[11px] text-neutral-500">Actualiza los platos del día y el precio al instante.</p>
+            </div>
+
+            <div class="space-y-3 pt-2 border-t border-neutral-100 max-h-72 overflow-y-auto pr-1 allow-scroll">
+                <div class="flex items-center justify-between p-3 bg-neutral-50 rounded-2xl border border-neutral-200/70">
+                    <label class="text-xs font-bold text-black flex items-center space-x-2">
+                        <span>Menú Activo Hoy</span>
+                    </label>
+                    <input type="checkbox" id="cfgMenuIsActive" ${menu.active ? 'checked' : ''} class="w-4 h-4 rounded text-black border-neutral-300 focus:ring-0">
+                </div>
+
+                <div>
+                    <label class="text-[9px] font-mono text-neutral-500 uppercase block mb-1">Precio por Persona (€)</label>
+                    <input type="number" step="0.50" id="cfgMenuPrice" value="${menu.price}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:border-black outline-none">
+                </div>
+
+                <div>
+                    <label class="text-[9px] font-mono text-neutral-500 uppercase block mb-1">Primeros Platos (Uno por línea)</label>
+                    <textarea id="cfgMenuFirsts" rows="3" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl p-3 text-xs text-black focus:border-black outline-none transition">${(menu.first_courses || []).join('\n')}</textarea>
+                </div>
+
+                <div>
+                    <label class="text-[9px] font-mono text-neutral-500 uppercase block mb-1">Segundos Platos (Uno por línea)</label>
+                    <textarea id="cfgMenuSeconds" rows="3" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl p-3 text-xs text-black focus:border-black outline-none transition">${(menu.second_courses || []).join('\n')}</textarea>
+                </div>
+
+                <div>
+                    <label class="text-[9px] font-mono text-neutral-500 uppercase block mb-1">Incluye (Bebida, pan, postre...)</label>
+                    <input type="text" id="cfgMenuIncludes" value="${menu.includes || ''}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs text-black focus:border-black outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-neutral-100">
+                <button onclick="if(typeof closeModal === 'function') closeModal()" class="w-full py-3 bg-neutral-100 text-black font-bold rounded-xl text-xs hover:bg-neutral-200 transition">
+                    Cancelar
+                </button>
+                <button onclick="saveDailyMenuSettings()" class="w-full py-3 bg-black text-white font-bold rounded-xl text-xs shadow-md active:scale-95 transition">
+                    Publicar Menú
+                </button>
+            </div>
+        </div>
+    `;
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+async function saveDailyMenuSettings() {
+    if (!currentBusiness) return;
+
+    const isActive = document.getElementById('cfgMenuIsActive')?.checked || false;
+    const price = parseFloat(document.getElementById('cfgMenuPrice')?.value || '14.50');
+    const firstsRaw = document.getElementById('cfgMenuFirsts')?.value || '';
+    const secondsRaw = document.getElementById('cfgMenuSeconds')?.value || '';
+    const includes = document.getElementById('cfgMenuIncludes')?.value.trim() || '';
+
+    const firsts = firstsRaw.split('\n').map(s => s.trim()).filter(Boolean);
+    const seconds = secondsRaw.split('\n').map(s => s.trim()).filter(Boolean);
+
+    const dailyMenuPayload = {
+        active: isActive,
+        price: price,
+        first_courses: firsts,
+        second_courses: seconds,
+        includes: includes
+    };
+
+    try {
+        const { error } = await supabaseClient
+            .from('restaurant_settings')
+            .upsert([{ 
+                business_name: currentBusiness.name,
+                daily_menu: dailyMenuPayload 
+            }], { onConflict: 'business_name' });
+
+        if (error) throw error;
+
+        if (window.restaurantState) {
+            window.restaurantState.dailyMenu = dailyMenuPayload;
+        }
+
+        if (typeof closeModal === 'function') closeModal();
+        alert("Menú del día actualizado y publicado en directo.");
+        renderBusinessOrders();
+    } catch (err) {
+        alert("Error al guardar menú: " + err.message);
+    }
+}
+
+// ==========================================
+// 6. GESTIÓN DE SALA Y MESAS (HOSTELERÍA)
 // ==========================================
 async function openRestaurantConfigModal() {
     if (!currentBusiness) return;
@@ -467,7 +617,7 @@ async function saveRestaurantSettingsToDB() {
 }
 
 // ==========================================
-// 6. GESTOR E IMPRESIÓN OFICIAL DE QR POR MESA
+// 7. GESTOR E IMPRESIÓN OFICIAL DE QR POR MESA
 // ==========================================
 async function openTablesQRManagerModal() {
     if (!currentBusiness) return;
@@ -552,7 +702,6 @@ function showSingleTableQRModal(tableNumber, encodedZone, capacity) {
 
     modalBody.innerHTML = `
         <div class="space-y-4 text-center">
-            <!-- Ficha de la mesa centrada -->
             <div id="printableTableQRCard" class="p-6 bg-white border border-neutral-200/80 rounded-[32px] shadow-sm space-y-4 text-center">
                 <div>
                     <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 font-bold block">NETWISH • ${bizName.toUpperCase()}</span>
@@ -570,7 +719,6 @@ function showSingleTableQRModal(tableNumber, encodedZone, capacity) {
                 </div>
             </div>
 
-            <!-- Botones de Acción -->
             <div class="grid grid-cols-2 gap-2 pt-1">
                 <button onclick="openTablesQRManagerModal()" class="w-full py-3 bg-neutral-100 text-black font-bold rounded-xl text-xs hover:bg-neutral-200 transition">
                     Volver
@@ -601,7 +749,6 @@ function showSingleTableQRModal(tableNumber, encodedZone, capacity) {
     }, 50);
 }
 
-// Disparador de impresión en ventana limpia aislada (100% libre de cortes o marcos de móvil)
 function printTableQRCard() {
     const card = document.getElementById('printableTableQRCard');
     if (!card) return;
@@ -728,7 +875,7 @@ function printTableQRCard() {
 }
 
 // ==========================================
-// 7. MODAL DE HISTORIAL DE PEDIDOS CON FILTRO
+// 8. MODAL DE HISTORIAL DE PEDIDOS CON FILTRO
 // ==========================================
 function openHistoryModal(dateFilter = '') {
     if (!currentBusiness) return;
@@ -811,7 +958,7 @@ function openHistoryModal(dateFilter = '') {
 }
 
 // ==========================================
-// 8. RENDERIZADO DEL PANEL PRINCIPAL
+// 9. RENDERIZADO DEL PANEL PRINCIPAL
 // ==========================================
 async function renderBusinessOrders() {
     if (!currentBusiness) return;
@@ -953,18 +1100,22 @@ async function renderBusinessOrders() {
                 </div>
             </div>
             
-            <div class="grid grid-cols-3 gap-2">
-                <button onclick="openRestaurantConfigModal()" class="py-3 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex flex-col justify-center items-center text-[10px] space-y-1">
-                    <i data-lucide="sliders" class="w-4 h-4"></i>
-                    <span>Horarios</span>
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="openDailyMenuConfigModal()" class="py-3.5 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex items-center justify-center space-x-2 text-xs">
+                    <i data-lucide="chef-hat" class="w-4 h-4 text-amber-400"></i>
+                    <span>Menú del Día</span>
                 </button>
-                <button onclick="openTablesQRManagerModal()" class="py-3 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex flex-col justify-center items-center text-[10px] space-y-1">
+                <button onclick="openStockControlModal()" class="py-3.5 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex items-center justify-center space-x-2 text-xs">
+                    <i data-lucide="book-open" class="w-4 h-4"></i>
+                    <span>Carta Digital</span>
+                </button>
+                <button onclick="openRestaurantConfigModal()" class="py-3 bg-neutral-100 text-black font-bold rounded-2xl border border-neutral-200/80 active:scale-95 transition flex items-center justify-center space-x-2 text-xs">
+                    <i data-lucide="sliders" class="w-4 h-4"></i>
+                    <span>Horarios & Mesas</span>
+                </button>
+                <button onclick="openTablesQRManagerModal()" class="py-3 bg-neutral-100 text-black font-bold rounded-2xl border border-neutral-200/80 active:scale-95 transition flex items-center justify-center space-x-2 text-xs">
                     <i data-lucide="qr-code" class="w-4 h-4"></i>
                     <span>QRs Mesas</span>
-                </button>
-                <button onclick="openStockControlModal()" class="py-3 bg-white border border-neutral-200 text-black font-bold rounded-2xl shadow-sm active:scale-95 transition flex flex-col justify-center items-center text-[10px] space-y-1">
-                    <i data-lucide="book-open" class="w-4 h-4"></i>
-                    <span>Carta</span>
                 </button>
             </div>
         `;
