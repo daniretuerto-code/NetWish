@@ -1,4 +1,11 @@
-// --- GENERACIÓN DE CÓDIGO QR PERSONAL (DIRECTO SIN LLAVE DE ACCESO) ---
+// js/scanner.js
+
+let currentStream = null;
+let scanningInterval = null;
+
+// =======================================================
+// 1. GENERACIÓN DE CÓDIGO QR PERSONAL
+// =======================================================
 async function openPersonalQR() {
     if (!currentUser) { 
         if (typeof openAuthModal === 'function') openAuthModal('login'); 
@@ -45,7 +52,9 @@ async function openPersonalQR() {
     }
 }
 
-// --- QR DE NEGOCIO EN MODAL ---
+// =======================================================
+// 2. QR DE NEGOCIO EN MODAL
+// =======================================================
 function openBusinessQR() {
     if (!currentBusiness) return;
     
@@ -96,7 +105,9 @@ function generateBusinessQR(biz) {
     }
 }
 
-// --- MODAL GENÉRICO ---
+// =======================================================
+// 3. MODAL GENÉRICO / PLACEHOLDER
+// =======================================================
 function openModal(sectionName) {
     stopCamera();
     const modal = document.getElementById('customModal');
@@ -125,7 +136,9 @@ function openModal(sectionName) {
     }, 10);
 }
 
-// --- LECTOR DE CÁMARA QR ---
+// =======================================================
+// 4. LECTOR DE CÁMARA QR
+// =======================================================
 async function startCameraModal() {
     const modal = document.getElementById('customModal');
     const modalContent = document.getElementById('modalContent');
@@ -141,7 +154,7 @@ async function startCameraModal() {
                     <div class="w-32 h-32 border-2 border-white rounded-2xl animate-pulse"></div>
                 </div>
             </div>
-            <p class="text-xs text-neutral-400">Apunta al QR personal o QR de Comercio.</p>
+            <p class="text-xs text-neutral-400">Apunta al QR personal, QR de comercio o QR de mesa.</p>
             <button onclick="closeModal()" class="w-full py-3.5 bg-neutral-100 text-black font-semibold rounded-2xl text-xs transition active:scale-95">Cerrar Cámara</button>
         </div>
     `;
@@ -163,7 +176,7 @@ async function startCameraModal() {
             startUniversalScanningLoop(); 
         }
     } catch (error) {
-        alert("No se pudo acceder a la cámara.");
+        alert("No se pudo acceder a la cámara o permisos denegados.");
         closeModal();
     }
 }
@@ -192,7 +205,49 @@ function startUniversalScanningLoop() {
     }, 250);
 }
 
+// =======================================================
+// 5. PROCESAMIENTO INTELIGENTE DEL CÓDIGO QR
+// =======================================================
 function processScannedQRData(qrText) {
+    // Caso 1: QR de Mesa mediante URL (ej: https://netwish.es/?biz=Restaurante%20Dani&table=3)
+    if (qrText.includes('biz=') && qrText.includes('table=')) {
+        try {
+            const url = new URL(qrText.startsWith('http') ? qrText : `https://${qrText}`);
+            const bizName = decodeURIComponent(url.searchParams.get('biz') || '');
+            const tableNum = parseInt(url.searchParams.get('table') || '1', 10);
+
+            if (bizName && tableNum) {
+                window.appState = window.appState || {};
+                window.appState.activeBusinessName = bizName;
+                window.appState.activeTableNumber = tableNum;
+
+                if (typeof window.openTableSessionView === 'function') {
+                    window.openTableSessionView(bizName, tableNum);
+                }
+                return;
+            }
+        } catch (e) {
+            console.warn("Error analizando URL de mesa:", e);
+        }
+    }
+
+    // Caso 2: Formato de protocolo directo para mesas (NETWISH_TABLE:Restaurante Dani:3)
+    if (qrText.startsWith('NETWISH_TABLE:')) {
+        const parts = qrText.split(':');
+        const bizName = parts[1] || 'Restaurante';
+        const tableNum = parseInt(parts[2] || '1', 10);
+
+        window.appState = window.appState || {};
+        window.appState.activeBusinessName = bizName;
+        window.appState.activeTableNumber = tableNum;
+
+        if (typeof window.openTableSessionView === 'function') {
+            window.openTableSessionView(bizName, tableNum);
+        }
+        return;
+    }
+
+    // Caso 3: QR de Pago Personal o Comercial
     if (qrText.startsWith('NETWISH_PAY:') || qrText.startsWith('NETWISH_BUSINESS:')) {
         const parts = qrText.split(':');
         activePayee = parts[1] || 'Establecimiento NetWish';
@@ -206,11 +261,15 @@ function processScannedQRData(qrText) {
         if (bubbleEl) bubbleEl.innerText = activePayee.substring(0, 2).toUpperCase();
         
         if (typeof switchTab === 'function') switchTab('payment');
-    } else {
-        alert("Código QR no reconocido en NetWish.");
+        return;
     }
+
+    alert("Código QR no reconocido en NetWish.");
 }
 
+// =======================================================
+// 6. DETENCIÓN DE CÁMARA Y CIERRE DE MODAL
+// =======================================================
 function stopCamera() {
     if (scanningInterval) { 
         clearInterval(scanningInterval); 

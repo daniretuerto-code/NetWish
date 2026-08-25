@@ -6,7 +6,9 @@ window.restaurantState = {
     selectedGuests: 2,
     selectedZone: 'Sala Principal',
     allocatedTable: null,
-    
+    currentTableSession: null,
+    sessionRealtimeSub: null,
+
     dailyMenu: {
         active: true,
         price: 14.50,
@@ -36,7 +38,7 @@ window.restaurantState = {
     }
 };
 
-// 1. HUB PRINCIPAL
+// 1. HUB PRINCIPAL DEL RESTAURANTE
 window.renderRestaurantHub = async function(container) {
     if (!container) return;
 
@@ -104,7 +106,7 @@ window.renderRestaurantHub = async function(container) {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 };
 
-// 2. CARGA DE LA CARTA DIGITAL DESDE SUPABASE
+// 2. CARGA DE LA CARTA
 window.loadRestaurantLiveCatalog = async function() {
     const client = window.supabaseClient || window.supabase;
     const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';
@@ -124,7 +126,7 @@ window.loadRestaurantLiveCatalog = async function() {
             }
         }
     } catch (e) {
-        console.warn("Aviso consultando carta de productos:", e);
+        console.warn("Aviso consultando carta:", e);
     }
 };
 
@@ -157,7 +159,343 @@ window.renderRestaurantMenuCards = function() {
     }).join('');
 };
 
-// 3. MODAL DE RESERVA DINÁMICA
+// ==========================================
+// 3. COMANDA Y CUENTA COLABORATIVA EN MESA (SIMULACIÓN DIRECTA)
+// ==========================================
+window.openTableSessionView = async function(bizName, tableNumber) {
+    const modal = document.getElementById('customModal');
+    const modalContent = document.getElementById('modalContent');
+    const modalBody = document.getElementById('modalBody');
+    if (!modal || !modalBody) return;
+
+    modalBody.innerHTML = `
+        <div class="space-y-4 text-center py-6">
+            <i data-lucide="loader-2" class="w-6 h-6 mx-auto animate-spin text-black mb-2"></i>
+            <p class="text-xs text-neutral-500">Conectando con Mesa ${tableNumber}...</p>
+        </div>
+    `;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    modal.classList.remove('hidden');
+    setTimeout(() => { 
+        modal.classList.remove('opacity-0'); 
+        modalContent?.classList.remove('scale-95'); 
+    }, 10);
+
+    window.subscribeToTableSession(bizName, tableNumber);
+    await window.fetchTableSessionData(bizName, tableNumber);
+};
+
+window.fetchTableSessionData = async function(bizName, tableNumber) {
+    const client = window.supabaseClient || window.supabase;
+    let session = null;
+
+    if (client) {
+        try {
+            const { data } = await client
+                .from('table_sessions')
+                .select('*')
+                .ilike('business_name', `%${bizName}%`)
+                .eq('table_number', tableNumber)
+                .eq('status', 'open')
+                .maybeSingle();
+
+            session = data;
+        } catch (e) {
+            console.warn("Aviso consultando sesión de mesa:", e);
+        }
+    }
+
+    window.restaurantState.currentTableSession = session;
+    window.renderTableSessionUI(bizName, tableNumber);
+};
+
+window.renderTableSessionUI = function(bizName, tableNumber) {
+    const modalBody = document.getElementById('modalBody');
+    if (!modalBody) return;
+
+    const session = window.restaurantState.currentTableSession;
+    const cart = window.appState?.cartItemsList || [];
+    const cartTotal = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+
+    // Caso A: Mesa abierta sin comanda enviada a cocina todavía
+    if (!session) {
+        modalBody.innerHTML = `
+            <div class="space-y-4 text-left">
+                <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
+                    <div>
+                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 font-bold">${bizName.toUpperCase()}</span>
+                        <h3 class="text-sm font-bold text-black">Mesa ${tableNumber} — Comanda</h3>
+                    </div>
+                    <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <div class="p-4 bg-neutral-50 rounded-2xl border border-neutral-200/70 text-center space-y-2">
+                    <i data-lucide="utensils-crossed" class="w-6 h-6 mx-auto text-neutral-400"></i>
+                    <p class="text-xs font-bold text-black">Mesa lista para pedir</p>
+                    <p class="text-[10px] text-neutral-400">Selecciona platos de la carta y envía la comanda a cocina.</p>
+                </div>
+
+                ${cart.length > 0 ? `
+                    <div class="space-y-2">
+                        <span class="text-[10px] font-mono uppercase text-neutral-400 block">Tu Pedido Actual (${cart.length})</span>
+                        <div class="max-h-32 overflow-y-auto space-y-1 pr-1 allow-scroll">
+                            ${cart.map(i => `
+                                <div class="flex justify-between items-center text-xs p-2 bg-neutral-50 rounded-xl">
+                                    <span>${i.qty}x ${i.name}</span>
+                                    <span class="font-mono font-bold">${(i.price * i.qty).toFixed(2)} €</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <button onclick="window.sendOrderToKitchen('${bizName}', ${tableNumber})" class="w-full py-3.5 bg-black text-white font-bold rounded-2xl text-xs shadow-md active:scale-95 transition flex items-center justify-center space-x-2">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                        <span>Enviar Comanda a Cocina (${cartTotal.toFixed(2)} €)</span>
+                    </button>
+                ` : `
+                    <button onclick="window.closeCustomModal()" class="w-full py-3.5 bg-black text-white font-bold rounded-2xl text-xs shadow-md active:scale-95 transition">
+                        Ver Carta y Añadir Platos
+                    </button>
+                `}
+            </div>
+        `;
+    } else {
+        // Caso B: Comanda activa con cuenta abierta para pagar
+        const total = parseFloat(session.total_amount) || 0;
+        const paid = parseFloat(session.paid_amount) || 0;
+        const remaining = Math.max(0, total - paid);
+        const percent = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
+        const payers = session.payers || [];
+
+        modalBody.innerHTML = `
+            <div class="space-y-4 text-left">
+                <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
+                    <div>
+                        <span class="text-[9px] font-mono uppercase tracking-widest text-emerald-600 font-bold">CUENTA EN MESA ABIERTA</span>
+                        <h3 class="text-sm font-bold text-black">Mesa ${tableNumber} — Total: ${total.toFixed(2)} €</h3>
+                    </div>
+                    <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <!-- Barra de Progreso en Tiempo Real -->
+                <div class="p-4 bg-neutral-50 rounded-2xl border border-neutral-200/70 space-y-2">
+                    <div class="flex justify-between items-center text-xs font-mono">
+                        <span class="text-neutral-500">Pagado: <strong>${paid.toFixed(2)} €</strong></span>
+                        <span class="font-extrabold ${remaining === 0 ? 'text-emerald-600' : 'text-black'}">Falta: ${remaining.toFixed(2)} €</span>
+                    </div>
+                    <div class="w-full h-3 bg-neutral-200 rounded-full overflow-hidden">
+                        <div class="h-full bg-emerald-500 transition-all duration-500" style="width: ${percent}%"></div>
+                    </div>
+                    <span class="text-[9px] text-neutral-400 font-mono block text-center">${percent}% liquidado</span>
+                </div>
+
+                <!-- Historial de Aportaciones de la Mesa -->
+                <div class="space-y-1.5">
+                    <span class="text-[10px] font-mono uppercase text-neutral-400 block">Aportaciones de la mesa</span>
+                    <div class="max-h-24 overflow-y-auto space-y-1 pr-1 allow-scroll">
+                        ${payers.length > 0 ? payers.map(p => `
+                            <div class="flex justify-between items-center text-[11px] p-2 bg-neutral-50 rounded-xl border border-neutral-100">
+                                <span class="font-medium text-black truncate max-w-[180px]">${p.name}</span>
+                                <span class="font-mono font-bold text-emerald-600">+${parseFloat(p.amount).toFixed(2)} €</span>
+                            </div>
+                        `).join('') : '<p class="text-[10px] text-neutral-400 text-center py-2">Sé el primero en abonar tu parte.</p>'}
+                    </div>
+                </div>
+
+                <!-- Aportación Directa (Sin cobro real de saldo) -->
+                ${remaining > 0 ? `
+                    <div class="space-y-2 pt-1 border-t border-neutral-100">
+                        <label class="text-[9px] font-mono uppercase text-neutral-400 block">Importe a abonar por tu parte</label>
+                        <div class="flex space-x-2">
+                            <input type="number" step="0.50" id="customSplitAmount" value="${(remaining > 10 ? 10 : remaining).toFixed(2)}" max="${remaining}" class="w-1/2 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:border-black outline-none">
+                            <button onclick="window.paySplitBill('${session.id}', ${tableNumber}, document.getElementById('customSplitAmount').value)" class="w-1/2 py-2.5 bg-black text-white font-bold rounded-xl text-xs active:scale-95 transition shadow-sm">
+                                Aportar Pago
+                            </button>
+                        </div>
+                        <button onclick="window.paySplitBill('${session.id}', ${tableNumber}, ${remaining})" class="w-full py-3 bg-neutral-100 hover:bg-neutral-200 text-black font-bold rounded-xl text-xs transition">
+                            Abonar Restante (${remaining.toFixed(2)} €)
+                        </button>
+                    </div>
+                ` : `
+                    <div class="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-center space-y-1">
+                        <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-600 mx-auto"></i>
+                        <p class="text-xs font-bold text-emerald-700">¡Cuenta totalmente liquidada!</p>
+                        <p class="text-[9px] text-neutral-500">Comprobante digital emitido.</p>
+                    </div>
+                `}
+            </div>
+        `;
+    }
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+};
+
+// 4. ENVÍO DE COMANDA A COCINA
+window.sendOrderToKitchen = async function(bizName, tableNumber) {
+    const cart = window.appState?.cartItemsList || [];
+    if (cart.length === 0) return;
+
+    const total = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+    const client = window.supabaseClient || window.supabase;
+    const customerUser = typeof currentUser !== 'undefined' ? currentUser : null;
+    const customerName = customerUser?.user_metadata?.full_name || customerUser?.email || 'Comensal';
+
+    const sessionPayload = {
+        business_name: bizName,
+        table_number: tableNumber,
+        items: cart,
+        total_amount: total,
+        paid_amount: 0.00,
+        remaining_amount: total,
+        status: 'open',
+        payers: []
+    };
+
+    if (client) {
+        try {
+            const { data, error } = await client.from('table_sessions').insert([sessionPayload]).select().single();
+            if (!error && data) {
+                window.restaurantState.currentTableSession = data;
+            }
+
+            await client.from('orders').insert([{
+                business_name: bizName,
+                customer: `${customerName} (Mesa ${tableNumber})`,
+                items: cart.map(i => `${i.qty}x ${i.name}`).join(', '),
+                total: total,
+                date: new Date().toISOString().split('T')[0],
+                time: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+                status: 'Comanda en Cocina'
+            }]);
+        } catch (e) {
+            console.warn("Aviso registrando comanda:", e);
+        }
+    }
+
+    if (window.emailService) {
+        const bizEmail = window.appState?.activeBusinessEmail || 'contacto@netwish.es';
+        window.emailService.sendBusinessAlert(bizEmail, {
+            businessName: bizName,
+            clientName: `Comensales Mesa ${tableNumber}`,
+            date: new Date().toISOString().split('T')[0],
+            time: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+            items: cart,
+            total: total,
+            action: 'comanda'
+        });
+    }
+
+    window.appState.cartItemsList = [];
+    if (typeof updateCartCountUI === 'function') updateCartCountUI();
+
+    window.renderTableSessionUI(bizName, tableNumber);
+    alert(`¡Comanda enviada a cocina para la Mesa ${tableNumber}! La cuenta queda abierta para que cada comensal aporte su parte.`);
+};
+
+// 5. REGISTRO DIRECTO DEL PAGO FRACCIONADO
+window.paySplitBill = async function(sessionId, tableNumber, amountVal) {
+    const amount = parseFloat(amountVal);
+    if (isNaN(amount) || amount <= 0) {
+        alert("Introduce un importe válido.");
+        return;
+    }
+
+    const session = window.restaurantState.currentTableSession;
+    if (!session) return;
+
+    const total = parseFloat(session.total_amount) || 0;
+    const currentPaid = parseFloat(session.paid_amount) || 0;
+    const newPaid = Math.min(total, currentPaid + amount);
+    const newRemaining = Math.max(0, total - newPaid);
+    const isFullyPaid = newRemaining === 0;
+
+    const customerUser = typeof currentUser !== 'undefined' ? currentUser : null;
+    const payerName = customerUser?.user_metadata?.full_name || customerUser?.email || `Comensal ${session.payers?.length + 1 || 1}`;
+    const payerEmail = customerUser?.email || '';
+
+    const newPayers = [...(session.payers || []), {
+        name: payerName,
+        email: payerEmail,
+        amount: amount,
+        time: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+    }];
+
+    const client = window.supabaseClient || window.supabase;
+    if (client) {
+        try {
+            await client.from('table_sessions').update({
+                paid_amount: newPaid,
+                remaining_amount: newRemaining,
+                status: isFullyPaid ? 'paid' : 'open',
+                payers: newPayers,
+                updated_at: new Date().toISOString()
+            }).eq('id', sessionId);
+        } catch (e) {
+            console.warn("Aviso actualizando pago en mesa:", e);
+        }
+    }
+
+    session.paid_amount = newPaid;
+    session.remaining_amount = newRemaining;
+    session.status = isFullyPaid ? 'paid' : 'open';
+    session.payers = newPayers;
+
+    // Disparo de confirmaciones y alertas al liquidar el 100% de la mesa
+    if (isFullyPaid && window.emailService) {
+        const orderSummary = {
+            businessName: session.business_name,
+            clientName: `Mesa ${tableNumber} (Cuenta Completa)`,
+            date: new Date().toISOString().split('T')[0],
+            time: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+            items: session.items,
+            total: total,
+            action: 'paid_table'
+        };
+
+        newPayers.forEach(p => {
+            if (p.email) window.emailService.sendClientReceipt(p.email, orderSummary);
+        });
+
+        const bizEmail = window.appState?.activeBusinessEmail || 'contacto@netwish.es';
+        window.emailService.sendBusinessAlert(bizEmail, {
+            ...orderSummary,
+            action: 'table_settled'
+        });
+    }
+
+    window.renderTableSessionUI(session.business_name, tableNumber);
+};
+
+// 6. SUSCRIPCIÓN EN TIEMPO REAL A LA MESA
+window.subscribeToTableSession = function(bizName, tableNumber) {
+    const client = window.supabaseClient || window.supabase;
+    if (!client) return;
+
+    if (window.restaurantState.sessionRealtimeSub) {
+        window.restaurantState.sessionRealtimeSub.unsubscribe();
+    }
+
+    window.restaurantState.sessionRealtimeSub = client
+        .channel(`table_session:${tableNumber}`)
+        .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'table_sessions',
+            filter: `table_number=eq.${tableNumber}` 
+        }, payload => {
+            if (payload.new) {
+                window.restaurantState.currentTableSession = payload.new;
+                window.renderTableSessionUI(bizName, tableNumber);
+            }
+        })
+        .subscribe();
+};
+
+// 7. MODAL DE RESERVAS POR TURNO Y AFORO
 window.openModernReservationModal = async function() {
     const modal = document.getElementById('customModal');
     const modalBody = document.getElementById('modalBody');
@@ -180,7 +518,6 @@ window.openModernReservationModal = async function() {
                 </button>
             </div>
 
-            <!-- Selector de Comensales, Fecha y Zona -->
             <div class="space-y-3">
                 <div>
                     <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Nº Comensales Exacto</label>
@@ -208,7 +545,6 @@ window.openModernReservationModal = async function() {
                     </div>
                 </div>
 
-                <!-- Horas Calculadas -->
                 <div>
                     <div class="flex justify-between items-center mb-1.5">
                         <label class="text-[9px] font-mono uppercase text-neutral-400 block">Horas Disponibles</label>
@@ -237,7 +573,6 @@ window.openModernReservationModal = async function() {
     await window.recalculateSlotsAvailability();
 };
 
-// 4. GENERADOR DE HORAS Y SOLAPAMIENTOS
 window.generateSlotsFromSettings = function() {
     const cfg = window.restaurantState.config;
     const slots = [];
@@ -370,7 +705,6 @@ window.recalculateSlotsAvailability = async function() {
     }
 };
 
-// 5. CONTROLADORES
 window.stepGuests = function(delta) {
     let current = window.restaurantState.selectedGuests + delta;
     if (current < 1) current = 1;
@@ -408,7 +742,6 @@ window.selectReservationTime = function(timeStr, tableNum) {
     if (confirmText) confirmText.innerText = `Confirmar Reserva a las ${timeStr}`;
 };
 
-// 6. REGISTRAR RESERVA
 window.processSmartReservation = async function() {
     const table = window.restaurantState.allocatedTable;
     const date = window.restaurantState.selectedDate;
@@ -465,7 +798,7 @@ window.processSmartReservation = async function() {
     alert(`¡Reserva confirmada con éxito!\n\nFecha: ${date}\nHora: ${startTime} h\nComensales: ${guests} personas\nMesa: Mesa ${table.table_number} (${zone})\n\nComprobante digital enviado a tu correo.`);
 };
 
-// 7. MODAL DEL MENÚ DEL DÍA (SINCRONIZADO EN DIRECTO)
+// 8. MODAL DEL MENÚ DEL DÍA
 window.openDailyMenuModal = function() {
     const modal = document.getElementById('customModal');
     const modalBody = document.getElementById('modalBody');
@@ -523,7 +856,6 @@ window.openDailyMenuModal = function() {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 };
 
-// 8. CARGA DE AJUSTES DESDE SUPABASE
 window.loadRestaurantSettingsFromDB = async function() {
     const client = window.supabaseClient || window.supabase;
     const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';
