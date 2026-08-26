@@ -19,7 +19,7 @@ window.emailService = {
                 maximumFractionDigits: 2 
             });
 
-            // Si el producto incluye un enlace de descarga master/beat entero o preview de música
+            // Enlace de descarga master prioritario o fallback al audio preview si es de música
             const downloadLink = i.full_audio_url || i.download_url || (orderData.businessName && orderData.businessName.toUpperCase().includes('JUUANCP') ? i.audio_url : null);
 
             if (downloadLink) {
@@ -28,7 +28,7 @@ window.emailService = {
                         <tr>
                             <td>
                                 <p style="font-size: 10px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; color: #a3a3a3; margin: 0 0 10px 0;">Archivo Master / Beat Exclusivo</p>
-                                <a href="${downloadLink}" target="_blank" style="display: inline-block; background-color: #ffffff; color: #000000; padding: 12px 24px; border-radius: 12px; font-size: 12px; font-weight: 800; text-decoration: none;">Descargar Beat en Alta Calidad</a>
+                                <a href="${downloadLink}" target="_blank" onclick="event.preventDefault(); const a = document.createElement('a'); a.href='${downloadLink}'; a.download='${i.name || 'beat-master'}.mp3'; document.body.appendChild(a); a.click(); document.body.removeChild(a);" style="display: inline-block; background-color: #ffffff; color: #000000; padding: 12px 24px; border-radius: 12px; font-size: 12px; font-weight: 800; text-decoration: none; cursor: pointer;">Descargar Beat en Alta Calidad</a>
                             </td>
                         </tr>
                     </table>
@@ -49,7 +49,7 @@ window.emailService = {
 
         const payload = {
             to: clientEmail,
-            subject: `Justificante de pedido — ${orderData.businessName || 'NetWish'}`,
+            subject: `Justificante de pedido y descarga — ${orderData.businessName || 'NetWish'}`,
             html: `
                 <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f5f5f5; padding: 24px 0;">
                     <tr>
@@ -67,7 +67,7 @@ window.emailService = {
                                         </table>
 
                                         <div style="border-bottom: 1px solid #eeeeee; padding-bottom: 16px; margin-bottom: 20px;">
-                                            <span style="font-size: 9px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; color: #888888;">JUSTIFICANTE DE COMPRA</span>
+                                            <span style="font-size: 9px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; color: #888888;">JUSTIFICANTE DE COMPRA & DESCARGA</span>
                                             <h2 style="font-size: 18px; font-weight: 800; color: #000000; margin: 6px 0 2px 0;">${orderData.businessName}</h2>
                                             <p style="font-size: 12px; color: #666666; margin: 0;">Fecha: ${orderData.date} • ${orderData.time}</p>
                                         </div>
@@ -87,7 +87,7 @@ window.emailService = {
 
                                         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #fafafa; border-radius: 16px; padding: 14px; text-align: center; border: 1px solid #eeeeee; margin-top: 20px;">
                                             <tr>
-                                                <td style="font-size: 11px; color: #777777;">Muestra este justificante al acudir al establecimiento o guarda tus archivos descargados.</td>
+                                                <td style="font-size: 11px; color: #777777;">Guarda este correo para acceder a tus archivos en cualquier momento.</td>
                                             </tr>
                                         </table>
                                     </td>
@@ -129,7 +129,7 @@ window.emailService = {
 
         const payload = {
             to: bizEmail,
-            subject: `⚡ Nuevo Pedido Recibido — ${orderData.clientName || 'Cliente'}`,
+            subject: `⚡ Nueva Licencia Vendida — ${orderData.clientName || 'Cliente'}`,
             html: `
                 <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f5f5f5; padding: 24px 0;">
                     <tr>
@@ -140,7 +140,7 @@ window.emailService = {
                                         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #000000; border-radius: 18px; padding: 20px; margin-bottom: 24px;">
                                             <tr>
                                                 <td>
-                                                    <span style="font-size: 9px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; color: #a3a3a3;">NUEVO PEDIDO CONFIRMADO</span>
+                                                    <span style="font-size: 9px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; color: #a3a3a3;">NUEVA VENTA DE BEAT</span>
                                                     <h2 style="font-size: 18px; font-weight: 800; color: #ffffff; margin: 4px 0 0 0;">${orderData.clientName || 'Cliente'}</h2>
                                                 </td>
                                             </tr>
@@ -152,11 +152,6 @@ window.emailService = {
                                                     <strong style="color: #111111;">Fecha y Hora:</strong> ${orderData.date} • ${orderData.time}
                                                 </td>
                                             </tr>
-                                            <tr>
-                                                <td style="font-size: 12px; color: #666666;">
-                                                    <strong style="color: #111111;">Estado de Pago:</strong> ${orderData.action === 'pay' ? 'Pagado vía NetWish' : 'Pendiente de pago en local'}
-                                                </td>
-                                            </tr>
                                         </table>
 
                                         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 24px; border-top: 1px solid #eeeeee;">
@@ -165,7 +160,7 @@ window.emailService = {
 
                                         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-top: 2px solid #000000; padding-top: 16px;">
                                             <tr>
-                                                <td style="font-size: 15px; font-weight: 800; color: #000000;">Total Pedido</td>
+                                                <td style="font-size: 15px; font-weight: 800; color: #000000;">Total Venta</td>
                                                 <td align="right" style="font-size: 18px; font-weight: 900; font-family: monospace; color: #000000;">${totalFormatted} €</td>
                                             </tr>
                                         </table>
