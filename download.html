@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>NetWish — Descarga Segura</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white text-black flex items-center justify-center h-[100dvh] font-sans">
+    <div class="text-center space-y-4 p-6 max-w-sm">
+        <div class="w-12 h-12 bg-black text-white rounded-2xl flex items-center justify-center mx-auto font-black italic">NW</div>
+        <h2 class="text-base font-bold">Preparando tu descarga...</h2>
+        <p class="text-xs text-neutral-500" id="downloadStatus">Tu archivo master se descargará automáticamente en unos segundos.</p>
+        <a id="directLink" href="#" class="hidden inline-block px-6 py-3 bg-black text-white font-bold rounded-xl text-xs">Descargar Manualmente</a>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const fileUrl = params.get('url');
+        const fileName = params.get('name') || 'beat-master.mp3';
+
+        if (fileUrl) {
+            // Forzar descarga mediante fetch y blob (evita que Safari abra el reproductor)
+            fetch(fileUrl)
+                .then(response => response.blob())
+                .then(blob => {
+                    const blobUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = blobUrl;
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(blobUrl);
+                    document.getElementById('downloadStatus').innerText = "¡Descarga completada con éxito!";
+                })
+                .catch(err => {
+                    console.error("Error en blob, abriendo enlace directo:", err);
+                    document.getElementById('downloadStatus').innerText = "Haz clic abajo si la descarga no empieza:";
+                    const directBtn = document.getElementById('directLink');
+                    directBtn.href = fileUrl;
+                    directBtn.download = fileName;
+                    directBtn.classList.remove('hidden');
+                });
+        } else {
+            document.getElementById('downloadStatus').innerText = "Enlace de descarga no válido.";
+        }
+    </script>
+</body>
+</html>
