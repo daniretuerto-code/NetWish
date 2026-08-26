@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (currentBusiness) {
             if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
             renderProfileView(); 
+            if (typeof generateBusinessQR === 'function') generateBusinessQR(currentBusiness);
             if (typeof renderBusinessOrders === 'function') renderBusinessOrders();
             
             switchTab('business-dashboard');
@@ -38,6 +39,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderProfileView();
     }
 
+    if (typeof initHoldButtonListeners === 'function') initHoldButtonListeners();
     if (typeof loadPublicBusinesses === 'function') loadPublicBusinesses(); 
 });
 
@@ -61,8 +63,23 @@ function renderProfileView() {
             </div>
 
             <div class="space-y-2 pt-4">
-                <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Ajustes y Sesión</span>
+                <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Ajustes y Personalización</span>
                 <div class="bg-neutral-50/80 border border-neutral-200/60 rounded-[32px] overflow-hidden shadow-sm">
+                    <button onclick="openBusinessCoverUploadModal()" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
+                        <span class="text-xs font-bold text-black flex items-center space-x-2">
+                            <i data-lucide="image" class="w-4 h-4 text-neutral-600"></i>
+                            <span>Cambiar Foto de Portada</span>
+                        </span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
+                    </button>
+                    <button onclick="if (typeof openModal === 'function') openModal('Información Pública')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
+                        <span class="text-xs font-bold text-black">Editar Perfil Público</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
+                    </button>
+                    <button onclick="if (typeof openModal === 'function') openModal('Soporte Comercios')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
+                        <span class="text-xs font-bold text-black">Soporte técnico NetWish</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
+                    </button>
                     <button onclick="logoutBusiness()" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-rose-50/60 transition text-rose-600 bg-rose-50/40">
                         <span class="text-xs font-bold flex items-center space-x-2">
                             <i data-lucide="log-out" class="w-4 h-4"></i>
@@ -95,6 +112,14 @@ function renderProfileView() {
             <div class="space-y-2 pt-2">
                 <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Configuración</span>
                 <div class="bg-neutral-50/80 border border-neutral-200/60 rounded-[32px] overflow-hidden shadow-sm">
+                    <button onclick="if (typeof openModal === 'function') openModal('Métodos de Pago')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
+                        <span class="text-xs font-bold text-black">Métodos de pago seguros</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
+                    </button>
+                    <button onclick="if (typeof openModal === 'function') openModal('Mis Reservas')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
+                        <span class="text-xs font-bold text-black">Mis reservas y tickets</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
+                    </button>
                     <button onclick="openBusinessLoginModal()" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
                         <span class="text-xs font-bold text-black flex items-center space-x-2">
                             <i data-lucide="store" class="w-4 h-4 text-neutral-700"></i>
@@ -127,6 +152,85 @@ function renderProfileView() {
         `;
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+async function openBusinessCoverUploadModal() {
+    if (!currentBusiness) return;
+
+    window.openModalCustom(`
+        <div class="space-y-4 text-left">
+            <div class="text-center space-y-1">
+                <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">PERSONALIZACIÓN</span>
+                <h3 class="text-base font-bold text-black">Foto de Portada</h3>
+                <p class="text-[11px] text-neutral-500">Sube la imagen principal que verán tus clientes al entrar a tu local.</p>
+            </div>
+
+            <div class="p-4 bg-neutral-50 border border-neutral-200/80 rounded-2xl space-y-3">
+                <input type="file" id="bizCoverFileInput" accept="image/*" class="w-full text-xs text-neutral-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-black file:text-white hover:file:bg-neutral-800 cursor-pointer">
+            </div>
+
+            <button id="btnSaveBizCover" onclick="uploadBusinessCoverImage()" class="w-full py-3.5 bg-black text-white font-bold rounded-2xl text-xs shadow-md active:scale-95 transition flex items-center justify-center space-x-2">
+                <i data-lucide="upload" class="w-4 h-4"></i>
+                <span>Guardar Imagen de Portada</span>
+            </button>
+            
+            <button onclick="window.closeCustomModal()" class="w-full py-2 bg-neutral-100 text-black font-bold rounded-xl text-xs">Cancelar</button>
+        </div>
+    `);
+}
+
+async function uploadBusinessCoverImage() {
+    const fileInput = document.getElementById('bizCoverFileInput');
+    const saveBtn = document.getElementById('btnSaveBizCover');
+
+    if (!fileInput || !fileInput.files.length) {
+        alert("Por favor selecciona una imagen.");
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const fileExt = file.name.split('.').pop().toLowerCase();
+    const safeBiz = currentBusiness.name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+    const filePath = `covers/${safeBiz}_${Date.now()}.${fileExt}`;
+
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Subiendo...</span>`;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    try {
+        const { error: uploadError } = await supabaseClient.storage
+            .from('public-images')
+            .upload(filePath, file, { cacheControl: '3600', upsert: true });
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabaseClient.storage
+            .from('public-images')
+            .getPublicUrl(filePath);
+
+        const coverUrl = publicUrlData.publicUrl;
+
+        await supabaseClient
+            .from('businesses')
+            .update({ cover_url: coverUrl })
+            .ilike('name', `%${currentBusiness.name}%`);
+
+        window.closeCustomModal();
+        if (typeof window.showToast === 'function') {
+            window.showToast("Portada actualizada con éxito", "success");
+        } else {
+            alert("Portada actualizada con éxito.");
+        }
+        if (typeof loadPublicBusinesses === 'function') loadPublicBusinesses();
+    } catch (err) {
+        alert("Error al subir portada: " + err.message);
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = `<span>Reintentar</span>`;
+        }
+    }
 }
 
 function openBusinessLoginModal() {
@@ -167,10 +271,7 @@ function openBusinessLoginModal() {
 }
 
 function openBusinessSignupRequest() {
-    const modalBody = document.getElementById('modalBody');
-    if (!modalBody) return;
-    
-    modalBody.innerHTML = `
+    window.openModalCustom(`
         <div class="space-y-3 text-left">
             <div class="text-center space-y-0.5">
                 <h3 class="text-base font-bold text-black">Solicitud de Alta Comercial</h3>
@@ -229,8 +330,7 @@ function openBusinessSignupRequest() {
                 Volver al acceso
             </button>
         </div>
-    `;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    `);
 }
 
 async function submitBusinessRequest() {
@@ -260,8 +360,7 @@ async function submitBusinessRequest() {
 
     if (typeof sendToTelegram === 'function') await sendToTelegram(messageHtml);
 
-    const modalBody = document.getElementById('modalBody');
-    modalBody.innerHTML = `
+    window.openModalCustom(`
         <div class="space-y-4 text-center py-6">
             <div class="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200">
                 <i data-lucide="check" class="w-7 h-7"></i>
@@ -272,8 +371,7 @@ async function submitBusinessRequest() {
             </div>
             <button onclick="window.closeCustomModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Entendido</button>
         </div>
-    `;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    `);
 }
 
 async function authenticateBusiness() {
@@ -316,7 +414,8 @@ async function authenticateBusiness() {
         id: bizRealName,
         name: bizRealName,
         category: biz.category || biz.Categoria || 'Comercio',
-        username: biz.username
+        username: biz.username,
+        cover_url: biz.cover_url || null
     };
 
     localStorage.setItem('netwish_business', JSON.stringify(currentBusiness));
@@ -324,6 +423,7 @@ async function authenticateBusiness() {
     
     if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
     renderProfileView();
+    if (typeof generateBusinessQR === 'function') generateBusinessQR(currentBusiness);
     if (typeof renderBusinessOrders === 'function') renderBusinessOrders();
 
     switchTab('business-dashboard');
@@ -348,7 +448,6 @@ function openAuthModal(initialMode = 'login') {
     if (!modal || !modalContent) return;
     
     modal.classList.remove('hidden');
-    modal.style.display = "flex";
     setTimeout(() => {
         modal.classList.remove('opacity-0');
         modalContent.classList.remove('scale-95');
@@ -378,12 +477,9 @@ function checkPasswordStrength() {
 }
 
 function renderAuthForm(mode) {
-    const modalBody = document.getElementById('modalBody');
-    if (!modalBody) return;
-
     const isLogin = mode === 'login';
 
-    modalBody.innerHTML = `
+    window.openModalCustom(`
         <div class="space-y-3 text-left">
             <div class="text-center space-y-0.5">
                 <h3 class="text-base font-bold text-black">${isLogin ? 'Iniciar Sesión' : 'Crear una cuenta'}</h3>
@@ -456,8 +552,7 @@ function renderAuthForm(mode) {
                 Cancelar
             </button>
         </div>
-    `;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    `);
 }
 
 async function signInWithGoogle() {

@@ -23,8 +23,15 @@ function openPublicBusiness(safeName, safeType, safeEmail) {
 
     updateContactButtonLabel(isJuanStudio);
 
+    const currentBizObj = (allPublicBusinesses || []).find(b => {
+        const bName = (b.name || b.Nombre || b.username || '').toLowerCase();
+        return bName === window.appState.activeBusinessName.toLowerCase();
+    });
+
     if (imgEl) {
-        if (isJuanStudio) {
+        if (currentBizObj && currentBizObj.cover_url) {
+            imgEl.src = currentBizObj.cover_url;
+        } else if (isJuanStudio) {
             imgEl.src = "https://gamjjnyomhnyswbxlhgq.supabase.co/storage/v1/object/public/public-images/juancp-cover.jpg";
         } else if (window.appState.activeBusinessCategory.includes('rest') || window.appState.activeBusinessCategory.includes('bar') || window.appState.activeBusinessName.toLowerCase().includes('restaurante')) {
             imgEl.src = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80";
@@ -94,12 +101,10 @@ async function renderPublicCatalogItems() {
             if (error) throw error;
             
             const cleanActiveName = window.appState.activeBusinessName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            const activeTokens = cleanActiveName.split(/\s+/).filter(t => t.length > 2);
 
             items = (data || []).filter(item => {
                 const bId = String(item.business_id || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                if (bId === cleanActiveName || bId === 'biz_db') return true;
-                return activeTokens.some(token => bId.includes(token));
+                return bId === cleanActiveName;
             });
         }
     } catch (err) {
