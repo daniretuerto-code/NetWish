@@ -160,7 +160,7 @@ async function openStockControlModal() {
 }
 
 // ==========================================
-// 2. GUARDAR PRODUCTO EN SUPABASE
+// 2. GUARDAR PRODUCTO EN SUPABASE (CON FALLBACK)
 // ==========================================
 async function saveNewStockProduct() {
     if (!currentBusiness) return;
@@ -169,7 +169,7 @@ async function saveNewStockProduct() {
     const desc = document.getElementById('newProdDesc').value.trim();
     const price = parseFloat(document.getElementById('newProdPrice').value);
     const sectionEl = document.getElementById('newProdSection');
-    const section = sectionEl ? sectionEl.value : 'General';
+    const section = sectionEl ? sectionEl.value : 'Entrantes';
     const audioInput = document.getElementById('newProdAudioFile');
     const isFinishedCheckbox = document.getElementById('newProdIsFinishedBeat');
     const saveBtn = document.getElementById('saveProdBtn');
@@ -190,7 +190,7 @@ async function saveNewStockProduct() {
 
         if (saveBtn) {
             saveBtn.disabled = true;
-            saveBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Subiendo Audio a Storage...</span>`;
+            saveBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Subiendo Audio...</span>`;
             if (typeof lucide !== 'undefined') lucide.createIcons();
         }
 
@@ -207,32 +207,41 @@ async function saveNewStockProduct() {
 
             audioUrl = publicUrlData.publicUrl;
         } catch (storageErr) {
-            alert("Error al subir el archivo de audio: " + storageErr.message);
+            alert("Error al subir archivo: " + storageErr.message);
             if (saveBtn) {
                 saveBtn.disabled = false;
-                saveBtn.innerHTML = `<i data-lucide="cloud-upload" class="w-4 h-4"></i><span>Reintentar Publicación</span>`;
+                saveBtn.innerHTML = `<i data-lucide="cloud-upload" class="w-4 h-4"></i><span>Reintentar</span>`;
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             }
             return;
         }
     }
 
-    try {
-        const insertPayload = { 
-            business_id: currentBusiness.name, 
-            name: name, 
-            description: desc, 
-            price: price,
-            section: section,
-            is_finished_beat: isFinished
-        };
+    const insertPayload = { 
+        business_id: currentBusiness.name, 
+        name: name, 
+        description: desc, 
+        price: price,
+        section: section,
+        is_finished_beat: isFinished
+    };
 
-        if (audioUrl) {
-            insertPayload.audio_url = audioUrl;
+    if (audioUrl) {
+        insertPayload.audio_url = audioUrl;
+    }
+
+    try {
+        let { error } = await supabaseClient.from('products').insert([insertPayload]);
+        
+        if (error && error.message && error.message.includes('section')) {
+            console.warn("Columna 'section' ausente en DB. Guardando sin campo section...");
+            delete insertPayload.section;
+            const resFallback = await supabaseClient.from('products').insert([insertPayload]);
+            error = resFallback.error;
         }
 
-        const { error } = await supabaseClient.from('products').insert([insertPayload]);
         if (error) throw error;
+        
         openStockControlModal();
     } catch (err) {
         alert("Error en Supabase: " + err.message);
