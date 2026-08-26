@@ -20,15 +20,18 @@ window.emailService = {
             });
 
             // Enlace de descarga master prioritario o fallback al audio preview si es de música
-            const downloadLink = i.full_audio_url || i.download_url || (orderData.businessName && orderData.businessName.toUpperCase().includes('JUUANCP') ? i.audio_url : null);
+            let downloadLink = i.full_audio_url || i.download_url || (orderData.businessName && orderData.businessName.toUpperCase().includes('JUUANCP') ? i.audio_url : null);
 
             if (downloadLink) {
+                // Si es un enlace de Supabase Storage, añadimos un parámetro de control o dejamos la URL limpia para descarga
+                const safeFileName = (i.name || 'beat-master').replace(/[^a-zA-Z0-9]/g, '_') + '.mp3';
+
                 downloadSectionHtml += `
                     <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 16px; background-color: #000000; border-radius: 16px; padding: 18px; text-align: center;">
                         <tr>
                             <td>
                                 <p style="font-size: 10px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; color: #a3a3a3; margin: 0 0 10px 0;">Archivo Master / Beat Exclusivo</p>
-                                <a href="${downloadLink}" target="_blank" onclick="event.preventDefault(); const a = document.createElement('a'); a.href='${downloadLink}'; a.download='${i.name || 'beat-master'}.mp3'; document.body.appendChild(a); a.click(); document.body.removeChild(a);" style="display: inline-block; background-color: #ffffff; color: #000000; padding: 12px 24px; border-radius: 12px; font-size: 12px; font-weight: 800; text-decoration: none; cursor: pointer;">Descargar Beat en Alta Calidad</a>
+                                <a href="${downloadLink}" download="${safeFileName}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #ffffff; color: #000000; padding: 12px 24px; border-radius: 12px; font-size: 12px; font-weight: 800; text-decoration: none;">Descargar Beat en Alta Calidad</a>
                             </td>
                         </tr>
                     </table>
