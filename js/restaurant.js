@@ -5,7 +5,7 @@ window.restaurantState = {
     selectedTime: '',
     selectedGuests: 2,
     selectedZone: 'Sala Principal',
-    activeMenuCategory: 'Entrantes', // 'Entrantes' | 'Carnes' | 'Pescados' | 'Bebidas & Vinos' | 'Postres'
+    activeMenuCategory: 'Entrantes',
     allocatedTable: null,
     currentTableSession: null,
     sessionRealtimeSub: null,
@@ -40,7 +40,7 @@ window.restaurantState = {
 };
 
 // =======================================================
-// 1. HUB PRINCIPAL DEL RESTAURANTE (3 BOTONES LIMPIOS)
+// 1. HUB PRINCIPAL DEL RESTAURANTE
 // =======================================================
 window.renderRestaurantHub = async function(container) {
     if (!container) return;
@@ -54,7 +54,7 @@ window.renderRestaurantHub = async function(container) {
 
     container.innerHTML = `
         <div class="space-y-4">
-            <!-- 1. Acceso: Menú del Día -->
+            <!-- 1. Menú del Día -->
             <button onclick="window.openDailyMenuModal()" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-[0.98] transition group">
                 <div class="flex items-center space-x-3.5">
                     <div class="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center shadow-md shrink-0">
@@ -75,7 +75,7 @@ window.renderRestaurantHub = async function(container) {
                 </div>
             </button>
 
-            <!-- 2. Acceso: Reservar Mesa -->
+            <!-- 2. Reservar Mesa -->
             <button onclick="window.openModernReservationModal()" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-[0.98] transition group">
                 <div class="flex items-center space-x-3.5">
                     <div class="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center shadow-md shrink-0">
@@ -94,8 +94,8 @@ window.renderRestaurantHub = async function(container) {
                 </div>
             </button>
 
-            <!-- 3. Acceso: Carta Digital Completa -->
-            <button onclick="window.openCategorizedMenuModal()" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-[0.98] transition group">
+            <!-- 3. Carta Digital (Abre pantalla completa dedicada) -->
+            <button onclick="window.openCategorizedMenuPage('Entrantes')" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-[0.98] transition group">
                 <div class="flex items-center space-x-3.5">
                     <div class="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center shadow-md shrink-0">
                         <i data-lucide="book-open" class="w-5 h-5 text-white"></i>
@@ -119,81 +119,59 @@ window.renderRestaurantHub = async function(container) {
 };
 
 // =======================================================
-// 2. MODAL DE CARTA DIGITAL POR CATEGORÍAS
+// 2. VISTA DEDICADA A PANTALLA COMPLETA DE LA CARTA
 // =======================================================
-window.openCategorizedMenuModal = function(initialCategory = 'Entrantes') {
-    const modal = document.getElementById('customModal');
-    const modalContent = document.getElementById('modalContent');
-    const modalBody = document.getElementById('modalBody');
-    if (!modal || !modalBody) return;
+window.openCategorizedMenuPage = function(category = 'Entrantes') {
+    const page = document.getElementById('view-restaurant-menu');
+    if (!page) return;
 
-    window.restaurantState.activeMenuCategory = initialCategory;
+    window.restaurantState.activeMenuCategory = category;
+    
+    const bizTitle = document.getElementById('restaurantMenuBizTitle');
+    if (bizTitle && window.appState?.activeBusinessName) {
+        bizTitle.innerText = window.appState.activeBusinessName;
+    }
 
-    const categories = [
-        { id: 'Entrantes', label: 'Entrantes' },
-        { id: 'Carnes', label: 'Carnes' },
-        { id: 'Pescados', label: 'Pescados' },
-        { id: 'Bebidas & Vinos', label: 'Bebidas & Bodega' },
-        { id: 'Postres', label: 'Postres' }
-    ];
+    page.classList.remove('hidden');
+    page.classList.add('flex');
+    
+    window.switchMenuCategory(category);
+};
 
-    modalBody.innerHTML = `
-        <div class="space-y-4 text-left">
-            <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
-                <div>
-                    <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 font-bold">CARTA DIGITAL</span>
-                    <h3 class="text-base font-bold text-black">Nuestra Cocina</h3>
-                </div>
-                <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-            </div>
-
-            <!-- Selector de Categorías Horizontal -->
-            <div class="flex space-x-1.5 overflow-x-auto pb-1 no-scrollbar -mx-1 px-1">
-                ${categories.map(c => {
-                    const isSelected = window.restaurantState.activeMenuCategory === c.id;
-                    return `
-                        <button onclick="window.switchMenuCategory('${c.id}')" class="px-3 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition ${isSelected ? 'bg-black text-white shadow-sm' : 'bg-neutral-100 text-neutral-600 hover:text-black'}">
-                            ${c.label}
-                        </button>
-                    `;
-                }).join('')}
-            </div>
-
-            <!-- Contenedor de Platos de la Categoría Seleccionada -->
-            <div id="categoryDishesContainer" class="space-y-2.5 max-h-[380px] overflow-y-auto pr-1 allow-scroll">
-                ${window.renderDishesForActiveCategory()}
-            </div>
-
-            <button onclick="window.closeCustomModal()" class="w-full py-3 bg-neutral-100 hover:bg-neutral-200 text-black font-bold rounded-xl text-xs transition">
-                Cerrar Carta
-            </button>
-        </div>
-    `;
-
-    modal.classList.remove('hidden');
-    modal.style.display = "flex";
-    setTimeout(() => { 
-        modal.classList.remove('opacity-0'); 
-        if (modalContent) modalContent.classList.remove('scale-95'); 
-    }, 10);
-
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+window.closeCategorizedMenuPage = function() {
+    const page = document.getElementById('view-restaurant-menu');
+    if (page) {
+        page.classList.add('hidden');
+        page.classList.remove('flex');
+    }
 };
 
 window.switchMenuCategory = function(catId) {
     window.restaurantState.activeMenuCategory = catId;
-    const container = document.getElementById('categoryDishesContainer');
+    
+    const tabs = [
+        { id: 'Entrantes', btn: 'tab-btn-Entrantes' },
+        { id: 'Carnes', btn: 'tab-btn-Carnes' },
+        { id: 'Pescados', btn: 'tab-btn-Pescados' },
+        { id: 'Bebidas & Vinos', btn: 'tab-btn-Bebidas' },
+        { id: 'Postres', btn: 'tab-btn-Postres' }
+    ];
+
+    tabs.forEach(t => {
+        const el = document.getElementById(t.btn);
+        if (el) {
+            if (t.id === catId) {
+                el.className = "px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition bg-black text-white shadow-sm";
+            } else {
+                el.className = "px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition bg-neutral-100 text-neutral-600 hover:text-black";
+            }
+        }
+    });
+
+    const container = document.getElementById('fullMenuDishesList');
     if (container) {
         container.innerHTML = window.renderDishesForActiveCategory();
         if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
-    
-    // Re-render tabs styles
-    const modalBody = document.getElementById('modalBody');
-    if (modalBody) {
-        window.openCategorizedMenuModal(catId);
     }
 };
 
@@ -216,9 +194,10 @@ window.renderDishesForActiveCategory = function() {
 
     if (filtered.length === 0) {
         return `
-            <div class="py-8 text-center space-y-1">
-                <p class="text-xs font-bold text-neutral-400">No hay platos dados de alta en ${activeCat}</p>
-                <p class="text-[10px] text-neutral-400">El negocio puede añadir productos en esta sección desde su panel.</p>
+            <div class="py-16 text-center space-y-2 bg-neutral-50 rounded-3xl border border-neutral-100">
+                <i data-lucide="utensils" class="w-6 h-6 mx-auto text-neutral-300"></i>
+                <p class="text-xs font-bold text-neutral-500">No hay platos en ${activeCat}</p>
+                <p class="text-[10px] text-neutral-400">Los platos dados de alta en el panel aparecerán aquí.</p>
             </div>
         `;
     }
@@ -230,15 +209,15 @@ window.renderDishesForActiveCategory = function() {
         const price = parseFloat(dish.price) || 0;
 
         return `
-            <div class="p-3.5 rounded-2xl border border-neutral-200/80 bg-neutral-50 flex items-center justify-between transition">
-                <div class="space-y-0.5 max-w-[65%] pr-2">
+            <div class="p-4 rounded-3xl border border-neutral-200/80 bg-neutral-50 flex items-center justify-between transition hover:border-black/20">
+                <div class="space-y-1 max-w-[65%] pr-2">
                     <h4 class="text-xs font-bold text-black truncate">${dish.name}</h4>
                     <p class="text-[10px] text-neutral-400 line-clamp-2">${dish.description || ''}</p>
                     <span class="text-xs font-extrabold text-black font-mono block pt-0.5">${price.toFixed(2)} €</span>
                 </div>
                 <div id="btn-container-${dish.id}" class="flex items-center space-x-2 shrink-0">
                     ${typeof renderItemButtonHTML === 'function' ? renderItemButtonHTML(dish.id, encodeURIComponent(itemIdStr), encodeURIComponent(dish.name), price, qty) : `
-                        <button onclick="window.changeItemQuantity('${dish.id}', '${encodeURIComponent(dish.name)}', ${price}, 1)" class="w-8 h-8 rounded-xl bg-black text-white font-bold flex items-center justify-center active:scale-90 transition shadow-sm">
+                        <button onclick="window.changeItemQuantity('${dish.id}', '${encodeURIComponent(dish.name)}', ${price}, 1)" class="w-9 h-9 rounded-2xl bg-black text-white font-bold flex items-center justify-center active:scale-90 transition shadow-sm">
                             +
                         </button>
                     `}
@@ -249,7 +228,7 @@ window.renderDishesForActiveCategory = function() {
 };
 
 // =======================================================
-// 3. CARGA DE LA CARTA DESDE SUPABASE
+// 3. CARGA DE PRODUCTOS DESDE SUPABASE
 // =======================================================
 window.loadRestaurantLiveCatalog = async function() {
     const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
@@ -268,16 +247,15 @@ window.loadRestaurantLiveCatalog = async function() {
             if (filtered.length > 0) {
                 window.restaurantState.catalogDishes = filtered;
             } else {
-                // Catálogo demo inicial clasificado
                 window.restaurantState.catalogDishes = [
                     { id: 'rest_1', name: 'Tabla de Quesos de Cerrato', description: 'Selección de quesos curados palentinos con mermelada artesana', price: 14.00, section: 'Entrantes' },
                     { id: 'rest_2', name: 'Croquetas de Jamón Ibérico (6 uds)', description: 'Rebozado crujiente y bechamel melosa', price: 9.50, section: 'Entrantes' },
                     { id: 'rest_3', name: 'Lechazo Churro Asado de Palencia', description: 'Cuarto de lechazo asado en horno de leña tradicional', price: 26.50, section: 'Carnes' },
-                    { id: 'rest_4', name: 'Solomillo de Ternera de la Montaña Palentina', description: 'A la brasa con guarnición de pimientos confitados', price: 22.00, section: 'Carnes' },
+                    { id: 'rest_4', name: 'Solomillo de Ternera de la Montaña', description: 'A la brasa con guarnición de pimientos confitados', price: 22.00, section: 'Carnes' },
                     { id: 'rest_5', name: 'Bacalao al Ajoarriero con Pimientos', description: 'Lomo confitado sobre cama de pimientos asados', price: 18.50, section: 'Pescados' },
                     { id: 'rest_6', name: 'Merluza del Cantábrico a la Cazuela', description: 'Con almejas y salsa verde tradicional', price: 19.00, section: 'Pescados' },
                     { id: 'rest_7', name: 'Vino Tinto D.O. Arlanza (Botella)', description: 'Crianza de la provincia, Roble selección', price: 15.00, section: 'Bebidas & Vinos' },
-                    { id: 'rest_8', name: 'Agua Mineral de Fuentes de Lebanza (1L)', description: 'Manantial puro de la Montaña Palentina', price: 2.50, section: 'Bebidas & Vinos' },
+                    { id: 'rest_8', name: 'Agua Mineral Fuentes de Lebanza (1L)', description: 'Manantial de la Montaña Palentina', price: 2.50, section: 'Bebidas & Vinos' },
                     { id: 'rest_9', name: 'Brazo de San Antolín', description: 'Postre tradicional hojaldrado con crema pastelera', price: 5.50, section: 'Postres' }
                 ];
             }

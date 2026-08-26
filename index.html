@@ -370,6 +370,31 @@
                 <div id="dynamicBeatsCatalogList" class="space-y-3 pt-2 pb-6"></div>
             </div>
 
+            <!-- VISTA DEDICADA: CARTA DIGITAL A PANTALLA COMPLETA -->
+            <div id="view-restaurant-menu" class="absolute inset-0 bg-white z-40 hidden flex-col allow-scroll px-6 pt-24 pb-28 space-y-4">
+                <div class="flex items-center space-x-3 px-1 shrink-0">
+                    <button onclick="window.closeCategorizedMenuPage()" class="w-10 h-10 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-black hover:bg-neutral-200 transition active:scale-95">
+                        <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                    </button>
+                    <div>
+                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 font-bold block">CARTA COMPLETA</span>
+                        <h2 class="text-xl font-bold text-black tracking-tight" id="restaurantMenuBizTitle">Nuestra Cocina</h2>
+                    </div>
+                </div>
+
+                <!-- Selector Horizontal de Secciones -->
+                <div class="flex space-x-2 overflow-x-auto pb-1 no-scrollbar shrink-0 -mx-1 px-1" id="restaurantCategoryTabs">
+                    <button onclick="window.switchMenuCategory('Entrantes')" id="tab-btn-Entrantes" class="px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition bg-black text-white shadow-sm">Entrantes</button>
+                    <button onclick="window.switchMenuCategory('Carnes')" id="tab-btn-Carnes" class="px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition bg-neutral-100 text-neutral-600 hover:text-black">Carnes</button>
+                    <button onclick="window.switchMenuCategory('Pescados')" id="tab-btn-Pescados" class="px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition bg-neutral-100 text-neutral-600 hover:text-black">Pescados</button>
+                    <button onclick="window.switchMenuCategory('Bebidas & Vinos')" id="tab-btn-Bebidas" class="px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition bg-neutral-100 text-neutral-600 hover:text-black">Bebidas & Bodega</button>
+                    <button onclick="window.switchMenuCategory('Postres')" id="tab-btn-Postres" class="px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition bg-neutral-100 text-neutral-600 hover:text-black">Postres</button>
+                </div>
+
+                <!-- Listado Dinámico de Platos -->
+                <div id="fullMenuDishesList" class="space-y-3 pt-2 pb-6 flex-1"></div>
+            </div>
+
             <!-- BARRA FLOTANTE GLOBAL DE CESTA -->
             <div id="publicBusinessCartBar" class="absolute bottom-24 left-6 right-6 z-50 transition-all duration-300 transform translate-y-64 opacity-0 pointer-events-none">
                 <button onclick="openCartSummary()" class="w-full bg-black text-white p-4 rounded-2xl flex justify-between items-center shadow-[0_20px_40px_rgba(0,0,0,0.35)] active:scale-95 transition-transform">
