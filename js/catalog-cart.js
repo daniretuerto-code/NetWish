@@ -23,9 +23,9 @@ function openPublicBusiness(safeName, safeType, safeEmail) {
 
     updateContactButtonLabel(isJuanStudio);
 
-    const currentBizObj = (allPublicBusinesses || []).find(b => {
-        const bName = (b.name || b.Nombre || b.username || '').toLowerCase();
-        return bName === window.appState.activeBusinessName.toLowerCase();
+    const currentBizObj = (window.allPublicBusinesses || allPublicBusinesses || []).find(b => {
+        const bName = (b.name || b.Nombre || b.username || '').toLowerCase().trim();
+        return bName === window.appState.activeBusinessName.toLowerCase().trim();
     });
 
     if (imgEl) {

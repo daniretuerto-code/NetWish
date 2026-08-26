@@ -161,7 +161,7 @@ function renderProfileView() {
 }
 
 // =======================================================
-// SUBIDA DE IMAGEN DE PORTADA (BUCKET ROBUSTO)
+// SUBIDA DE IMAGEN DE PORTADA (SINCRONIZACIÓN INMEDIATA)
 // =======================================================
 async function openBusinessCoverUploadModal() {
     if (!currentBusiness) return;
@@ -229,21 +229,26 @@ async function uploadBusinessCoverImage() {
 
         const coverUrl = publicUrlData.publicUrl;
 
-        await supabaseClient
+        const { error: updateError } = await supabaseClient
             .from('businesses')
             .update({ cover_url: coverUrl })
             .ilike('name', `%${currentBusiness.name}%`);
 
+        if (updateError) throw updateError;
+
         currentBusiness.cover_url = coverUrl;
         localStorage.setItem('netwish_business', JSON.stringify(currentBusiness));
 
+        if (typeof loadPublicBusinesses === 'function') {
+            await loadPublicBusinesses();
+        }
+
         window.closeCustomModal();
         if (typeof window.showToast === 'function') {
-            window.showToast("Foto de portada actualizada con éxito", "success");
+            window.showToast("¡Foto de portada actualizada con éxito!", "success");
         } else {
             alert("Foto de portada actualizada con éxito.");
         }
-        if (typeof loadPublicBusinesses === 'function') loadPublicBusinesses();
     } catch (err) {
         alert("Error al guardar portada: " + err.message);
         if (saveBtn) {
