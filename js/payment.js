@@ -2,7 +2,6 @@
 
 window.rawAmountString = window.rawAmountString || "000";
 
-// --- CONTROL DEL TECLADO NUMÉRICO ---
 function appendNum(num) {
     if (window.rawAmountString.length >= 8) return;
     if (window.rawAmountString === "000" || window.rawAmountString === "0") {
@@ -35,7 +34,6 @@ window.updateAmountDisplay = function() {
     display.innerText = formatted;
 };
 
-// --- BOTÓN MANTENER PARA CONFIRMAR ---
 function initHoldButton() {
     const btnContainer = document.getElementById('holdButtonContainer');
     if (!btnContainer) return;
@@ -94,13 +92,8 @@ function initHoldButton() {
 
 document.addEventListener('DOMContentLoaded', initHoldButton);
 
-// --- EJECUCIÓN DEL PAGO Y ENVÍO GARANTIZADO A AMBOS ---
 window.executeFullPayment = async function(isReservation = false) {
     try {
-        const modal = document.getElementById('customModal');
-        const modalContent = document.getElementById('modalContent');
-        const modalBody = document.getElementById('modalBody');
-
         let isCart = window.appState && window.appState.isCartCheckout;
         let cTotal = window.appState ? window.appState.cartTotalValue : 0;
         let cItems = window.appState ? window.appState.cartItemsList : [];
@@ -127,7 +120,6 @@ window.executeFullPayment = async function(isReservation = false) {
 
         const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
 
-        // 1. Obtener notification_email exacto del comercio desde Supabase
         let targetBizEmail = (window.appState && window.appState.activeBusinessEmail) || '';
         
         if (client) {
@@ -164,7 +156,6 @@ window.executeFullPayment = async function(isReservation = false) {
             status: statusText
         };
 
-        // 2. Guardar orden en Supabase
         if (client) {
             try {
                 await client.from('orders').insert([orderPayload]);
@@ -173,7 +164,6 @@ window.executeFullPayment = async function(isReservation = false) {
             }
         }
 
-        // 3. Disparo dual garantizado (Cliente + Negocio)
         if (window.emailService) {
             const structuredOrder = {
                 businessName: tBusiness,
@@ -185,51 +175,37 @@ window.executeFullPayment = async function(isReservation = false) {
                 action: isReservation ? 'reserve' : 'pay'
             };
 
-            // Notificación al cliente
             if (customerEmail) {
                 window.emailService.sendClientReceipt(customerEmail, structuredOrder);
             }
 
-            // Notificación al comercio
             if (targetBizEmail) {
                 window.emailService.sendBusinessAlert(targetBizEmail, structuredOrder);
             }
         }
 
-        // 4. Modal de confirmación en la UI
-        if (modalBody) {
-            modalBody.innerHTML = `
-                <div class="text-center space-y-4 py-3">
-                    <div class="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
-                        <i data-lucide="check" class="w-8 h-8"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-bold text-black">${isReservation ? 'Reserva Confirmada' : 'Pago Completado'}</h3>
-                        <p class="text-xs text-neutral-500 mt-1">Registrado con éxito en ${tBusiness}.</p>
-                        <p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo digital emitido a tu correo.</p>
-                    </div>
-
-                    <div class="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-left space-y-1">
-                        <span class="text-[10px] text-neutral-400 font-mono uppercase block">Detalles</span>
-                        <span class="text-xs font-bold text-black block truncate">${itemsDesc}</span>
-                        <span class="text-sm font-extrabold text-black block mt-1">${totalVal.toFixed(2)} €</span>
-                    </div>
-
-                    <button onclick="window.finishPaymentFlow()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs active:scale-95 transition shadow-sm">
-                        Volver al Inicio
-                    </button>
+        window.openModalCustom(`
+            <div class="text-center space-y-4 py-3">
+                <div class="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
+                    <i data-lucide="check" class="w-8 h-8"></i>
                 </div>
-            `;
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
+                <div>
+                    <h3 class="text-lg font-bold text-black">${isReservation ? 'Reserva Confirmada' : 'Pago Completado'}</h3>
+                    <p class="text-xs text-neutral-500 mt-1">Registrado con éxito en ${tBusiness}.</p>
+                    <p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo digital emitido a tu correo.</p>
+                </div>
 
-        if (modal) {
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                if (modalContent) modalContent.classList.remove('scale-95');
-            }, 10);
-        }
+                <div class="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-left space-y-1">
+                    <span class="text-[10px] text-neutral-400 font-mono uppercase block">Detalles</span>
+                    <span class="text-xs font-bold text-black block truncate">${itemsDesc}</span>
+                    <span class="text-sm font-extrabold text-black block mt-1">${totalVal.toFixed(2)} €</span>
+                </div>
+
+                <button onclick="window.finishPaymentFlow()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs active:scale-95 transition shadow-sm">
+                    Volver al Inicio
+                </button>
+            </div>
+        `);
 
     } catch (criticalError) {
         console.error("Fallo crítico en el proceso de pago:", criticalError);
@@ -238,14 +214,7 @@ window.executeFullPayment = async function(isReservation = false) {
 };
 
 window.finishPaymentFlow = function() {
-    const modal = document.getElementById('customModal');
-    const modalContent = document.getElementById('modalContent');
-    
-    if (modal) {
-        modal.classList.add('opacity-0');
-        if (modalContent) modalContent.classList.add('scale-95');
-        setTimeout(() => modal.classList.add('hidden'), 300);
-    }
+    window.closeCustomModal();
 
     window.rawAmountString = "000";
     if (window.appState) {

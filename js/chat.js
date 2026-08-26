@@ -1,9 +1,10 @@
+// js/chat.js
+
 let currentChatBusiness = null;
 let currentChatCustomer = null;
 let chatRealtimeSubscription = null;
 let bizGlobalUnreadSubscription = null;
 
-// --- ABRIR CHAT DESDE EL CLIENTE HACIA EL COMERCIO ---
 function openCustomerChat(bizName) {
     if (typeof currentUser === 'undefined' || !currentUser) {
         if (typeof openAuthModal === 'function') openAuthModal('login');
@@ -13,13 +14,8 @@ function openCustomerChat(bizName) {
     currentChatBusiness = decodeURIComponent(bizName || window.appState?.activeBusinessName || '');
     currentChatCustomer = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email || 'Cliente';
 
-    const modal = document.getElementById('customModal');
-    const modalContent = document.getElementById('modalContent');
-    const modalBody = document.getElementById('modalBody');
-
-    modalBody.innerHTML = `
+    window.openModalCustom(`
         <div class="flex flex-col h-[430px] justify-between text-left">
-            <!-- Header Chat -->
             <div class="flex items-center justify-between pb-3 border-b border-neutral-100 shrink-0">
                 <div class="flex items-center space-x-2.5">
                     <div class="w-9 h-9 rounded-2xl bg-black text-white flex items-center justify-center text-xs font-bold shadow-sm">
@@ -38,14 +34,12 @@ function openCustomerChat(bizName) {
                 </button>
             </div>
 
-            <!-- Contenedor Mensajes -->
             <div id="chatMessagesContainer" class="flex-1 overflow-y-auto py-3 space-y-2.5 pr-1 allow-scroll">
                 <div class="text-center py-6">
                     <i data-lucide="loader-2" class="w-4 h-4 mx-auto animate-spin text-neutral-400"></i>
                 </div>
             </div>
 
-            <!-- Input Envío -->
             <div class="pt-2 border-t border-neutral-100 flex items-center space-x-2 shrink-0">
                 <input type="text" id="chatInputText" placeholder="Escribe tu consulta o pedido a medida..." 
                     onkeydown="if(event.key === 'Enter') sendChatMessage('customer')"
@@ -55,19 +49,11 @@ function openCustomerChat(bizName) {
                 </button>
             </div>
         </div>
-    `;
-
-    lucide.createIcons();
-    modal.classList.remove('hidden');
-    setTimeout(() => {
-        modal.classList.remove('opacity-0');
-        modalContent?.classList.remove('scale-95');
-    }, 10);
+    `);
 
     loadChatMessages('customer');
 }
 
-// --- ACTUALIZACIÓN REACTIVA DEL BADGE ROJO EN LA BARRA INFERIOR ---
 async function updateBusinessNavUnreadBadge() {
     if (!currentBusiness) return;
     const dot = document.getElementById('bizNavUnreadDot');
@@ -94,7 +80,6 @@ async function updateBusinessNavUnreadBadge() {
     }
 }
 
-// --- RENDERIZADO DE LA PESTAÑA DEDICADA DE MENSAJES (MODO COMERCIO) ---
 async function renderBusinessMessagesTab() {
     if (!currentBusiness) return;
     const container = document.getElementById('businessMessagesTabContent');
@@ -108,10 +93,8 @@ async function renderBusinessMessagesTab() {
     `;
     lucide.createIcons();
 
-    // Actualizar punto rojo en barra de navegación
     updateBusinessNavUnreadBadge();
 
-    // Suscripción Realtime global para el badge y la lista
     if (!bizGlobalUnreadSubscription && typeof supabaseClient.channel === 'function') {
         bizGlobalUnreadSubscription = supabaseClient
             .channel('public:messages_global_unread')
@@ -176,7 +159,6 @@ async function renderBusinessMessagesTab() {
             const avatar = entry.avatarUrl;
             const dateStr = lastMsg.created_at ? new Date(lastMsg.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
 
-            // Icono / Avatar del cliente
             let avatarMarkup = '';
             if (avatar) {
                 avatarMarkup = `
@@ -195,7 +177,6 @@ async function renderBusinessMessagesTab() {
                 `;
             }
 
-            // Badge de no leídos
             const unreadBadge = unread > 0 ? `
                 <div class="flex items-center space-x-1 bg-rose-500 text-white px-2 py-0.5 rounded-full text-[9px] font-bold shadow-xs">
                     <span>${unread}</span>
@@ -235,14 +216,12 @@ async function renderBusinessMessagesTab() {
     }
 }
 
-// --- ABRIR CHAT INDIVIDUAL DEL NEGOCIO CON UN CLIENTE (MODAL) ---
 async function openBusinessChatWithCustomer(encodedClient, encodedAvatar = '') {
     const client = decodeURIComponent(encodedClient);
     const avatar = decodeURIComponent(encodedAvatar);
     currentChatBusiness = currentBusiness.name;
     currentChatCustomer = client;
 
-    // Marcar mensajes de este cliente como leídos en Supabase
     try {
         await supabaseClient
             .from('messages')
@@ -255,11 +234,6 @@ async function openBusinessChatWithCustomer(encodedClient, encodedAvatar = '') {
     } catch (err) {
         console.warn("Aviso marcando mensajes como leídos:", err);
     }
-
-    const modal = document.getElementById('customModal');
-    const modalContent = document.getElementById('modalContent');
-    const modalBody = document.getElementById('modalBody');
-    if (!modalBody) return;
 
     let headerAvatarMarkup = '';
     if (avatar) {
@@ -279,9 +253,8 @@ async function openBusinessChatWithCustomer(encodedClient, encodedAvatar = '') {
         `;
     }
 
-    modalBody.innerHTML = `
+    window.openModalCustom(`
         <div class="flex flex-col h-[430px] justify-between text-left">
-            <!-- Header Chat Negocio -->
             <div class="flex items-center justify-between pb-3 border-b border-neutral-100 shrink-0">
                 <div class="flex items-center space-x-2.5">
                     <button onclick="renderBusinessMessagesTab(); closeChatModal();" class="w-8 h-8 rounded-xl bg-neutral-100 flex items-center justify-center text-black active:scale-90 transition mr-0.5">
@@ -298,14 +271,12 @@ async function openBusinessChatWithCustomer(encodedClient, encodedAvatar = '') {
                 </button>
             </div>
 
-            <!-- Contenedor Mensajes -->
             <div id="chatMessagesContainer" class="flex-1 overflow-y-auto py-3 space-y-2.5 pr-1 allow-scroll">
                 <div class="text-center py-6">
                     <i data-lucide="loader-2" class="w-4 h-4 mx-auto animate-spin text-neutral-400"></i>
                 </div>
             </div>
 
-            <!-- Input Envío Negocio -->
             <div class="pt-2 border-t border-neutral-100 flex items-center space-x-2 shrink-0">
                 <input type="text" id="chatInputText" placeholder="Responder al cliente..." 
                     onkeydown="if(event.key === 'Enter') sendChatMessage('business')"
@@ -315,19 +286,11 @@ async function openBusinessChatWithCustomer(encodedClient, encodedAvatar = '') {
                 </button>
             </div>
         </div>
-    `;
-
-    lucide.createIcons();
-    modal.classList.remove('hidden');
-    setTimeout(() => {
-        modal.classList.remove('opacity-0');
-        modalContent?.classList.remove('scale-95');
-    }, 10);
+    `);
 
     loadChatMessages('business');
 }
 
-// --- CARGA Y RENDERIZADO DE MENSAJES CON REALTIME ---
 async function loadChatMessages(currentRole) {
     const container = document.getElementById('chatMessagesContainer');
     if (!container) return;
@@ -345,7 +308,6 @@ async function loadChatMessages(currentRole) {
 
         renderMessagesList(data || [], currentRole);
 
-        // Suscripción Realtime para la conversación activa
         if (!chatRealtimeSubscription && typeof supabaseClient.channel === 'function') {
             chatRealtimeSubscription = supabaseClient
                 .channel('public:messages_single_chat')
@@ -431,7 +393,6 @@ function appendSingleMessage(msg, currentRole) {
     container.scrollTop = container.scrollHeight;
 }
 
-// --- ENVÍO DE MENSAJES ---
 async function sendChatMessage(senderType) {
     const input = document.getElementById('chatInputText');
     if (!input || !input.value.trim()) return;
@@ -474,10 +435,9 @@ function closeChatModal() {
         supabaseClient.removeChannel(chatRealtimeSubscription);
         chatRealtimeSubscription = null;
     }
-    if (typeof closeModal === 'function') closeModal();
+    window.closeCustomModal();
 }
 
-// Inicializar chequeo de badge si ya está en modo comercio
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof currentBusiness !== 'undefined' && currentBusiness) {
         updateBusinessNavUnreadBadge();

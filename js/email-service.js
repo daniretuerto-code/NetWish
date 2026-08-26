@@ -3,7 +3,6 @@
 window.emailService = {
     apiUrl: '/api/send-email',
 
-    // 1. Justificante digital para el Cliente
     sendClientReceipt: async function(clientEmail, orderData) {
         if (!clientEmail) return;
 
@@ -82,7 +81,6 @@ window.emailService = {
         return this.triggerSend(payload);
     },
 
-    // 2. Alerta de nuevo pedido para el Negocio
     sendBusinessAlert: async function(bizEmail, orderData) {
         if (!bizEmail) return;
 

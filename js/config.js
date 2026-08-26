@@ -1,4 +1,5 @@
-// Inicialización de Iconos
+// js/config.js
+
 lucide.createIcons();
 
 // Conexión Supabase
@@ -18,6 +19,7 @@ let scanningInterval = null;
 
 let activePayee = "";
 let rawAmountString = "000"; 
+let activeTab = 'home';
 
 let cartTotalValue = 0.00;
 let cartItemCount = 0;
@@ -30,7 +32,7 @@ let holdTimer = null;
 let progressInterval = null;
 let holdProgress = 0;
 
-// Función de notificaciones
+// Notificaciones Telegram
 async function sendToTelegram(htmlText) {
     try {
         await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {

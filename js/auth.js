@@ -1,17 +1,16 @@
+// js/auth.js
+
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Recuperación de contraseña vía enlace
     const hash = window.location.hash;
     if (hash && hash.includes('type=recovery')) {
         if (typeof openNewPasswordModal === 'function') openNewPasswordModal();
     }
 
-    // 2. Sesión personal en Supabase
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
         currentUser = session.user;
     }
 
-    // 3. Sesión de comercio en localStorage
     const savedBusiness = localStorage.getItem('netwish_business');
     if (savedBusiness) {
         try {
@@ -27,7 +26,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (currentBusiness) {
             if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
             renderProfileView(); 
-            if (typeof generateBusinessQR === 'function') generateBusinessQR(currentBusiness);
             if (typeof renderBusinessOrders === 'function') renderBusinessOrders();
             
             switchTab('business-dashboard');
@@ -40,7 +38,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderProfileView();
     }
 
-    if (typeof initHoldButtonListeners === 'function') initHoldButtonListeners();
     if (typeof loadPublicBusinesses === 'function') loadPublicBusinesses(); 
 });
 
@@ -66,14 +63,6 @@ function renderProfileView() {
             <div class="space-y-2 pt-4">
                 <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Ajustes y Sesión</span>
                 <div class="bg-neutral-50/80 border border-neutral-200/60 rounded-[32px] overflow-hidden shadow-sm">
-                    <button onclick="if (typeof openModal === 'function') openModal('Información Pública')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
-                        <span class="text-xs font-bold text-black">Editar Perfil Público</span>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
-                    </button>
-                    <button onclick="if (typeof openModal === 'function') openModal('Soporte Comercios')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
-                        <span class="text-xs font-bold text-black">Soporte técnico NetWish</span>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
-                    </button>
                     <button onclick="logoutBusiness()" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-rose-50/60 transition text-rose-600 bg-rose-50/40">
                         <span class="text-xs font-bold flex items-center space-x-2">
                             <i data-lucide="log-out" class="w-4 h-4"></i>
@@ -106,14 +95,6 @@ function renderProfileView() {
             <div class="space-y-2 pt-2">
                 <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 px-1">Configuración</span>
                 <div class="bg-neutral-50/80 border border-neutral-200/60 rounded-[32px] overflow-hidden shadow-sm">
-                    <button onclick="if (typeof openModal === 'function') openModal('Métodos de Pago')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
-                        <span class="text-xs font-bold text-black">Métodos de pago seguros</span>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
-                    </button>
-                    <button onclick="if (typeof openModal === 'function') openModal('Mis Reservas')" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
-                        <span class="text-xs font-bold text-black">Mis reservas y tickets</span>
-                        <i data-lucide="chevron-right" class="w-4 h-4 text-neutral-400 shrink-0"></i>
-                    </button>
                     <button onclick="openBusinessLoginModal()" class="w-full px-5 py-4 text-left flex justify-between items-center hover:bg-neutral-100/60 transition border-b border-neutral-200/60">
                         <span class="text-xs font-bold text-black flex items-center space-x-2">
                             <i data-lucide="store" class="w-4 h-4 text-neutral-700"></i>
@@ -149,13 +130,7 @@ function renderProfileView() {
 }
 
 function openBusinessLoginModal() {
-    const modal = document.getElementById('customModal');
-    const modalContent = document.getElementById('modalContent');
-    const modalBody = document.getElementById('modalBody');
-
-    if (!modal || !modalBody) return;
-
-    modalBody.innerHTML = `
+    window.openModalCustom(`
         <div class="space-y-4 text-left">
             <div class="text-center space-y-1">
                 <h3 class="text-base font-bold text-black">Acceso de Comercios</h3>
@@ -184,18 +159,11 @@ function openBusinessLoginModal() {
                 </button>
             </div>
             
-            <button onclick="if (typeof closeModal === 'function') closeModal()" class="w-full py-1 text-neutral-400 font-medium text-xs text-center">
+            <button onclick="window.closeCustomModal()" class="w-full py-1 text-neutral-400 font-medium text-xs text-center">
                 Cancelar
             </button>
         </div>
-    `;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-
-    modal.classList.remove('hidden');
-    setTimeout(() => {
-        modal.classList.remove('opacity-0');
-        if (modalContent) modalContent.classList.remove('scale-95');
-    }, 10);
+    `);
 }
 
 function openBusinessSignupRequest() {
@@ -302,7 +270,7 @@ async function submitBusinessRequest() {
                 <h3 class="text-base font-bold text-black">¡Solicitud Registrada!</h3>
                 <p class="text-xs text-neutral-500 leading-relaxed">Hemos registrado tu establecimiento <strong class="text-black">${name}</strong>. Nos pondremos en contacto contigo muy pronto.</p>
             </div>
-            <button onclick="if (typeof closeModal === 'function') closeModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Entendido</button>
+            <button onclick="window.closeCustomModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs">Entendido</button>
         </div>
     `;
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -352,11 +320,10 @@ async function authenticateBusiness() {
     };
 
     localStorage.setItem('netwish_business', JSON.stringify(currentBusiness));
-    if (typeof closeModal === 'function') closeModal();
+    window.closeCustomModal();
     
     if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
     renderProfileView();
-    if (typeof generateBusinessQR === 'function') generateBusinessQR(currentBusiness);
     if (typeof renderBusinessOrders === 'function') renderBusinessOrders();
 
     switchTab('business-dashboard');
@@ -381,6 +348,7 @@ function openAuthModal(initialMode = 'login') {
     if (!modal || !modalContent) return;
     
     modal.classList.remove('hidden');
+    modal.style.display = "flex";
     setTimeout(() => {
         modal.classList.remove('opacity-0');
         modalContent.classList.remove('scale-95');
@@ -484,7 +452,7 @@ function renderAuthForm(mode) {
                 `}
             </div>
 
-            <button onclick="if(typeof closeModal === 'function') closeModal()" class="w-full py-1 text-neutral-400 font-medium text-xs transition hover:text-black">
+            <button onclick="window.closeCustomModal()" class="w-full py-1 text-neutral-400 font-medium text-xs transition hover:text-black">
                 Cancelar
             </button>
         </div>
@@ -531,7 +499,7 @@ async function processAuthAction(mode) {
         if (error) { alert("Error al iniciar sesión."); return; }
         currentUser = data.user;
     }
-    if (typeof closeModal === 'function') closeModal();
+    window.closeCustomModal();
     if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
     renderProfileView();
     switchTab('home');

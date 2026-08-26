@@ -1,8 +1,8 @@
-// --- ÓRDENES Y CONFIGURACIÓN DE PESTAÑAS ---
+// js/navigation.js
+
 const userTabOrder = ['home', 'explore', 'scan', 'profile'];
 const bizTabOrder = ['business-dashboard', 'business-orders', 'business-messages', 'business-profile'];
 
-// --- CONTROLADOR PRINCIPAL DE ENRUTAMIENTO Y TRANSICIONES ---
 function switchTab(tabId) {
     activeTab = tabId;
     
@@ -11,8 +11,8 @@ function switchTab(tabId) {
     const personalNav = document.getElementById('personal-nav');
     const bizNav = document.getElementById('business-nav');
 
-    // 1. Cerrar submenús flotantes si se navega a pestañas principales
-    const subViews = ['view-category', 'view-payment', 'view-cart', 'view-public-business', 'view-beats-catalog'];
+    // Cerrar submenús flotantes si se navega a pestañas principales
+    const subViews = ['view-category', 'view-payment', 'view-cart', 'view-public-business', 'view-beats-catalog', 'view-restaurant-menu'];
     if (userTabOrder.includes(tabId) || bizTabOrder.includes(tabId)) {
         subViews.forEach(vId => {
             const el = document.getElementById(vId);
@@ -23,7 +23,6 @@ function switchTab(tabId) {
         });
     }
 
-    // 2. Comprobación y alternancia de wrappers según el modo
     if (currentBusiness) {
         if (personalNav) personalNav.classList.add('hidden');
         if (bizNav) bizNav.classList.remove('hidden');
@@ -62,55 +61,34 @@ function switchTab(tabId) {
         }
     }
 
-    // 3. Manejo de vistas modulares y submenús flotantes
     if (tabId === 'category') {
         const catView = document.getElementById('view-category');
-        if (catView) {
-            catView.classList.remove('hidden');
-            catView.scrollTop = 0;
-        }
+        if (catView) { catView.classList.remove('hidden'); catView.scrollTop = 0; }
     } else if (tabId === 'payment') {
         const payView = document.getElementById('view-payment');
-        if (payView) {
-            payView.classList.remove('hidden');
-            payView.scrollTop = 0;
-        }
+        if (payView) { payView.classList.remove('hidden'); payView.scrollTop = 0; }
     } else if (tabId === 'cart') {
         const cartView = document.getElementById('view-cart');
-        if (cartView) {
-            cartView.classList.remove('hidden');
-            cartView.scrollTop = 0;
-        }
+        if (cartView) { cartView.classList.remove('hidden'); cartView.scrollTop = 0; }
     } else if (tabId === 'public-business') {
         const pubBizView = document.getElementById('view-public-business');
-        if (pubBizView) {
-            pubBizView.classList.remove('hidden');
-            pubBizView.scrollTop = 0;
-        }
+        if (pubBizView) { pubBizView.classList.remove('hidden'); pubBizView.scrollTop = 0; }
     } else if (tabId === 'beats-catalog') {
         const beatsView = document.getElementById('view-beats-catalog');
-        if (beatsView) {
-            beatsView.classList.remove('hidden');
-            beatsView.classList.add('flex');
-            beatsView.scrollTop = 0;
-        }
+        if (beatsView) { beatsView.classList.remove('hidden'); beatsView.classList.add('flex'); beatsView.scrollTop = 0; }
     }
 
-    // 4. Adaptar visibilidad de la cesta según la pestaña
     if (typeof updateCartDisplay === 'function') {
         updateCartDisplay();
     }
 
-    // 5. Adaptación reactiva de la cabecera
     updateHeaderLayout(tabId);
 
-    // 6. Refresco dinámico de iconos Lucide
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
     }
 }
 
-// --- CIERRE DE PANTALLA DE PAGO ---
 function closePaymentView() {
     const payView = document.getElementById('view-payment');
     if (payView) payView.classList.add('hidden');
@@ -123,7 +101,6 @@ function closePaymentView() {
     }
 }
 
-// --- ACTUALIZACIÓN DINÁMICA DE LA CABECERA SEGÚN LA PESTAÑA ---
 function updateHeaderLayout(currentActiveTab) {
     const header = document.getElementById('mainAppHeader');
     const headerLogo = document.getElementById('headerLogo');
@@ -149,7 +126,6 @@ function updateHeaderLayout(currentActiveTab) {
     }
 }
 
-// --- ACTUALIZACIÓN VISUAL DE BOTONES (MODO USUARIO) ---
 function updateActiveUserNavButton(activeId) {
     userTabOrder.forEach(tab => {
         const btn = document.getElementById(`nav-btn-${tab}`);
@@ -169,7 +145,6 @@ function updateActiveUserNavButton(activeId) {
     });
 }
 
-// --- ACTUALIZACIÓN VISUAL DE BOTONES (MODO COMERCIO) ---
 function updateActiveBizNavButton(activeId) {
     const keyMap = {
         'business-dashboard': 'dashboard',
@@ -197,12 +172,12 @@ function updateActiveBizNavButton(activeId) {
     });
 }
 
-// --- ESCUCHADORES DE SCROLL SNAP E INERCIA TÁCTIL ---
 document.addEventListener('DOMContentLoaded', () => {
     const userWrapper = document.getElementById('userScrollWrapper');
     const bizWrapper = document.getElementById('bizScrollWrapper');
     const pubBizView = document.getElementById('view-public-business');
     const beatsView = document.getElementById('view-beats-catalog');
+    const restaurantMenuView = document.getElementById('view-restaurant-menu');
 
     if (userWrapper) {
         userWrapper.addEventListener('scroll', () => {
@@ -231,52 +206,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }, { passive: true });
     }
 
-    if (pubBizView) {
+    const attachSwipeBack = (el, onBackFn) => {
+        if (!el) return;
         let touchStartX = 0;
         let touchStartY = 0;
 
-        pubBizView.addEventListener('touchstart', (e) => {
+        el.addEventListener('touchstart', (e) => {
             touchStartX = e.touches[0].clientX;
             touchStartY = e.touches[0].clientY;
         }, { passive: true });
 
-        pubBizView.addEventListener('touchend', (e) => {
+        el.addEventListener('touchend', (e) => {
             const touchEndX = e.changedTouches[0].clientX;
             const touchEndY = e.changedTouches[0].clientY;
             const deltaX = touchEndX - touchStartX;
             const deltaY = Math.abs(touchEndY - touchStartY);
 
             if (deltaX > 60 && deltaY < 80) {
-                goBackFromBusiness();
+                onBackFn();
             }
         }, { passive: true });
-    }
+    };
 
-    if (beatsView) {
-        let touchStartX = 0;
-        let touchStartY = 0;
-
-        beatsView.addEventListener('touchstart', (e) => {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-        }, { passive: true });
-
-        beatsView.addEventListener('touchend', (e) => {
-            const touchEndX = e.changedTouches[0].clientX;
-            const touchEndY = e.changedTouches[0].clientY;
-            const deltaX = touchEndX - touchStartX;
-            const deltaY = Math.abs(touchEndY - touchStartY);
-
-            if (deltaX > 60 && deltaY < 80) {
-                if (typeof closeBeatsCatalogView === 'function') closeBeatsCatalogView();
-            }
-        }, { passive: true });
-    }
+    attachSwipeBack(pubBizView, goBackFromBusiness);
+    attachSwipeBack(beatsView, () => {
+        if (typeof closeBeatsCatalogView === 'function') closeBeatsCatalogView();
+    });
+    attachSwipeBack(restaurantMenuView, () => {
+        if (typeof window.closeCategorizedMenuPage === 'function') window.closeCategorizedMenuPage();
+    });
 
     updateHeaderLayout(activeTab || 'home');
 });
 
-// --- CLIC EN EL AVATAR DE LA CABECERA ---
 function handleHeaderProfileClick() {
     if (currentBusiness) {
         switchTab('business-profile');
@@ -285,21 +247,25 @@ function handleHeaderProfileClick() {
     }
 }
 
-// --- RETROCESO DESDE EL COMERCIO PÚBLICO ---
 function goBackFromBusiness() {
     const pubBizView = document.getElementById('view-public-business');
-    if (pubBizView) {
-        pubBizView.classList.add('hidden');
-    }
+    if (pubBizView) pubBizView.classList.add('hidden');
+
     const beatsView = document.getElementById('view-beats-catalog');
     if (beatsView) {
         beatsView.classList.add('hidden');
         beatsView.classList.remove('flex');
     }
+
+    const restMenuView = document.getElementById('view-restaurant-menu');
+    if (restMenuView) {
+        restMenuView.classList.add('hidden');
+        restMenuView.classList.remove('flex');
+    }
+
     switchTab('explore');
 }
 
-// --- ACTUALIZACIÓN REACTIVA DEL AVATAR DEL HEADER ---
 function updateHeaderAvatar() {
     const avatarBtn = document.getElementById('headerAvatar');
     if (!avatarBtn) return;

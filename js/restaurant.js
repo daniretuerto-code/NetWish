@@ -94,7 +94,7 @@ window.renderRestaurantHub = async function(container) {
                 </div>
             </button>
 
-            <!-- 3. Carta Digital (Abre pantalla completa dedicada) -->
+            <!-- 3. Carta Digital Completa -->
             <button onclick="window.openCategorizedMenuPage('Entrantes')" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-[0.98] transition group">
                 <div class="flex items-center space-x-3.5">
                     <div class="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center shadow-md shrink-0">
@@ -119,7 +119,7 @@ window.renderRestaurantHub = async function(container) {
 };
 
 // =======================================================
-// 2. VISTA DEDICADA A PANTALLA COMPLETA DE LA CARTA
+// 2. VISTA DEDICADA DE CARTA COMPLETA
 // =======================================================
 window.openCategorizedMenuPage = function(category = 'Entrantes') {
     const page = document.getElementById('view-restaurant-menu');
@@ -228,11 +228,11 @@ window.renderDishesForActiveCategory = function() {
 };
 
 // =======================================================
-// 3. CARGA DE PRODUCTOS DESDE SUPABASE
+// 3. CARGA DE CATÁLOGO Y CONFIGURACIÓN
 // =======================================================
 window.loadRestaurantLiveCatalog = async function() {
     const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
-    const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';
+    const bizName = window.appState?.activeBusinessName || 'Restaurante';
     if (!client) return;
 
     try {
@@ -265,29 +265,46 @@ window.loadRestaurantLiveCatalog = async function() {
     }
 };
 
+window.loadRestaurantSettingsFromDB = async function() {
+    const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
+    const bizName = window.appState?.activeBusinessName || 'Restaurante';
+    if (!client) return;
+
+    try {
+        const { data } = await client
+            .from('restaurant_settings')
+            .select('*')
+            .ilike('business_name', `%${bizName}%`)
+            .maybeSingle();
+
+        if (data) {
+            window.restaurantState.config = {
+                lunch_start: data.lunch_start || '13:00',
+                lunch_end: data.lunch_end || '16:00',
+                dinner_start: data.dinner_start || '20:30',
+                dinner_end: data.dinner_end || '23:30',
+                turn_duration_min: data.turn_duration_min || 90,
+                tables: data.tables || window.restaurantState.config.tables
+            };
+            if (data.daily_menu) {
+                window.restaurantState.dailyMenu = data.daily_menu;
+            }
+        }
+    } catch (e) {
+        console.warn("Aviso cargando configuración de BD:", e);
+    }
+};
+
 // =======================================================
-// 4. SESIÓN DE MESA, COMANDAS Y SPLIT BILL
+// 4. SESIÓN DE MESA Y CUENTA COMPARTIDA (SPLIT BILL)
 // =======================================================
 window.openTableSessionView = async function(bizName, tableNumber) {
-    const modal = document.getElementById('customModal');
-    const modalContent = document.getElementById('modalContent');
-    const modalBody = document.getElementById('modalBody');
-    if (!modal || !modalBody) return;
-
-    modalBody.innerHTML = `
+    window.openModalCustom(`
         <div class="space-y-4 text-center py-6">
             <i data-lucide="loader-2" class="w-6 h-6 mx-auto animate-spin text-black mb-2"></i>
             <p class="text-xs text-neutral-500">Conectando con Mesa ${tableNumber}...</p>
         </div>
-    `;
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-    
-    modal.classList.remove('hidden');
-    modal.style.display = "flex";
-    setTimeout(() => { 
-        modal.classList.remove('opacity-0'); 
-        if (modalContent) modalContent.classList.remove('scale-95'); 
-    }, 10);
+    `);
 
     await window.loadRestaurantLiveCatalog();
 
@@ -459,7 +476,7 @@ window.addDishToTableCart = function(id, encName, price, bizName, tableNumber) {
         window.appState.cartItemsList.push({ id, name, price: parseFloat(price), qty: 1 });
     }
 
-    if (typeof updateCartCountUI === 'function') updateCartCountUI();
+    if (typeof updateCartDisplay === 'function') updateCartDisplay();
     window.renderTableSessionUI(bizName, tableNumber);
 };
 
@@ -522,10 +539,14 @@ window.sendOrderToKitchen = async function(bizName, tableNumber) {
     }
 
     window.appState.cartItemsList = [];
-    if (typeof updateCartCountUI === 'function') updateCartCountUI();
+    if (typeof updateCartDisplay === 'function') updateCartDisplay();
 
     window.renderTableSessionUI(bizName, tableNumber);
-    alert(`¡Comanda de la Mesa ${tableNumber} enviada a cocina!`);
+    if (typeof window.showToast === 'function') {
+        window.showToast(`¡Comanda de Mesa ${tableNumber} enviada!`, "success");
+    } else {
+        alert(`¡Comanda de la Mesa ${tableNumber} enviada a cocina!`);
+    }
 };
 
 window.paySplitBill = async function(sessionId, tableNumber, amountVal) {
@@ -628,16 +649,12 @@ window.subscribeToTableSession = function(bizName, tableNumber) {
 // 5. RESERVAS POR TURNO Y AFORO
 // =======================================================
 window.openModernReservationModal = async function() {
-    const modal = document.getElementById('customModal');
-    const modalBody = document.getElementById('modalBody');
-    if (!modal || !modalBody) return;
-
     const today = new Date().toISOString().split('T')[0];
     if (!window.restaurantState.selectedDate) window.restaurantState.selectedDate = today;
 
     await window.loadRestaurantSettingsFromDB();
 
-    modalBody.innerHTML = `
+    window.openModalCustom(`
         <div class="space-y-4 text-left">
             <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
                 <div>
@@ -695,12 +712,7 @@ window.openModernReservationModal = async function() {
                 <span id="btnConfirmReservationText">Confirmar Reserva</span>
             </button>
         </div>
-    `;
-
-    modal.classList.remove('hidden');
-    modal.style.display = "flex";
-    modal.classList.add('opacity-100');
-    if (typeof lucide !== 'undefined') lucide.createIcons();
+    `);
 
     await window.recalculateSlotsAvailability();
 };
@@ -734,7 +746,7 @@ window.recalculateSlotsAvailability = async function() {
     const duration = window.restaurantState.config.turn_duration_min;
     
     const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
-    const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';
+    const bizName = window.appState?.activeBusinessName || 'Restaurante';
     let existingReservations = [];
 
     if (client) {
@@ -882,7 +894,7 @@ window.processSmartReservation = async function() {
     const zone = window.restaurantState.selectedZone;
     const duration = window.restaurantState.config.turn_duration_min;
     const endTime = window.minutesToTime(window.timeToMinutes(startTime) + duration);
-    const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';
+    const bizName = window.appState?.activeBusinessName || 'Restaurante';
     
     if (!table) return;
 
@@ -927,21 +939,21 @@ window.processSmartReservation = async function() {
     }
 
     window.closeCustomModal();
-    alert(`¡Reserva confirmada con éxito!\n\nFecha: ${date}\nHora: ${startTime} h\nComensales: ${guests} personas\nMesa: Mesa ${table.table_number} (${zone})\n\nComprobante digital enviado a tu correo.`);
+    if (typeof window.showToast === 'function') {
+        window.showToast("¡Reserva confirmada con éxito!", "success");
+    } else {
+        alert(`¡Reserva confirmada!\n\nFecha: ${date}\nHora: ${startTime} h\nMesa: Mesa ${table.table_number} (${zone})`);
+    }
 };
 
 // =======================================================
 // 6. MODAL DEL MENÚ DEL DÍA
 // =======================================================
 window.openDailyMenuModal = function() {
-    const modal = document.getElementById('customModal');
-    const modalBody = document.getElementById('modalBody');
-    if (!modal || !modalBody) return;
-
     const menu = window.restaurantState.dailyMenu;
     const price = menu?.price || 14.50;
 
-    modalBody.innerHTML = `
+    window.openModalCustom(`
         <div class="space-y-4 text-left">
             <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
                 <div>
@@ -983,42 +995,7 @@ window.openDailyMenuModal = function() {
                 <span>Añadir Menú a Mi Pedido (${price.toFixed(2)} €)</span>
             </button>
         </div>
-    `;
-
-    modal.classList.remove('hidden');
-    modal.style.display = "flex";
-    modal.classList.add('opacity-100');
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-};
-
-window.loadRestaurantSettingsFromDB = async function() {
-    const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
-    const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';
-    if (!client) return;
-
-    try {
-        const { data } = await client
-            .from('restaurant_settings')
-            .select('*')
-            .ilike('business_name', `%${bizName}%`)
-            .maybeSingle();
-
-        if (data) {
-            window.restaurantState.config = {
-                lunch_start: data.lunch_start || '13:00',
-                lunch_end: data.lunch_end || '16:00',
-                dinner_start: data.dinner_start || '20:30',
-                dinner_end: data.dinner_end || '23:30',
-                turn_duration_min: data.turn_duration_min || 90,
-                tables: data.tables || window.restaurantState.config.tables
-            };
-            if (data.daily_menu) {
-                window.restaurantState.dailyMenu = data.daily_menu;
-            }
-        }
-    } catch (e) {
-        console.warn("Aviso cargando configuración de BD:", e);
-    }
+    `);
 };
 
 window.timeToMinutes = (str) => {
@@ -1030,16 +1007,4 @@ window.minutesToTime = (min) => {
     const h = Math.floor(min / 60).toString().padStart(2, '0');
     const m = (min % 60).toString().padStart(2, '0');
     return `${h}:${m}`;
-};
-
-window.closeCustomModal = function() {
-    if (typeof window.stopCamera === 'function') window.stopCamera();
-    const modal = document.getElementById('customModal');
-    if (modal) {
-        modal.classList.add('opacity-0');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-            modal.style.display = "";
-        }, 200);
-    }
 };

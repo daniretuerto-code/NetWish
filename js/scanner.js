@@ -3,9 +3,6 @@
 window.currentCameraStream = null;
 window.scanningInterval = null;
 
-// =======================================================
-// 1. GENERACIÓN DE CÓDIGO QR PERSONAL
-// =======================================================
 window.openPersonalQR = function() {
     const user = (typeof currentUser !== 'undefined') ? currentUser : null;
     if (!user) { 
@@ -14,14 +11,9 @@ window.openPersonalQR = function() {
         return; 
     }
 
-    const modal = document.getElementById('customModal');
-    const modalContent = document.getElementById('modalContent');
-    const modalBody = document.getElementById('modalBody');
     const meta = user.user_metadata || {};
 
-    if (!modal || !modalBody) return;
-
-    modalBody.innerHTML = `
+    window.openModalCustom(`
         <div class="space-y-4 text-center">
             <h3 class="text-base font-bold text-black">Tu Código QR Personal</h3>
             <p class="text-xs text-neutral-500">Muestra este código para recibir pagos o transferencias.</p>
@@ -32,44 +24,29 @@ window.openPersonalQR = function() {
             </div>
             <button onclick="window.closeCustomModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs transition active:scale-95 shadow-md">Cerrar</button>
         </div>
-    `;
-    
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-    
-    modal.classList.remove('hidden');
-    modal.style.display = "flex";
-    setTimeout(() => { 
-        modal.classList.remove('opacity-0'); 
-        if (modalContent) modalContent.classList.remove('scale-95'); 
-    }, 10);
+    `);
 
-    const qrContainer = document.getElementById('realQRCodeContainer');
-    if (qrContainer && typeof QRCode !== 'undefined') {
-        qrContainer.innerHTML = "";
-        new QRCode(qrContainer, {
-            text: `NETWISH_PAY:${meta.name || 'Usuario'}:${user.email || ''}`,
-            width: 170, 
-            height: 170, 
-            colorDark: "#000000", 
-            colorLight: "#ffffff", 
-            correctLevel: QRCode.CorrectLevel.H
-        });
-    }
+    setTimeout(() => {
+        const qrContainer = document.getElementById('realQRCodeContainer');
+        if (qrContainer && typeof QRCode !== 'undefined') {
+            qrContainer.innerHTML = "";
+            new QRCode(qrContainer, {
+                text: `NETWISH_PAY:${meta.name || 'Usuario'}:${user.email || ''}`,
+                width: 170, 
+                height: 170, 
+                colorDark: "#000000", 
+                colorLight: "#ffffff", 
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+    }, 50);
 };
 
-// =======================================================
-// 2. QR DE NEGOCIO EN MODAL
-// =======================================================
 window.openBusinessQR = function() {
     const biz = (typeof currentBusiness !== 'undefined') ? currentBusiness : null;
     if (!biz) return;
-    
-    const modal = document.getElementById('customModal');
-    const modalContent = document.getElementById('modalContent');
-    const modalBody = document.getElementById('modalBody');
-    if (!modal || !modalBody) return;
 
-    modalBody.innerHTML = `
+    window.openModalCustom(`
         <div class="space-y-4 text-center">
             <h3 class="text-base font-bold text-black">QR de Cobro Comercial</h3>
             <p class="text-xs text-neutral-500">Muestra este código a tus clientes para recibir cobros en <strong class="text-black">${biz.name}</strong>.</p>
@@ -80,43 +57,27 @@ window.openBusinessQR = function() {
             </div>
             <button onclick="window.closeCustomModal()" class="w-full py-3.5 bg-black text-white font-semibold rounded-2xl text-xs transition active:scale-95 shadow-md">Ocultar QR</button>
         </div>
-    `;
-    
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-    
-    modal.classList.remove('hidden');
-    modal.style.display = "flex";
-    setTimeout(() => { 
-        modal.classList.remove('opacity-0'); 
-        if (modalContent) modalContent.classList.remove('scale-95'); 
-    }, 10);
+    `);
 
-    const container = document.getElementById('businessQRCodeContainer');
-    if (container && typeof QRCode !== 'undefined') {
-        container.innerHTML = "";
-        const safeName = biz.name ? biz.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "Comercio";
-        new QRCode(container, {
-            text: `NETWISH_BUSINESS:${safeName}:${biz.id || biz.name}`,
-            width: 170, 
-            height: 170, 
-            colorDark: "#000000", 
-            colorLight: "#ffffff", 
-            correctLevel: QRCode.CorrectLevel.H
-        });
-    }
+    setTimeout(() => {
+        const container = document.getElementById('businessQRCodeContainer');
+        if (container && typeof QRCode !== 'undefined') {
+            container.innerHTML = "";
+            const safeName = biz.name ? biz.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "Comercio";
+            new QRCode(container, {
+                text: `NETWISH_BUSINESS:${safeName}:${biz.id || biz.name}`,
+                width: 170, 
+                height: 170, 
+                colorDark: "#000000", 
+                colorLight: "#ffffff", 
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+    }, 50);
 };
 
-// =======================================================
-// 3. ACTIVADOR ROBUSTO DEL ESCÁNER QR
-// =======================================================
 window.startCameraModal = async function() {
-    const modal = document.getElementById('customModal');
-    const modalContent = document.getElementById('modalContent');
-    const modalBody = document.getElementById('modalBody');
-
-    if (!modal || !modalBody) return;
-
-    modalBody.innerHTML = `
+    window.openModalCustom(`
         <div class="space-y-4 text-center">
             <div class="space-y-1">
                 <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">LECTOR ÓPTICO</span>
@@ -132,19 +93,10 @@ window.startCameraModal = async function() {
             <p class="text-[11px] text-neutral-400">Enfoca a una mesa, comercio o usuario.</p>
             <button onclick="window.closeCustomModal()" class="w-full py-3 bg-neutral-100 hover:bg-neutral-200 text-black font-bold rounded-xl text-xs transition active:scale-95">Cerrar Cámara</button>
         </div>
-    `;
-    
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-    
-    modal.classList.remove('hidden');
-    modal.style.display = "flex";
-    setTimeout(() => { 
-        modal.classList.remove('opacity-0'); 
-        if (modalContent) modalContent.classList.remove('scale-95'); 
-    }, 10);
+    `);
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert("El navegador no permite acceso a la cámara en este entorno (usa HTTPS o Localhost).");
+        alert("El navegador no permite acceso a la cámara en este entorno.");
         window.closeCustomModal();
         return;
     }
@@ -188,7 +140,7 @@ function startUniversalScanningLoop() {
                 const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
                 if (code && code.data) {
                     clearInterval(window.scanningInterval);
-                    window.stopCamera(); // Detiene el stream sin cerrar el modal
+                    window.stopCamera();
                     processScannedQRData(code.data);
                 }
             }
@@ -196,13 +148,9 @@ function startUniversalScanningLoop() {
     }, 150);
 }
 
-// =======================================================
-// 4. PROCESAMIENTO INTELIGENTE DEL CÓDIGO QR
-// =======================================================
 function processScannedQRData(rawText) {
     const qrText = (rawText || '').trim();
 
-    // 1. Detección de Mesa por URL o parámetros
     if (qrText.includes('table=') || qrText.includes('biz=')) {
         try {
             let bizName = 'Restaurante Dani';
@@ -232,7 +180,6 @@ function processScannedQRData(rawText) {
         }
     }
 
-    // 2. Detección de Mesa por Formato de Protocolo (NETWISH_TABLE:Restaurante:1)
     if (qrText.startsWith('NETWISH_TABLE:')) {
         const parts = qrText.split(':');
         const bizName = parts[1] || 'Restaurante Dani';
@@ -248,7 +195,6 @@ function processScannedQRData(rawText) {
         }
     }
 
-    // 3. QR de Cobro Directo (NETWISH_PAY o NETWISH_BUSINESS)
     if (qrText.startsWith('NETWISH_PAY:') || qrText.startsWith('NETWISH_BUSINESS:')) {
         window.closeCustomModal();
         const parts = qrText.split(':');
@@ -264,14 +210,10 @@ function processScannedQRData(rawText) {
         return;
     }
 
-    // Si no coincide con ninguno, cerramos el modal e informamos
     window.closeCustomModal();
     alert(`Contenido leído: ${qrText}`);
 }
 
-// =======================================================
-// 5. DETENCIÓN Y CIERRE DE MODAL
-// =======================================================
 window.stopCamera = function() {
     if (window.scanningInterval) { 
         clearInterval(window.scanningInterval); 
@@ -283,18 +225,4 @@ window.stopCamera = function() {
     }
 };
 
-window.closeCustomModal = function() {
-    window.stopCamera();
-    const modal = document.getElementById('customModal');
-    const modalContent = document.getElementById('modalContent');
-    if (!modal) return;
-    modal.classList.add('opacity-0');
-    if (modalContent) modalContent.classList.add('scale-95');
-    setTimeout(() => { 
-        modal.classList.add('hidden'); 
-        modal.style.display = "";
-    }, 200);
-};
-
-window.closeModal = window.closeCustomModal;
 window.startCamera = window.startCameraModal;

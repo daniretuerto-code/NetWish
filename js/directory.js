@@ -1,3 +1,5 @@
+// js/directory.js
+
 let currentCategoryFilter = '';
 let currentCategoryBusinesses = [];
 
