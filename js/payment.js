@@ -114,15 +114,6 @@ window.executeFullPayment = async function(isReservation = false) {
 
         let customerEmail = (customerUser && customerUser.email) ? customerUser.email : (pDetails?.clientEmail || '');
 
-        if (!customerEmail) {
-            customerEmail = prompt("Introduce tu correo electrónico para enviarte el justificante:");
-        }
-
-        if (!customerEmail || !customerEmail.includes('@')) {
-            alert("Introduce un correo electrónico válido para completar el pedido.");
-            return;
-        }
-
         let orderDate = pDetails?.date || new Date().toISOString().split('T')[0];
         let orderTime = pDetails?.time || "Inmediato";
         let statusText = isReservation ? 'Pendiente (Pago en local)' : 'Pagado Online';
@@ -157,7 +148,7 @@ window.executeFullPayment = async function(isReservation = false) {
             business_name: tBusiness,
             business_email: targetBizEmail || null,
             customer: customerName,
-            customer_email: customerEmail,
+            customer_email: customerEmail || null,
             items: itemsDesc,
             total: totalVal,
             date: orderDate,
@@ -173,7 +164,6 @@ window.executeFullPayment = async function(isReservation = false) {
             }
         }
 
-        // Comprobar si el pedido contiene algún beat o archivo descargable
         const hasDownloadable = (isCart && cItems.length > 0) 
             ? cItems.some(i => Boolean(i.full_audio_url || i.audio_url || i.download_url)) 
             : false;
@@ -189,16 +179,18 @@ window.executeFullPayment = async function(isReservation = false) {
                 action: isReservation ? 'reserve' : 'pay'
             };
 
-            await window.emailService.sendClientReceipt(customerEmail, structuredOrder);
+            if (customerEmail && customerEmail.includes('@')) {
+                await window.emailService.sendClientReceipt(customerEmail, structuredOrder);
+            }
 
-            if (targetBizEmail) {
+            if (targetBizEmail && targetBizEmail.includes('@')) {
                 await window.emailService.sendBusinessAlert(targetBizEmail, structuredOrder);
             }
         }
 
         const confirmationMsg = hasDownloadable
-            ? `Recibo digital y enlace de descarga enviados a <b>${customerEmail}</b>.`
-            : `Recibo digital enviado a <b>${customerEmail}</b>.`;
+            ? (customerEmail ? `Recibo digital y enlace de descarga enviados a <b>${customerEmail}</b>.` : 'Recibo digital y enlace de descarga emitidos.')
+            : (customerEmail ? `Recibo digital enviado a <b>${customerEmail}</b>.` : 'Recibo digital emitido correctamente.');
 
         window.openModalCustom(`
             <div class="text-center space-y-4 py-3">
@@ -226,7 +218,7 @@ window.executeFullPayment = async function(isReservation = false) {
 
     } catch (criticalError) {
         console.error("Fallo crítico en el proceso de pago:", criticalError);
-        alert("Ocurrió un error al procesar la operación: " + criticalError.message);
+        alert("Ocurrió un error al procesar la operación.");
     }
 };
 

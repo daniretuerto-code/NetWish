@@ -4,7 +4,10 @@ window.emailService = {
     apiUrl: '/api/send-email',
 
     sendClientReceipt: async function(clientEmail, orderData) {
-        if (!clientEmail) return;
+        if (!clientEmail || !clientEmail.includes('@')) {
+            console.warn("sendClientReceipt omitido: email de cliente no válido:", clientEmail);
+            return;
+        }
 
         const totalFormatted = Number(orderData.total || 0).toLocaleString('es-ES', { 
             minimumFractionDigits: 2, 
@@ -12,7 +15,7 @@ window.emailService = {
         });
 
         let downloadSectionHtml = '';
-        let hasAnyDownload = false;
+        let hasDownloadable = false;
 
         const isMusicBiz = (orderData.businessName || '').toUpperCase().includes('JUUANCP') || 
                            (orderData.businessName || '').toLowerCase().includes('disco') ||
@@ -25,11 +28,10 @@ window.emailService = {
                 maximumFractionDigits: 2 
             });
 
-            // Solo buscar enlaces de descarga si el negocio es musical o el ítem tiene audio explícito
             const downloadLink = i.full_audio_url || i.download_url || (isMusicBiz ? i.audio_url : null);
 
             if (downloadLink) {
-                hasAnyDownload = true;
+                hasDownloadable = true;
                 const safeFileName = (i.name || 'beat-master').replace(/[^a-zA-Z0-9]/g, '_') + '.mp3';
                 const bridgeDownloadUrl = `https://netwish.es/download.html?url=${encodeURIComponent(downloadLink)}&name=${encodeURIComponent(safeFileName)}`;
 
@@ -57,8 +59,8 @@ window.emailService = {
             `;
         }).join('');
 
-        const headerSubtitle = hasAnyDownload ? 'JUSTIFICANTE DE COMPRA & DESCARGA' : 'JUSTIFICANTE DE COMPRA';
-        const footerNotice = hasAnyDownload 
+        const headerSubtitle = hasDownloadable ? 'JUSTIFICANTE DE COMPRA & DESCARGA' : 'JUSTIFICANTE DE COMPRA';
+        const footerNotice = hasDownloadable 
             ? 'Guarda este correo para acceder a tus descargas en cualquier momento.' 
             : 'Muestra este justificante al acudir al establecimiento.';
 
@@ -118,7 +120,7 @@ window.emailService = {
     },
 
     sendBusinessAlert: async function(bizEmail, orderData) {
-        if (!bizEmail) return;
+        if (!bizEmail || !bizEmail.includes('@')) return;
 
         const totalFormatted = Number(orderData.total || 0).toLocaleString('es-ES', { 
             minimumFractionDigits: 2, 

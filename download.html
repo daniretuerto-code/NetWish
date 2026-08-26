@@ -6,8 +6,8 @@
     <title>NetWish — Descarga Segura</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-white text-black flex items-center justify-center h-[100dvh] font-sans">
-    <div class="text-center space-y-4 p-6 max-w-sm">
+<body class="bg-white text-black flex items-center justify-center min-h-[100dvh] font-sans p-4">
+    <div class="text-center space-y-4 max-w-sm w-full">
         <div class="w-12 h-12 bg-black text-white rounded-2xl flex items-center justify-center mx-auto font-black italic shadow-md">NW</div>
         <h2 class="text-base font-bold tracking-tight">Preparando tu descarga...</h2>
         <p class="text-xs text-neutral-500 leading-relaxed" id="downloadStatus">Tu archivo master se descargará automáticamente en unos segundos.</p>
@@ -22,7 +22,7 @@
         if (fileUrl) {
             fetch(fileUrl)
                 .then(response => {
-                    if (!response.ok) throw new Error('Network response was not ok');
+                    if (!response.ok) throw new Error('Error al descargar archivo');
                     return response.blob();
                 })
                 .then(blob => {
@@ -35,18 +35,18 @@
                     a.click();
                     window.URL.revokeObjectURL(blobUrl);
                     document.body.removeChild(a);
-                    document.getElementById('downloadStatus').innerText = "¡Descarga completada con éxito! Ya puedes cerrar esta ventana.";
+                    document.getElementById('downloadStatus').innerText = "¡Descarga completada! Ya puedes cerrar esta ventana.";
                 })
                 .catch(err => {
-                    console.error("Error en blob, abriendo enlace directo:", err);
-                    document.getElementById('downloadStatus').innerText = "Haz clic en el botón de abajo si la descarga no empieza automáticamente:";
+                    console.error("Error en blob, activando enlace directo:", err);
+                    document.getElementById('downloadStatus').innerText = "Haz clic en el botón inferior si la descarga no inicia:";
                     const directBtn = document.getElementById('directLink');
                     directBtn.href = fileUrl;
                     directBtn.setAttribute('download', fileName);
                     directBtn.classList.remove('hidden');
                 });
         } else {
-            document.getElementById('downloadStatus').innerText = "Enlace de descarga no válido o expirado.";
+            document.getElementById('downloadStatus').innerText = "Enlace no válido o expirado.";
         }
     </script>
 </body>
