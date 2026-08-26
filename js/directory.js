@@ -4,6 +4,11 @@ window.allPublicBusinesses = window.allPublicBusinesses || [];
 let currentCategoryFilter = '';
 let currentCategoryBusinesses = [];
 
+// Autoejecución inmediata al cargar el script
+document.addEventListener('DOMContentLoaded', () => {
+    loadPublicBusinesses();
+});
+
 async function loadPublicBusinesses() {
     const listContainer = document.getElementById('dynamicBusinessList');
     if (!listContainer) return;
