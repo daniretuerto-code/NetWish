@@ -110,9 +110,9 @@ window.executeFullPayment = async function(isReservation = false) {
 
         let customerName = customerUser
             ? (customerUser.user_metadata?.full_name || customerUser.user_metadata?.name || customerUser.email?.split('@')[0] || 'Cliente')
-            : (pDetails?.clientName || 'Cliente');
+            : 'Cliente';
 
-        let customerEmail = (customerUser && customerUser.email) ? customerUser.email : (pDetails?.clientEmail || '');
+        let customerEmail = (customerUser && customerUser.email) ? customerUser.email : '';
 
         let orderDate = pDetails?.date || new Date().toISOString().split('T')[0];
         let orderTime = pDetails?.time || "Inmediato";
@@ -148,7 +148,7 @@ window.executeFullPayment = async function(isReservation = false) {
             business_name: tBusiness,
             business_email: targetBizEmail || null,
             customer: customerName,
-            customer_email: customerEmail || null,
+            customer_email: customerEmail,
             items: itemsDesc,
             total: totalVal,
             date: orderDate,
@@ -164,33 +164,25 @@ window.executeFullPayment = async function(isReservation = false) {
             }
         }
 
-        const hasDownloadable = (isCart && cItems.length > 0) 
-            ? cItems.some(i => Boolean(i.full_audio_url || i.audio_url || i.download_url)) 
-            : false;
-
         if (window.emailService) {
             const structuredOrder = {
                 businessName: tBusiness,
                 clientName: customerName,
                 date: orderDate,
                 time: orderTime,
-                items: (isCart && cItems.length > 0) ? [...cItems] : [{ name: 'Pago Directo Terminal', qty: 1, price: totalVal }],
+                items: (isCart && cItems.length > 0) ? cItems : [{ name: 'Pago Directo Terminal', qty: 1, price: totalVal }],
                 total: totalVal,
                 action: isReservation ? 'reserve' : 'pay'
             };
 
-            if (customerEmail && customerEmail.includes('@')) {
-                await window.emailService.sendClientReceipt(customerEmail, structuredOrder);
+            if (customerEmail) {
+                window.emailService.sendClientReceipt(customerEmail, structuredOrder);
             }
 
-            if (targetBizEmail && targetBizEmail.includes('@')) {
-                await window.emailService.sendBusinessAlert(targetBizEmail, structuredOrder);
+            if (targetBizEmail) {
+                window.emailService.sendBusinessAlert(targetBizEmail, structuredOrder);
             }
         }
-
-        const confirmationMsg = hasDownloadable
-            ? (customerEmail ? `Recibo digital y enlace de descarga enviados a <b>${customerEmail}</b>.` : 'Recibo digital y enlace de descarga emitidos.')
-            : (customerEmail ? `Recibo digital enviado a <b>${customerEmail}</b>.` : 'Recibo digital emitido correctamente.');
 
         window.openModalCustom(`
             <div class="text-center space-y-4 py-3">
@@ -200,7 +192,7 @@ window.executeFullPayment = async function(isReservation = false) {
                 <div>
                     <h3 class="text-lg font-bold text-black">${isReservation ? 'Reserva Confirmada' : 'Pago Completado'}</h3>
                     <p class="text-xs text-neutral-500 mt-1">Registrado con éxito en ${tBusiness}.</p>
-                    <p class="text-[10px] text-neutral-400 mt-1 font-mono">${confirmationMsg}</p>
+                    <p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo digital emitido a tu correo.</p>
                 </div>
 
                 <div class="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-left space-y-1">
@@ -214,7 +206,6 @@ window.executeFullPayment = async function(isReservation = false) {
                 </button>
             </div>
         `);
-        if (typeof lucide !== 'undefined') lucide.createIcons();
 
     } catch (criticalError) {
         console.error("Fallo crítico en el proceso de pago:", criticalError);

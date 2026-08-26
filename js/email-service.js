@@ -4,10 +4,7 @@ window.emailService = {
     apiUrl: '/api/send-email',
 
     sendClientReceipt: async function(clientEmail, orderData) {
-        if (!clientEmail || !clientEmail.includes('@')) {
-            console.warn("sendClientReceipt omitido: email de cliente no válido:", clientEmail);
-            return;
-        }
+        if (!clientEmail) return;
 
         const totalFormatted = Number(orderData.total || 0).toLocaleString('es-ES', { 
             minimumFractionDigits: 2, 
@@ -15,12 +12,6 @@ window.emailService = {
         });
 
         let downloadSectionHtml = '';
-        let hasDownloadable = false;
-
-        const isMusicBiz = (orderData.businessName || '').toUpperCase().includes('JUUANCP') || 
-                           (orderData.businessName || '').toLowerCase().includes('disco') ||
-                           (orderData.businessName || '').toLowerCase().includes('music') ||
-                           (orderData.businessName || '').toLowerCase().includes('estudio');
 
         const itemsTable = (orderData.items || []).map(i => {
             const itemTotal = (Number(i.price || 0) * Number(i.qty || 1)).toLocaleString('es-ES', { 
@@ -28,19 +19,20 @@ window.emailService = {
                 maximumFractionDigits: 2 
             });
 
-            const downloadLink = i.full_audio_url || i.download_url || (isMusicBiz ? i.audio_url : null);
+            // Enlace de descarga master prioritario o fallback al audio preview si es de música
+            const downloadLink = i.full_audio_url || i.download_url || (orderData.businessName && orderData.businessName.toUpperCase().includes('JUUANCP') ? i.audio_url : null);
 
             if (downloadLink) {
-                hasDownloadable = true;
                 const safeFileName = (i.name || 'beat-master').replace(/[^a-zA-Z0-9]/g, '_') + '.mp3';
-                const bridgeDownloadUrl = `https://netwish.es/download.html?url=${encodeURIComponent(downloadLink)}&name=${encodeURIComponent(safeFileName)}`;
+                // Ruta puente a la API para forzar cabecera de descarga y evitar el reproductor nativo
+                const proxyDownloadUrl = `https://netwish.es/api/download?url=${encodeURIComponent(downloadLink)}&filename=${encodeURIComponent(safeFileName)}`;
 
                 downloadSectionHtml += `
                     <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 16px; background-color: #000000; border-radius: 16px; padding: 18px; text-align: center;">
                         <tr>
                             <td>
                                 <p style="font-size: 10px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; color: #a3a3a3; margin: 0 0 10px 0;">Archivo Master / Beat Exclusivo</p>
-                                <a href="${bridgeDownloadUrl}" target="_blank" style="display: inline-block; background-color: #ffffff; color: #000000; padding: 12px 24px; border-radius: 12px; font-size: 12px; font-weight: 800; text-decoration: none;">Descargar Beat Automáticamente</a>
+                                <a href="${proxyDownloadUrl}" target="_blank" style="display: inline-block; background-color: #ffffff; color: #000000; padding: 12px 24px; border-radius: 12px; font-size: 12px; font-weight: 800; text-decoration: none;">Descargar Beat Automáticamente</a>
                             </td>
                         </tr>
                     </table>
@@ -59,14 +51,9 @@ window.emailService = {
             `;
         }).join('');
 
-        const headerSubtitle = hasDownloadable ? 'JUSTIFICANTE DE COMPRA & DESCARGA' : 'JUSTIFICANTE DE COMPRA';
-        const footerNotice = hasDownloadable 
-            ? 'Guarda este correo para acceder a tus descargas en cualquier momento.' 
-            : 'Muestra este justificante al acudir al establecimiento.';
-
         const payload = {
             to: clientEmail,
-            subject: `Justificante de pedido — ${orderData.businessName || 'NetWish'}`,
+            subject: `Justificante de pedido y descarga — ${orderData.businessName || 'NetWish'}`,
             html: `
                 <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f5f5f5; padding: 24px 0;">
                     <tr>
@@ -84,7 +71,7 @@ window.emailService = {
                                         </table>
 
                                         <div style="border-bottom: 1px solid #eeeeee; padding-bottom: 16px; margin-bottom: 20px;">
-                                            <span style="font-size: 9px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; color: #888888;">${headerSubtitle}</span>
+                                            <span style="font-size: 9px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; color: #888888;">JUSTIFICANTE DE COMPRA & DESCARGA</span>
                                             <h2 style="font-size: 18px; font-weight: 800; color: #000000; margin: 6px 0 2px 0;">${orderData.businessName}</h2>
                                             <p style="font-size: 12px; color: #666666; margin: 0;">Fecha: ${orderData.date} • ${orderData.time}</p>
                                         </div>
@@ -104,7 +91,7 @@ window.emailService = {
 
                                         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #fafafa; border-radius: 16px; padding: 14px; text-align: center; border: 1px solid #eeeeee; margin-top: 20px;">
                                             <tr>
-                                                <td style="font-size: 11px; color: #777777;">${footerNotice}</td>
+                                                <td style="font-size: 11px; color: #777777;">Guarda este correo para acceder a tus archivos en cualquier momento.</td>
                                             </tr>
                                         </table>
                                     </td>
@@ -120,7 +107,7 @@ window.emailService = {
     },
 
     sendBusinessAlert: async function(bizEmail, orderData) {
-        if (!bizEmail || !bizEmail.includes('@')) return;
+        if (!bizEmail) return;
 
         const totalFormatted = Number(orderData.total || 0).toLocaleString('es-ES', { 
             minimumFractionDigits: 2, 
@@ -146,7 +133,7 @@ window.emailService = {
 
         const payload = {
             to: bizEmail,
-            subject: `⚡ Nuevo Pedido Recibido — ${orderData.clientName || 'Cliente'}`,
+            subject: `⚡ Nueva Licencia Vendida — ${orderData.clientName || 'Cliente'}`,
             html: `
                 <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f5f5f5; padding: 24px 0;">
                     <tr>
@@ -157,7 +144,7 @@ window.emailService = {
                                         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #000000; border-radius: 18px; padding: 20px; margin-bottom: 24px;">
                                             <tr>
                                                 <td>
-                                                    <span style="font-size: 9px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; color: #a3a3a3;">NUEVO PEDIDO CONFIRMADO</span>
+                                                    <span style="font-size: 9px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; color: #a3a3a3;">NUEVA VENTA DE BEAT</span>
                                                     <h2 style="font-size: 18px; font-weight: 800; color: #ffffff; margin: 4px 0 0 0;">${orderData.clientName || 'Cliente'}</h2>
                                                 </td>
                                             </tr>
@@ -169,11 +156,6 @@ window.emailService = {
                                                     <strong style="color: #111111;">Fecha y Hora:</strong> ${orderData.date} • ${orderData.time}
                                                 </td>
                                             </tr>
-                                            <tr>
-                                                <td style="font-size: 12px; color: #666666;">
-                                                    <strong style="color: #111111;">Estado de Pago:</strong> ${orderData.action === 'pay' ? 'Pagado vía NetWish' : 'Pendiente de pago en local'}
-                                                </td>
-                                            </tr>
                                         </table>
 
                                         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 24px; border-top: 1px solid #eeeeee;">
@@ -182,7 +164,7 @@ window.emailService = {
 
                                         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-top: 2px solid #000000; padding-top: 16px;">
                                             <tr>
-                                                <td style="font-size: 15px; font-weight: 800; color: #000000;">Total Pedido</td>
+                                                <td style="font-size: 15px; font-weight: 800; color: #000000;">Total Venta</td>
                                                 <td align="right" style="font-size: 18px; font-weight: 900; font-family: monospace; color: #000000;">${totalFormatted} €</td>
                                             </tr>
                                         </table>
@@ -205,8 +187,7 @@ window.emailService = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            const data = await res.json();
-            return data;
+            return await res.json();
         } catch (err) {
             console.error("Error disparando petición de email:", err);
             return { error: err.message };

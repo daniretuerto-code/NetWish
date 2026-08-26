@@ -421,8 +421,7 @@ function processCartChoice(action) {
     const user = (typeof currentUser !== 'undefined') ? currentUser : null;
     const orderSummary = {
         businessName: window.appState.activeBusinessName || 'Comercio NetWish',
-        clientName: user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Cliente NetWish',
-        clientEmail: user?.email || '',
+        clientName: user?.user_metadata?.full_name || user?.email || 'Cliente NetWish',
         date: date,
         time: time,
         items: [...window.appState.cartItemsList],
