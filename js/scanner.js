@@ -37,6 +37,7 @@ window.openPersonalQR = function() {
     if (typeof lucide !== 'undefined') lucide.createIcons();
     
     modal.classList.remove('hidden');
+    modal.style.display = "flex";
     setTimeout(() => { 
         modal.classList.remove('opacity-0'); 
         if (modalContent) modalContent.classList.remove('scale-95'); 
@@ -84,6 +85,7 @@ window.openBusinessQR = function() {
     if (typeof lucide !== 'undefined') lucide.createIcons();
     
     modal.classList.remove('hidden');
+    modal.style.display = "flex";
     setTimeout(() => { 
         modal.classList.remove('opacity-0'); 
         if (modalContent) modalContent.classList.remove('scale-95'); 
@@ -142,7 +144,7 @@ window.startCameraModal = async function() {
     }, 10);
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert("El navegador no soporta cámara en esta conexión. Recuerda usar HTTPS o Localhost.");
+        alert("El navegador no permite acceso a la cámara en este entorno (usa HTTPS o Localhost).");
         window.closeCustomModal();
         return;
     }
@@ -162,7 +164,7 @@ window.startCameraModal = async function() {
         }
     } catch (error) {
         console.warn("Acceso a cámara:", error);
-        alert("Permiso de cámara no concedido o dispositivo en uso.");
+        alert("Permiso de cámara no concedido o dispositivo ocupado.");
         window.closeCustomModal();
     }
 };
@@ -186,8 +188,7 @@ function startUniversalScanningLoop() {
                 const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
                 if (code && code.data) {
                     clearInterval(window.scanningInterval);
-                    window.stopCamera();
-                    window.closeCustomModal();
+                    window.stopCamera(); // Detiene el stream sin cerrar el modal
                     processScannedQRData(code.data);
                 }
             }
@@ -196,33 +197,45 @@ function startUniversalScanningLoop() {
 }
 
 // =======================================================
-// 4. PROCESAMIENTO DEL CÓDIGO
+// 4. PROCESAMIENTO INTELIGENTE DEL CÓDIGO QR
 // =======================================================
-function processScannedQRData(qrText) {
-    if (qrText.includes('biz=') && qrText.includes('table=')) {
+function processScannedQRData(rawText) {
+    const qrText = (rawText || '').trim();
+
+    // 1. Detección de Mesa por URL o parámetros
+    if (qrText.includes('table=') || qrText.includes('biz=')) {
         try {
-            const url = new URL(qrText.startsWith('http') ? qrText : `https://${qrText}`);
-            const bizName = decodeURIComponent(url.searchParams.get('biz') || '');
-            const tableNum = parseInt(url.searchParams.get('table') || '1', 10);
+            let bizName = 'Restaurante Dani';
+            let tableNum = 1;
 
-            if (bizName && tableNum) {
-                window.appState = window.appState || {};
-                window.appState.activeBusinessName = bizName;
-                window.appState.activeTableNumber = tableNum;
+            if (qrText.startsWith('http')) {
+                const url = new URL(qrText);
+                bizName = decodeURIComponent(url.searchParams.get('biz') || bizName);
+                tableNum = parseInt(url.searchParams.get('table') || '1', 10);
+            } else {
+                const matchBiz = qrText.match(/biz=([^&]+)/);
+                const matchTable = qrText.match(/table=(\d+)/);
+                if (matchBiz) bizName = decodeURIComponent(matchBiz[1]);
+                if (matchTable) tableNum = parseInt(matchTable[1], 10);
+            }
 
-                if (typeof window.openTableSessionView === 'function') {
-                    window.openTableSessionView(bizName, tableNum);
-                }
+            window.appState = window.appState || {};
+            window.appState.activeBusinessName = bizName;
+            window.appState.activeTableNumber = tableNum;
+
+            if (typeof window.openTableSessionView === 'function') {
+                window.openTableSessionView(bizName, tableNum);
                 return;
             }
         } catch (e) {
-            console.warn("Error en URL de mesa:", e);
+            console.warn("Error parseando URL de mesa:", e);
         }
     }
 
+    // 2. Detección de Mesa por Formato de Protocolo (NETWISH_TABLE:Restaurante:1)
     if (qrText.startsWith('NETWISH_TABLE:')) {
         const parts = qrText.split(':');
-        const bizName = parts[1] || 'Restaurante';
+        const bizName = parts[1] || 'Restaurante Dani';
         const tableNum = parseInt(parts[2] || '1', 10);
 
         window.appState = window.appState || {};
@@ -231,11 +244,13 @@ function processScannedQRData(qrText) {
 
         if (typeof window.openTableSessionView === 'function') {
             window.openTableSessionView(bizName, tableNum);
+            return;
         }
-        return;
     }
 
+    // 3. QR de Cobro Directo (NETWISH_PAY o NETWISH_BUSINESS)
     if (qrText.startsWith('NETWISH_PAY:') || qrText.startsWith('NETWISH_BUSINESS:')) {
+        window.closeCustomModal();
         const parts = qrText.split(':');
         const targetPayee = parts[1] || 'Establecimiento NetWish';
         
@@ -249,11 +264,13 @@ function processScannedQRData(qrText) {
         return;
     }
 
-    alert(`Código leído: ${qrText}`);
+    // Si no coincide con ninguno, cerramos el modal e informamos
+    window.closeCustomModal();
+    alert(`Contenido leído: ${qrText}`);
 }
 
 // =======================================================
-// 5. DETENCIÓN Y CIERRE
+// 5. DETENCIÓN Y CIERRE DE MODAL
 // =======================================================
 window.stopCamera = function() {
     if (window.scanningInterval) { 
@@ -279,6 +296,5 @@ window.closeCustomModal = function() {
     }, 200);
 };
 
-// Aliases globales de compatibilidad
 window.closeModal = window.closeCustomModal;
 window.startCamera = window.startCameraModal;
