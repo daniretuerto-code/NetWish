@@ -4,7 +4,7 @@ let ordersRealtimeSubscription = null;
 let currentBusinessOrders = []; 
 let activeOrdersTab = 'pending';
 
-// 1. Control de Catálogo / Stock
+// 1. Control de Catálogo / Stock / Beats Master / Carta Digital
 async function openStockControlModal() {
     if (!currentBusiness) return;
 
@@ -20,10 +20,10 @@ async function openStockControlModal() {
 
     if (isMusic) {
         title = "Gestor de Beats & Tracks";
-        subtitle = "Publica licencias, beats con preview y servicios.";
+        subtitle = "Publica licencias, beats con preview y archivo master descargable.";
         phName = "Nombre del Beat (ej. Drill Beat Vol.1)";
         phDesc = "Detalles (ej. 140 BPM, Key C Minor)";
-        btnText = "Publicar Beat con Preview";
+        btnText = "Publicar Beat Completo";
     } else if (isRestaurant) {
         title = "Gestor de Carta Digital";
         subtitle = "Añade platos clasificados por sección y raciones.";
@@ -61,6 +61,7 @@ async function openStockControlModal() {
     catalog.forEach(p => {
         const price = parseFloat(p.price) || 0;
         const hasAudio = Boolean(p.audio_url);
+        const hasMaster = Boolean(p.full_audio_url);
         const isFinished = p.is_finished_beat === true || (p.name || '').toLowerCase().includes('prueba1');
         const sectionBadge = p.section ? `<span class="text-[8px] bg-neutral-200 text-neutral-700 font-mono font-bold px-1.5 py-0.5 rounded-md">${p.section}</span>` : '';
 
@@ -68,7 +69,8 @@ async function openStockControlModal() {
             <div class="flex justify-between items-center bg-neutral-50 p-3.5 rounded-2xl border border-neutral-200/60 shadow-xs">
                 <div class="overflow-hidden pr-2">
                     <div class="flex items-center space-x-1.5">
-                        ${hasAudio ? '<i data-lucide="volume-2" class="w-3.5 h-3.5 text-amber-500 shrink-0"></i>' : ''}
+                        ${hasAudio ? '<i data-lucide="volume-2" class="w-3.5 h-3.5 text-amber-500 shrink-0" title="Preview activo"></i>' : ''}
+                        ${hasMaster ? '<i data-lucide="download-cloud" class="w-3.5 h-3.5 text-emerald-600 shrink-0" title="Master descargable listo"></i>' : ''}
                         <span class="text-xs font-bold block text-black truncate">${p.name}</span>
                         ${sectionBadge}
                         ${isFinished ? '<span class="text-[8px] bg-amber-500/10 text-amber-600 font-bold px-1.5 py-0.5 rounded-full border border-amber-500/20">Finalizado</span>' : ''}
@@ -113,16 +115,20 @@ async function openStockControlModal() {
                 <input type="number" step="0.01" id="newProdPrice" placeholder="Precio en € (ej. 14.50)" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black transition font-mono">
                 
                 ${isMusic ? `
-                <div class="p-3 bg-amber-500/5 rounded-2xl border border-amber-500/20 space-y-2">
-                    <label class="text-[10px] font-mono text-amber-700 font-bold uppercase tracking-wider block flex items-center space-x-1.5">
-                        <i data-lucide="music" class="w-3.5 h-3.5"></i>
-                        <span>Archivo de Audio Preview (.mp3 / .wav)</span>
-                    </label>
-                    <input type="file" id="newProdAudioFile" accept="audio/mp3,audio/wav,audio/mpeg" class="w-full text-[11px] text-neutral-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-black file:text-white hover:file:bg-neutral-800 cursor-pointer transition">
+                <div class="space-y-3 p-3 bg-neutral-50 rounded-2xl border border-neutral-200/80">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-mono text-neutral-700 font-bold uppercase tracking-wider block">1. Audio Preview (Corto para escuchar)</label>
+                        <input type="file" id="newProdAudioFile" accept="audio/mp3,audio/wav,audio/mpeg" class="w-full text-[11px] text-neutral-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-black file:text-white cursor-pointer">
+                    </div>
+
+                    <div class="space-y-1 pt-1">
+                        <label class="text-[10px] font-mono text-amber-700 font-bold uppercase tracking-wider block">2. Beat Entero / Master (Para descarga tras compra)</label>
+                        <input type="file" id="newProdFullAudioFile" accept="audio/mp3,audio/wav,audio/mpeg,.zip,.rar" class="w-full text-[11px] text-neutral-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-black cursor-pointer">
+                    </div>
                     
                     <label class="flex items-center space-x-2 pt-1 cursor-pointer select-none">
                         <input type="checkbox" id="newProdIsFinishedBeat" checked class="w-4 h-4 rounded text-black border-neutral-300 focus:ring-0">
-                        <span class="text-xs font-bold text-neutral-800">Marcar como Beat Finalizado</span>
+                        <span class="text-xs font-bold text-neutral-800">Marcar como Beat en Venta</span>
                     </label>
                 </div>
                 ` : ''}
@@ -157,6 +163,7 @@ async function saveNewStockProduct() {
     const sectionEl = document.getElementById('newProdSection');
     const section = sectionEl ? sectionEl.value : 'Entrantes';
     const audioInput = document.getElementById('newProdAudioFile');
+    const fullAudioInput = document.getElementById('newProdFullAudioFile');
     const isFinishedCheckbox = document.getElementById('newProdIsFinishedBeat');
     const saveBtn = document.getElementById('saveProdBtn');
 
@@ -166,41 +173,53 @@ async function saveNewStockProduct() {
     }
 
     let audioUrl = null;
+    let fullAudioUrl = null;
     const isFinished = isFinishedCheckbox ? isFinishedCheckbox.checked : false;
+    const safeBiz = currentBusiness.name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
 
-    if (audioInput && audioInput.files.length > 0) {
-        const file = audioInput.files[0];
-        const fileExt = file.name.split('.').pop().toLowerCase();
-        const safeBiz = currentBusiness.name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-        const filePath = `${safeBiz}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Subiendo archivos...</span>`;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
 
-        if (saveBtn) {
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Subiendo Audio...</span>`;
-            if (typeof lucide !== 'undefined') lucide.createIcons();
-        }
+    try {
+        if (audioInput && audioInput.files.length > 0) {
+            const file = audioInput.files[0];
+            const fileExt = file.name.split('.').pop().toLowerCase();
+            const filePath = `${safeBiz}/${Date.now()}_preview.${fileExt}`;
 
-        try {
             const { error: uploadError } = await supabaseClient.storage
                 .from('beats')
                 .upload(filePath, file, { cacheControl: '3600', upsert: false });
 
-            if (uploadError) throw uploadError;
-
-            const { data: publicUrlData } = supabaseClient.storage
-                .from('beats')
-                .getPublicUrl(filePath);
-
-            audioUrl = publicUrlData.publicUrl;
-        } catch (storageErr) {
-            alert("Error al subir archivo: " + storageErr.message);
-            if (saveBtn) {
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = `<i data-lucide="cloud-upload" class="w-4 h-4"></i><span>Reintentar</span>`;
-                if (typeof lucide !== 'undefined') lucide.createIcons();
+            if (!uploadError) {
+                const { data: publicUrlData } = supabaseClient.storage.from('beats').getPublicUrl(filePath);
+                audioUrl = publicUrlData.publicUrl;
             }
-            return;
         }
+
+        if (fullAudioInput && fullAudioInput.files.length > 0) {
+            const fileFull = fullAudioInput.files[0];
+            const extFull = fileFull.name.split('.').pop().toLowerCase();
+            const filePathFull = `${safeBiz}/${Date.now()}_master.${extFull}`;
+
+            const { error: uploadErrorFull } = await supabaseClient.storage
+                .from('beats')
+                .upload(filePathFull, fileFull, { cacheControl: '3600', upsert: false });
+
+            if (!uploadErrorFull) {
+                const { data: publicUrlDataFull } = supabaseClient.storage.from('beats').getPublicUrl(filePathFull);
+                fullAudioUrl = publicUrlDataFull.publicUrl;
+            }
+        }
+    } catch (storageErr) {
+        alert("Error al subir archivos: " + storageErr.message);
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = `<i data-lucide="cloud-upload" class="w-4 h-4"></i><span>Reintentar</span>`;
+        }
+        return;
     }
 
     const insertPayload = { 
@@ -209,12 +228,10 @@ async function saveNewStockProduct() {
         description: desc, 
         price: price,
         section: section,
-        is_finished_beat: isFinished
+        is_finished_beat: isFinished,
+        audio_url: audioUrl,
+        full_audio_url: fullAudioUrl
     };
-
-    if (audioUrl) {
-        insertPayload.audio_url = audioUrl;
-    }
 
     try {
         let { error } = await supabaseClient.from('products').insert([insertPayload]);
@@ -227,7 +244,6 @@ async function saveNewStockProduct() {
         }
 
         if (error) throw error;
-        
         openStockControlModal();
     } catch (err) {
         alert("Error en Supabase: " + err.message);

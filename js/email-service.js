@@ -11,11 +11,29 @@ window.emailService = {
             maximumFractionDigits: 2 
         });
 
+        let downloadSectionHtml = '';
+
         const itemsTable = (orderData.items || []).map(i => {
             const itemTotal = (Number(i.price || 0) * Number(i.qty || 1)).toLocaleString('es-ES', { 
                 minimumFractionDigits: 2, 
                 maximumFractionDigits: 2 
             });
+
+            // Si el producto incluye un enlace de descarga master/beat entero
+            if (i.full_audio_url || i.download_url) {
+                const downloadLink = i.full_audio_url || i.download_url;
+                downloadSectionHtml += `
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 16px; background-color: #000000; border-radius: 16px; padding: 18px; text-align: center;">
+                        <tr>
+                            <td>
+                                <p style="font-size: 10px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; color: #a3a3a3; margin: 0 0 10px 0;">Archivo Master Disponible</p>
+                                <a href="${downloadLink}" target="_blank" style="display: inline-block; background-color: #ffffff; color: #000000; padding: 12px 24px; border-radius: 12px; font-size: 12px; font-weight: 800; text-decoration: none;">Descargar Beat en Alta Calidad</a>
+                            </td>
+                        </tr>
+                    </table>
+                `;
+            }
+
             return `
                 <tr>
                     <td style="padding: 8px 0; font-size: 13px; color: #111111; border-bottom: 1px solid #f0f0f0;">
@@ -57,14 +75,16 @@ window.emailService = {
                                             ${itemsTable}
                                         </table>
 
-                                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-top: 2px solid #000000; padding-top: 16px; margin-bottom: 28px;">
+                                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-top: 2px solid #000000; padding-top: 16px; margin-bottom: 20px;">
                                             <tr>
                                                 <td style="font-size: 15px; font-weight: 800; color: #000000;">Total Pagado</td>
                                                 <td align="right" style="font-size: 18px; font-weight: 900; font-family: monospace; color: #000000;">${totalFormatted} €</td>
                                             </tr>
                                         </table>
 
-                                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #fafafa; border-radius: 16px; padding: 14px; text-align: center; border: 1px solid #eeeeee;">
+                                        ${downloadSectionHtml}
+
+                                        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #fafafa; border-radius: 16px; padding: 14px; text-align: center; border: 1px solid #eeeeee; margin-top: 20px;">
                                             <tr>
                                                 <td style="font-size: 11px; color: #777777;">Muestra este justificante al acudir al establecimiento.</td>
                                             </tr>
