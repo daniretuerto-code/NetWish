@@ -1,13 +1,18 @@
 // js/directory.js
 
+window.allPublicBusinesses = window.allPublicBusinesses || [];
 let currentCategoryFilter = '';
 let currentCategoryBusinesses = [];
 
 async function loadPublicBusinesses() {
     const listContainer = document.getElementById('dynamicBusinessList');
     if (!listContainer) return;
+    
     try {
-        const { data, error } = await supabaseClient.from('businesses').select('*');
+        const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
+        if (!client) return;
+
+        const { data, error } = await client.from('businesses').select('*');
         if (error) throw error;
         
         const uniqueBusinesses = [];
@@ -17,15 +22,17 @@ async function loadPublicBusinesses() {
             let rawName = biz.name || biz.Nombre || biz.username || '';
             let cleanName = rawName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
             
-            if (!seenNames.has(cleanName)) {
+            if (cleanName && !seenNames.has(cleanName)) {
                 seenNames.add(cleanName);
                 uniqueBusinesses.push(biz);
             }
         });
         
+        window.allPublicBusinesses = uniqueBusinesses;
         allPublicBusinesses = uniqueBusinesses;
-        renderBusinessDirectory(allPublicBusinesses);
+        renderBusinessDirectory(window.allPublicBusinesses);
     } catch (err) {
+        console.error("Error cargando directorio:", err);
         listContainer.innerHTML = `<p class="text-xs text-center text-rose-500 py-4">Error al cargar el directorio urbano.</p>`;
     }
 }
@@ -34,7 +41,9 @@ function renderBusinessDirectory(businesses) {
     const listContainer = document.getElementById('dynamicBusinessList');
     if (!listContainer) return;
     
-    if (!businesses || businesses.length === 0) {
+    const items = businesses || window.allPublicBusinesses || [];
+    
+    if (items.length === 0) {
         listContainer.innerHTML = `
             <div class="py-12 text-center space-y-3">
                 <div class="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto text-neutral-400 shadow-inner">
@@ -44,12 +53,12 @@ function renderBusinessDirectory(businesses) {
                 <p class="text-xs text-neutral-500 px-4">Aún no hay locales dados de alta. ¡Estamos trabajando en ello!</p>
             </div>
         `;
-        lucide.createIcons();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         return;
     }
 
     let html = '';
-    businesses.forEach(biz => {
+    items.forEach(biz => {
         const name = biz.name || biz.Nombre || biz.username || 'Comercio';
         const cat = (biz.category || biz.Categoria || '').toLowerCase();
         
@@ -71,9 +80,10 @@ function renderBusinessDirectory(businesses) {
 
         const safeName = encodeURIComponent(name);
         const safeCat = encodeURIComponent(cat);
+        const safeEmail = encodeURIComponent(biz.notification_email || '');
 
         html += `
-            <button onclick="openPublicBusiness('${safeName}', '${safeCat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
+            <button onclick="openPublicBusiness('${safeName}', '${safeCat}', '${safeEmail}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
                 <div class="w-12 h-12 rounded-xl ${bgClass} flex items-center justify-center shrink-0">
                     <i data-lucide="${icon}" class="w-5 h-5 ${colorClass}"></i>
                 </div>
@@ -86,12 +96,13 @@ function renderBusinessDirectory(businesses) {
         `;
     });
     listContainer.innerHTML = html;
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function filterDirectory() {
     const query = document.getElementById('directorySearch').value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const filtered = allPublicBusinesses.filter(biz => {
+    const source = window.allPublicBusinesses.length ? window.allPublicBusinesses : allPublicBusinesses;
+    const filtered = source.filter(biz => {
         const name = (biz.name || biz.Nombre || biz.username || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         const cat = (biz.category || biz.Categoria || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         return name.includes(query) || cat.includes(query);
@@ -114,7 +125,8 @@ function goToDirectory(filter) {
     if (titleText) titleText.innerText = titleMap[filter] || 'Categoría';
     currentCategoryFilter = filter;
 
-    currentCategoryBusinesses = allPublicBusinesses.filter(biz => {
+    const source = window.allPublicBusinesses.length ? window.allPublicBusinesses : allPublicBusinesses;
+    currentCategoryBusinesses = source.filter(biz => {
         const cat = (biz.category || biz.Categoria || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         return cat.includes(filter);
     });
@@ -124,7 +136,7 @@ function goToDirectory(filter) {
     const searchInput = document.getElementById('categorySearch');
     if (searchInput) searchInput.value = '';
 
-    switchTab('category');
+    if (typeof switchTab === 'function') switchTab('category');
 }
 
 function renderCategoryDirectory(businesses) {
@@ -141,7 +153,7 @@ function renderCategoryDirectory(businesses) {
                 <p class="text-xs text-neutral-500 px-4">Aún no hay locales de esta categoría dados de alta. ¡Estamos trabajando en ello!</p>
             </div>
         `;
-        lucide.createIcons();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         return;
     }
 
@@ -166,9 +178,10 @@ function renderCategoryDirectory(businesses) {
 
         const safeName = encodeURIComponent(name);
         const safeCat = encodeURIComponent(cat);
+        const safeEmail = encodeURIComponent(biz.notification_email || '');
 
         html += `
-            <button onclick="openPublicBusiness('${safeName}', '${safeCat}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
+            <button onclick="openPublicBusiness('${safeName}', '${safeCat}', '${safeEmail}')" class="w-full p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex items-center space-x-4 active:scale-95 transition-transform text-left">
                 <div class="w-12 h-12 rounded-xl ${bgClass} flex items-center justify-center shrink-0">
                     <i data-lucide="${icon}" class="w-5 h-5 ${colorClass}"></i>
                 </div>
@@ -181,7 +194,7 @@ function renderCategoryDirectory(businesses) {
         `;
     });
     listContainer.innerHTML = html;
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function filterCategoryView() {

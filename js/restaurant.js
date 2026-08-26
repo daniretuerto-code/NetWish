@@ -40,7 +40,7 @@ window.restaurantState = {
 };
 
 // =======================================================
-// 1. HUB PRINCIPAL DEL RESTAURANTE
+// 1. HUB PRINCIPAL DEL RESTAURANTE (VISTA PÚBLICA)
 // =======================================================
 window.renderRestaurantHub = async function(container) {
     if (!container) return;
@@ -232,31 +232,26 @@ window.renderDishesForActiveCategory = function() {
 // =======================================================
 window.loadRestaurantLiveCatalog = async function() {
     const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
-    const bizName = window.appState?.activeBusinessName || 'Restaurante';
+    const bizName = (window.appState?.activeBusinessName || 'Restaurante Dani').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     if (!client) return;
 
     try {
         const { data, error } = await client.from('products').select('*');
         if (!error && data) {
-            const cleanName = bizName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
             const filtered = data.filter(p => {
-                const bId = String(p.business_id || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                return bId === cleanName || bId.includes('restaurante') || cleanName.includes(bId);
+                const bId = String(p.business_id || '').trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                return bId === bizName || bId.includes('restaurante');
             });
 
             if (filtered.length > 0) {
                 window.restaurantState.catalogDishes = filtered;
             } else {
                 window.restaurantState.catalogDishes = [
-                    { id: 'rest_1', name: 'Tabla de Quesos de Cerrato', description: 'Selección de quesos curados palentinos con mermelada artesana', price: 14.00, section: 'Entrantes' },
+                    { id: 'rest_1', name: 'Tabla de Quesos de Cerrato', description: 'Selección de quesos curados palentinos', price: 14.00, section: 'Entrantes' },
                     { id: 'rest_2', name: 'Croquetas de Jamón Ibérico (6 uds)', description: 'Rebozado crujiente y bechamel melosa', price: 9.50, section: 'Entrantes' },
-                    { id: 'rest_3', name: 'Lechazo Churro Asado de Palencia', description: 'Cuarto de lechazo asado en horno de leña tradicional', price: 26.50, section: 'Carnes' },
-                    { id: 'rest_4', name: 'Solomillo de Ternera de la Montaña', description: 'A la brasa con guarnición de pimientos confitados', price: 22.00, section: 'Carnes' },
-                    { id: 'rest_5', name: 'Bacalao al Ajoarriero con Pimientos', description: 'Lomo confitado sobre cama de pimientos asados', price: 18.50, section: 'Pescados' },
-                    { id: 'rest_6', name: 'Merluza del Cantábrico a la Cazuela', description: 'Con almejas y salsa verde tradicional', price: 19.00, section: 'Pescados' },
-                    { id: 'rest_7', name: 'Vino Tinto D.O. Arlanza (Botella)', description: 'Crianza de la provincia, Roble selección', price: 15.00, section: 'Bebidas & Vinos' },
-                    { id: 'rest_8', name: 'Agua Mineral Fuentes de Lebanza (1L)', description: 'Manantial de la Montaña Palentina', price: 2.50, section: 'Bebidas & Vinos' },
-                    { id: 'rest_9', name: 'Brazo de San Antolín', description: 'Postre tradicional hojaldrado con crema pastelera', price: 5.50, section: 'Postres' }
+                    { id: 'rest_3', name: 'Lechazo Churro Asado de Palencia', description: 'Cuarto de lechazo en horno de leña', price: 26.50, section: 'Carnes' },
+                    { id: 'rest_4', name: 'Solomillo de Ternera de la Montaña', description: 'A la brasa con guarnición', price: 22.00, section: 'Carnes' },
+                    { id: 'rest_5', name: 'Bacalao al Ajoarriero con Pimientos', description: 'Lomo confitado con pimientos asados', price: 18.50, section: 'Pescados' }
                 ];
             }
         }
@@ -267,7 +262,7 @@ window.loadRestaurantLiveCatalog = async function() {
 
 window.loadRestaurantSettingsFromDB = async function() {
     const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
-    const bizName = window.appState?.activeBusinessName || 'Restaurante';
+    const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';
     if (!client) return;
 
     try {
@@ -296,23 +291,37 @@ window.loadRestaurantSettingsFromDB = async function() {
 };
 
 // =======================================================
-// 4. SESIÓN DE MESA Y CUENTA COMPARTIDA (SPLIT BILL)
+// 4. SESIÓN DE MESA EN PANTALLA COMPLETA
 // =======================================================
 window.openTableSessionView = async function(bizName, tableNumber) {
-    window.openModalCustom(`
-        <div class="space-y-4 text-center py-6">
-            <i data-lucide="loader-2" class="w-6 h-6 mx-auto animate-spin text-black mb-2"></i>
-            <p class="text-xs text-neutral-500">Conectando con Mesa ${tableNumber}...</p>
-        </div>
-    `);
+    if (typeof window.closeCustomModal === 'function') window.closeCustomModal();
+
+    window.appState = window.appState || {};
+    window.appState.activeBusinessName = bizName;
+    window.appState.activeTableNumber = tableNumber;
+
+    const page = document.getElementById('view-table-session');
+    if (!page) {
+        // Fallback dinámico si no existe el contenedor en el DOM
+        const newPage = document.createElement('div');
+        newPage.id = 'view-table-session';
+        newPage.className = 'absolute inset-0 bg-white z-40 flex flex-col allow-scroll px-6 pt-20 pb-28 space-y-4';
+        document.getElementById('mainContentArea').appendChild(newPage);
+    }
+
+    const container = document.getElementById('view-table-session');
+    container.classList.remove('hidden');
+    container.classList.add('flex');
+    container.scrollTop = 0;
 
     await window.loadRestaurantLiveCatalog();
+    await window.loadRestaurantSettingsFromDB();
 
     let session = null;
     try {
         const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
         if (client) {
-            const fetchPromise = client
+            const { data } = await client
                 .from('table_sessions')
                 .select('*')
                 .ilike('business_name', `%${bizName}%`)
@@ -320,9 +329,7 @@ window.openTableSessionView = async function(bizName, tableNumber) {
                 .eq('status', 'open')
                 .maybeSingle();
 
-            const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ data: null }), 1500));
-            const res = await Promise.race([fetchPromise, timeoutPromise]);
-            session = res?.data || null;
+            session = data || null;
         }
     } catch (err) {
         console.warn("Aviso cargando comanda de mesa:", err);
@@ -333,131 +340,160 @@ window.openTableSessionView = async function(bizName, tableNumber) {
     window.renderTableSessionUI(bizName, tableNumber);
 };
 
+window.closeTableSessionView = function() {
+    const page = document.getElementById('view-table-session');
+    if (page) {
+        page.classList.add('hidden');
+        page.classList.remove('flex');
+    }
+    if (typeof switchTab === 'function') switchTab('home');
+};
+
 window.renderTableSessionUI = function(bizName, tableNumber) {
-    const modalBody = document.getElementById('modalBody');
-    if (!modalBody) return;
+    const container = document.getElementById('view-table-session');
+    if (!container) return;
 
     const session = window.restaurantState.currentTableSession;
     const cart = window.appState?.cartItemsList || [];
     const cartTotal = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
     const dishes = window.restaurantState.catalogDishes;
+    const dailyMenu = window.restaurantState.dailyMenu;
+    const menuPrice = dailyMenu?.price || 14.50;
+
+    let sessionHeaderHTML = `
+        <div class="flex items-center justify-between border-b border-neutral-100 pb-3 shrink-0">
+            <div class="flex items-center space-x-3">
+                <button onclick="window.closeTableSessionView()" class="w-10 h-10 rounded-2xl bg-neutral-100 flex items-center justify-center text-black active:scale-95 transition">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                </button>
+                <div>
+                    <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 font-bold block">${bizName.toUpperCase()}</span>
+                    <h2 class="text-xl font-black text-black tracking-tight">Mesa ${tableNumber}</h2>
+                </div>
+            </div>
+            <span class="text-[9px] font-mono bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 rounded-full border border-emerald-200/60">EN VIVO</span>
+        </div>
+    `;
 
     if (!session) {
-        modalBody.innerHTML = `
-            <div class="space-y-4 text-left">
-                <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
-                    <div>
-                        <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 font-bold">${bizName.toUpperCase()}</span>
-                        <h3 class="text-sm font-bold text-black">Mesa ${tableNumber} — Carta & Pedidos</h3>
+        container.innerHTML = `
+            ${sessionHeaderHTML}
+
+            <!-- 1. Acceso al Menú del Día de la Mesa -->
+            <div class="p-4 bg-neutral-50 rounded-3xl border border-neutral-200/70 space-y-2">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="chef-hat" class="w-4 h-4 text-amber-500"></i>
+                        <span class="text-xs font-bold text-black">Menú del Día</span>
                     </div>
-                    <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black">
-                        <i data-lucide="x" class="w-4 h-4"></i>
-                    </button>
+                    <span class="text-xs font-mono font-extrabold text-black">${menuPrice.toFixed(2)} €</span>
                 </div>
-
-                <div class="space-y-2">
-                    <span class="text-[10px] font-mono uppercase text-neutral-400 block font-bold">Carta de la Mesa</span>
-                    <div class="max-h-44 overflow-y-auto space-y-1.5 pr-1 allow-scroll">
-                        ${dishes.map(d => {
-                            const pPrice = parseFloat(d.price) || 0;
-                            return `
-                                <div class="flex items-center justify-between p-2.5 bg-neutral-50 rounded-2xl border border-neutral-200/70 text-xs">
-                                    <div class="pr-2 truncate">
-                                        <span class="font-bold text-black block truncate">${d.name}</span>
-                                        <span class="font-mono text-[10px] text-neutral-500">${pPrice.toFixed(2)} € • ${d.section || 'Plato'}</span>
-                                    </div>
-                                    <button onclick="window.addDishToTableCart('${d.id}', '${encodeURIComponent(d.name)}', ${pPrice}, '${bizName}', ${tableNumber})" class="px-3 py-1.5 bg-black text-white font-bold rounded-xl text-[11px] active:scale-95 transition shrink-0">
-                                        + Añadir
-                                    </button>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-
-                ${cart.length > 0 ? `
-                    <div class="p-3 bg-neutral-100 rounded-2xl border border-neutral-200 space-y-1.5">
-                        <div class="flex justify-between items-center text-xs font-bold text-black">
-                            <span>Comanda seleccionada (${cart.length})</span>
-                            <span class="font-mono">${cartTotal.toFixed(2)} €</span>
-                        </div>
-                        <div class="text-[10px] text-neutral-500 truncate">
-                            ${cart.map(i => `${i.qty}x ${i.name}`).join(', ')}
-                        </div>
-                    </div>
-
-                    <button onclick="window.sendOrderToKitchen('${bizName}', ${tableNumber})" class="w-full py-3.5 bg-black text-white font-bold rounded-2xl text-xs shadow-md active:scale-95 transition flex items-center justify-center space-x-2">
-                        <i data-lucide="send" class="w-4 h-4"></i>
-                        <span>Enviar Comanda a Cocina (${cartTotal.toFixed(2)} €)</span>
-                    </button>
-                ` : `
-                    <p class="text-[11px] text-neutral-400 text-center py-1">Añade los platos que vas a pedir a la mesa.</p>
-                `}
+                <p class="text-[10px] text-neutral-500">Incluye primero, segundo, postre y pan de leña.</p>
+                <button onclick="window.openDailyMenuModal()" class="w-full py-2 bg-white border border-neutral-200 rounded-xl text-xs font-bold text-black hover:border-black transition active:scale-95 shadow-2xs">
+                    Ver Platos del Menú
+                </button>
             </div>
+
+            <!-- 2. Carta Completa para pedir a la mesa -->
+            <div class="space-y-2 flex-1">
+                <div class="flex justify-between items-center px-1">
+                    <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 font-bold">Carta & Raciones</span>
+                    <button onclick="window.openCategorizedMenuPage('Entrantes')" class="text-[10px] font-bold text-black underline">Ver por categorías</button>
+                </div>
+
+                <div class="space-y-2 max-h-72 overflow-y-auto pr-1 allow-scroll">
+                    ${dishes.map(d => {
+                        const pPrice = parseFloat(d.price) || 0;
+                        return `
+                            <div class="flex items-center justify-between p-3.5 bg-neutral-50 rounded-2xl border border-neutral-200/70 text-xs">
+                                <div class="pr-2 truncate">
+                                    <span class="font-bold text-black block truncate">${d.name}</span>
+                                    <span class="font-mono text-[10px] text-neutral-500">${pPrice.toFixed(2)} € • ${d.section || 'Plato'}</span>
+                                </div>
+                                <button onclick="window.addDishToTableCart('${d.id}', '${encodeURIComponent(d.name)}', ${pPrice}, '${bizName}', ${tableNumber})" class="px-3 py-1.5 bg-black text-white font-bold rounded-xl text-[11px] active:scale-95 transition shrink-0 shadow-sm">
+                                    + Añadir
+                                </button>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+
+            <!-- 3. Comanda seleccionada lista para cocina -->
+            ${cart.length > 0 ? `
+                <div class="p-4 bg-black text-white rounded-3xl space-y-3 shadow-xl">
+                    <div class="flex justify-between items-center text-xs font-bold border-b border-white/10 pb-2">
+                        <span>Tu comanda para la mesa (${cart.length} platos)</span>
+                        <span class="font-mono text-sm">${cartTotal.toFixed(2)} €</span>
+                    </div>
+                    <div class="text-[11px] text-neutral-300 truncate">
+                        ${cart.map(i => `${i.qty}x ${i.name}`).join(', ')}
+                    </div>
+                    <button onclick="window.sendOrderToKitchen('${bizName}', ${tableNumber})" class="w-full py-3 bg-white text-black font-extrabold rounded-2xl text-xs active:scale-95 transition flex items-center justify-center space-x-2 shadow-md">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                        <span>Pedir a Cocina (${cartTotal.toFixed(2)} €)</span>
+                    </button>
+                </div>
+            ` : `
+                <div class="p-3 bg-neutral-50 rounded-2xl border border-neutral-100 text-center">
+                    <p class="text-[11px] text-neutral-400">Selecciona los platos que vais a consumir en la mesa.</p>
+                </div>
+            `}
         `;
     } else {
+        // Cuenta compartida en directo (Split Bill)
         const total = parseFloat(session.total_amount) || 0;
         const paid = parseFloat(session.paid_amount) || 0;
         const remaining = Math.max(0, total - paid);
         const percent = total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
         const payers = session.payers || [];
 
-        modalBody.innerHTML = `
-            <div class="space-y-4 text-left">
-                <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
-                    <div>
-                        <span class="text-[9px] font-mono uppercase tracking-widest text-emerald-600 font-bold">CUENTA EN MESA ABIERTA</span>
-                        <h3 class="text-sm font-bold text-black">Mesa ${tableNumber} — Total: ${total.toFixed(2)} €</h3>
-                    </div>
-                    <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black">
-                        <i data-lucide="x" class="w-4 h-4"></i>
-                    </button>
-                </div>
+        container.innerHTML = `
+            ${sessionHeaderHTML}
 
-                <div class="p-4 bg-neutral-50 rounded-2xl border border-neutral-200/70 space-y-2">
-                    <div class="flex justify-between items-center text-xs font-mono">
-                        <span class="text-neutral-500">Pagado: <strong>${paid.toFixed(2)} €</strong></span>
-                        <span class="font-extrabold ${remaining === 0 ? 'text-emerald-600' : 'text-black'}">Falta: ${remaining.toFixed(2)} €</span>
-                    </div>
-                    <div class="w-full h-3 bg-neutral-200 rounded-full overflow-hidden">
-                        <div class="h-full bg-emerald-500 transition-all duration-500" style="width: ${percent}%"></div>
-                    </div>
-                    <span class="text-[9px] text-neutral-400 font-mono block text-center">${percent}% liquidado</span>
+            <div class="p-5 bg-neutral-50 rounded-[32px] border border-neutral-200/80 space-y-3 shadow-sm">
+                <div class="flex justify-between items-center text-xs font-mono">
+                    <span class="text-neutral-500">Total cuenta: <strong>${total.toFixed(2)} €</strong></span>
+                    <span class="font-black ${remaining === 0 ? 'text-emerald-600' : 'text-black'}">Pendiente: ${remaining.toFixed(2)} €</span>
                 </div>
-
-                <div class="space-y-1.5">
-                    <span class="text-[10px] font-mono uppercase text-neutral-400 block font-bold">Aportaciones de la mesa</span>
-                    <div class="max-h-24 overflow-y-auto space-y-1 pr-1 allow-scroll">
-                        ${payers.length > 0 ? payers.map(p => `
-                            <div class="flex justify-between items-center text-[11px] p-2 bg-neutral-50 rounded-xl border border-neutral-100">
-                                <span class="font-medium text-black truncate max-w-[180px]">${p.name}</span>
-                                <span class="font-mono font-bold text-emerald-600">+${parseFloat(p.amount).toFixed(2)} €</span>
-                            </div>
-                        `).join('') : '<p class="text-[10px] text-neutral-400 text-center py-2">Sé el primero en abonar tu parte.</p>'}
-                    </div>
+                <div class="w-full h-3.5 bg-neutral-200 rounded-full overflow-hidden">
+                    <div class="h-full bg-emerald-500 transition-all duration-500" style="width: ${percent}%"></div>
                 </div>
+                <span class="text-[10px] text-neutral-400 font-mono block text-center">${percent}% liquidado (${paid.toFixed(2)} € abonados)</span>
+            </div>
 
-                ${remaining > 0 ? `
-                    <div class="space-y-2 pt-1 border-t border-neutral-100">
-                        <label class="text-[9px] font-mono uppercase text-neutral-400 block font-bold">Importe a abonar por tu parte</label>
-                        <div class="flex space-x-2">
-                            <input type="number" step="0.50" id="customSplitAmount" value="${(remaining > 10 ? 10 : remaining).toFixed(2)}" max="${remaining}" class="w-1/2 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:border-black outline-none">
-                            <button onclick="window.paySplitBill('${session.id}', ${tableNumber}, document.getElementById('customSplitAmount').value)" class="w-1/2 py-2.5 bg-black text-white font-bold rounded-xl text-xs active:scale-95 transition shadow-sm">
-                                Aportar Pago
-                            </button>
+            <div class="space-y-2 flex-1">
+                <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 font-bold block">Aportaciones de los comensales</span>
+                <div class="space-y-1.5 max-h-40 overflow-y-auto pr-1 allow-scroll">
+                    ${payers.length > 0 ? payers.map(p => `
+                        <div class="flex justify-between items-center text-xs p-3 bg-neutral-50 rounded-2xl border border-neutral-100">
+                            <span class="font-bold text-black truncate max-w-[200px]">${p.name}</span>
+                            <span class="font-mono font-black text-emerald-600">+${parseFloat(p.amount).toFixed(2)} €</span>
                         </div>
-                        <button onclick="window.paySplitBill('${session.id}', ${tableNumber}, ${remaining})" class="w-full py-3 bg-neutral-100 hover:bg-neutral-200 text-black font-bold rounded-xl text-xs transition">
-                            Abonar Restante (${remaining.toFixed(2)} €)
+                    `).join('') : '<p class="text-xs text-neutral-400 text-center py-4">Aún no hay pagos registrados para esta mesa.</p>'}
+                </div>
+            </div>
+
+            ${remaining > 0 ? `
+                <div class="space-y-2 pt-2 border-t border-neutral-100">
+                    <label class="text-[10px] font-mono uppercase text-neutral-400 block font-bold">Abonar parte personalizada</label>
+                    <div class="flex space-x-2">
+                        <input type="number" step="0.50" id="customSplitAmount" value="${(remaining > 10 ? 10 : remaining).toFixed(2)}" max="${remaining}" class="w-1/2 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:border-black outline-none">
+                        <button onclick="window.paySplitBill('${session.id}', ${tableNumber}, document.getElementById('customSplitAmount').value)" class="w-1/2 py-2.5 bg-black text-white font-bold rounded-xl text-xs active:scale-95 transition shadow-sm">
+                            Pagar Mi Parte
                         </button>
                     </div>
-                ` : `
-                    <div class="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-center space-y-1">
-                        <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-600 mx-auto"></i>
-                        <p class="text-xs font-bold text-emerald-700">¡Cuenta totalmente liquidada!</p>
-                        <p class="text-[9px] text-neutral-500">Recibo digital emitido.</p>
-                    </div>
-                `}
-            </div>
+                    <button onclick="window.paySplitBill('${session.id}', ${tableNumber}, ${remaining})" class="w-full py-3.5 bg-neutral-100 hover:bg-neutral-200 text-black font-extrabold rounded-2xl text-xs transition">
+                        Pagar Todo lo Restante (${remaining.toFixed(2)} €)
+                    </button>
+                </div>
+            ` : `
+                <div class="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-3xl text-center space-y-1">
+                    <i data-lucide="check-circle-2" class="w-6 h-6 text-emerald-600 mx-auto"></i>
+                    <p class="text-sm font-black text-emerald-700">¡Cuenta totalmente pagada!</p>
+                    <p class="text-[10px] text-neutral-500">Recibos digitales enviados a los correos de los comensales.</p>
+                </div>
+            `}
         `;
     }
 
@@ -476,7 +512,6 @@ window.addDishToTableCart = function(id, encName, price, bizName, tableNumber) {
         window.appState.cartItemsList.push({ id, name, price: parseFloat(price), qty: 1 });
     }
 
-    if (typeof updateCartDisplay === 'function') updateCartDisplay();
     window.renderTableSessionUI(bizName, tableNumber);
 };
 
@@ -539,13 +574,11 @@ window.sendOrderToKitchen = async function(bizName, tableNumber) {
     }
 
     window.appState.cartItemsList = [];
-    if (typeof updateCartDisplay === 'function') updateCartDisplay();
-
     window.renderTableSessionUI(bizName, tableNumber);
     if (typeof window.showToast === 'function') {
-        window.showToast(`¡Comanda de Mesa ${tableNumber} enviada!`, "success");
+        window.showToast(`¡Comanda enviada a cocina!`, "success");
     } else {
-        alert(`¡Comanda de la Mesa ${tableNumber} enviada a cocina!`);
+        alert(`¡Comanda enviada a cocina!`);
     }
 };
 
@@ -746,7 +779,7 @@ window.recalculateSlotsAvailability = async function() {
     const duration = window.restaurantState.config.turn_duration_min;
     
     const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
-    const bizName = window.appState?.activeBusinessName || 'Restaurante';
+    const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';
     let existingReservations = [];
 
     if (client) {
@@ -894,7 +927,7 @@ window.processSmartReservation = async function() {
     const zone = window.restaurantState.selectedZone;
     const duration = window.restaurantState.config.turn_duration_min;
     const endTime = window.minutesToTime(window.timeToMinutes(startTime) + duration);
-    const bizName = window.appState?.activeBusinessName || 'Restaurante';
+    const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';
     
     if (!table) return;
 
@@ -940,9 +973,9 @@ window.processSmartReservation = async function() {
 
     window.closeCustomModal();
     if (typeof window.showToast === 'function') {
-        window.showToast("¡Reserva confirmada con éxito!", "success");
+        window.showToast("¡Reserva confirmada!", "success");
     } else {
-        alert(`¡Reserva confirmada!\n\nFecha: ${date}\nHora: ${startTime} h\nMesa: Mesa ${table.table_number} (${zone})`);
+        alert(`¡Reserva confirmada con éxito!\n\nFecha: ${date}\nHora: ${startTime} h\nMesa: Mesa ${table.table_number} (${zone})`);
     }
 };
 

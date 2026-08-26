@@ -9,19 +9,29 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#f8f9fa">
 
+    <!-- Frameworks y Librerías -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = { theme: { extend: { colors: { dark: '#0a0a0a' } } } }
+        tailwind.config = { 
+            theme: { 
+                extend: { 
+                    colors: { 
+                        dark: '#0a0a0a' 
+                    } 
+                } 
+            } 
+        }
     </script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <link rel="stylesheet" href="css/styles.css?v=34">
+    <link rel="stylesheet" href="css/styles.css?v=35">
 </head>
 <body class="bg-neutral-100 text-black select-none">
 
+    <!-- CONTENEDOR PRINCIPAL MOBILE FIRST -->
     <div class="w-full h-[100dvh] sm:h-[844px] sm:max-w-[390px] sm:rounded-[48px] bg-white flex flex-col relative shadow-[0_30px_90px_rgba(0,0,0,0.12)] overflow-hidden sm:border-[8px] sm:border-neutral-900 mx-auto my-auto">
         
         <!-- CABECERA DINÁMICA REACTIVA -->
@@ -32,11 +42,13 @@
             </button>
         </header>
 
+        <!-- ÁREA PRINCIPAL DE CONTENIDO -->
         <main id="mainContentArea" class="flex-1 relative overflow-hidden flex flex-col pt-20">
             
             <!-- 1. CARRUSEL MODO USUARIO PERSONAL -->
             <div id="userScrollWrapper" class="horizontal-scroll-container">
                 
+                <!-- VISTA: INICIO / IDENTIFICACIÓN PERSONAL -->
                 <div id="view-home" class="view-pane px-6 pt-2 pb-28 space-y-5">
                     <section class="glass-dark p-6 rounded-[32px] text-white flex flex-col justify-between space-y-5 relative overflow-hidden shadow-xl transform-gpu" style="-webkit-mask-image: radial-gradient(white, black); mask-image: radial-gradient(white, black);">
                         <div class="absolute -right-10 -top-10 w-36 h-36 bg-gradient-to-br from-neutral-700/30 to-transparent rounded-full blur-2xl pointer-events-none"></div>
@@ -55,12 +67,14 @@
                         </button>
                     </section>
 
+                    <!-- GRID DE SERVICIOS URBANOS -->
                     <div class="space-y-3">
                         <div class="flex justify-between items-center px-1">
                             <h3 class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Servicios Activos</h3>
                         </div>
 
                         <div class="grid grid-cols-2 gap-3">
+                            <!-- Panaderías -->
                             <button onclick="goToDirectory('pan')" class="group p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/70 hover:border-black/30 hover:bg-white transition-all duration-200 text-left active:scale-[0.97] shadow-sm flex flex-col justify-between h-24">
                                 <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
                                     <i data-lucide="croissant" class="w-4 h-4 text-amber-600"></i>
@@ -70,6 +84,8 @@
                                     <span class="block text-[10px] text-neutral-400 mt-0.5">Click & Collect</span>
                                 </div>
                             </button>
+
+                            <!-- Restaurantes -->
                             <button onclick="goToDirectory('rest')" class="group p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/70 hover:border-black/30 hover:bg-white transition-all duration-200 text-left active:scale-[0.97] shadow-sm flex flex-col justify-between h-24">
                                 <div class="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
                                     <i data-lucide="utensils" class="w-4 h-4 text-rose-600"></i>
@@ -79,6 +95,8 @@
                                     <span class="block text-[10px] text-neutral-400 mt-0.5">QR mesa y reservas</span>
                                 </div>
                             </button>
+
+                            <!-- Movilidad -->
                             <button onclick="goToDirectory('movil')" class="group p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/70 hover:border-black/30 hover:bg-white transition-all duration-200 text-left active:scale-[0.97] shadow-sm flex flex-col justify-between h-24">
                                 <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
                                     <i data-lucide="car" class="w-4 h-4 text-emerald-600"></i>
@@ -88,6 +106,8 @@
                                     <span class="block text-[10px] text-neutral-400 mt-0.5">Taxis y bus GPS</span>
                                 </div>
                             </button>
+
+                            <!-- Peluquería -->
                             <button onclick="goToDirectory('pel')" class="group p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/70 hover:border-black/30 hover:bg-white transition-all duration-200 text-left active:scale-[0.97] shadow-sm flex flex-col justify-between h-24">
                                 <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
                                     <i data-lucide="scissors" class="w-4 h-4 text-blue-600"></i>
@@ -99,6 +119,7 @@
                             </button>
                         </div>
 
+                        <!-- Ocio y Experiencias -->
                         <button onclick="goToDirectory('ocio')" class="w-full group p-4 rounded-3xl bg-neutral-50/80 border border-neutral-200/70 hover:border-black/30 hover:bg-white transition-all duration-200 text-left active:scale-[0.98] shadow-sm flex items-center justify-between">
                             <div class="flex items-center space-x-3.5">
                                 <div class="w-10 h-10 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
@@ -116,6 +137,7 @@
                     </div>
                 </div>
 
+                <!-- VISTA: EXPLORAR / DIRECTORIO URBANO -->
                 <div id="view-explore" class="view-pane px-6 pt-2 pb-28 space-y-4">
                     <div class="space-y-1 px-1">
                         <h2 class="text-xl font-bold text-black tracking-tight">Directorio Urbano</h2>
@@ -132,6 +154,7 @@
                     </div>
                 </div>
 
+                <!-- VISTA: ESCÁNER QR -->
                 <div id="view-scan" class="view-pane px-6 pb-28 flex flex-col items-center justify-center text-center my-auto space-y-6">
                     <div class="w-16 h-16 rounded-[28px] bg-black text-white flex items-center justify-center mx-auto shadow-xl"><i data-lucide="scan" class="w-8 h-8"></i></div>
                     <div class="space-y-1.5">
@@ -141,6 +164,7 @@
                     <button onclick="startCameraModal()" class="w-full py-3.5 bg-black text-white rounded-2xl text-xs font-semibold transition hover:bg-neutral-800 shadow-md">Activar Lector QR</button>
                 </div>
 
+                <!-- VISTA: PERFIL DE USUARIO -->
                 <div id="view-profile" class="view-pane px-6 pt-2 pb-28 space-y-5">
                     <div id="profileContentContainer" class="w-full"></div>
                 </div>
@@ -150,6 +174,7 @@
             <!-- 2. CARRUSEL MODO COMERCIO / NEGOCIO -->
             <div id="bizScrollWrapper" class="horizontal-scroll-container hidden">
                 
+                <!-- VISTA: PANEL DEL COMERCIO -->
                 <div id="view-business-dashboard" class="view-pane px-6 pt-2 pb-28 space-y-5">
                     <div class="flex items-center justify-between px-1">
                         <div>
@@ -161,6 +186,7 @@
                     <div id="dynamicDashboardContent" class="space-y-5"></div>
                 </div>
 
+                <!-- VISTA: PEDIDOS Y RESERVAS -->
                 <div id="view-business-orders" class="view-pane px-6 pt-2 pb-28 space-y-4">
                     <div class="flex items-center justify-between px-1">
                         <div>
@@ -172,6 +198,7 @@
                     <div id="dynamicOrdersTabContent" class="space-y-4"></div>
                 </div>
 
+                <!-- VISTA: MENSAJES Y ATENCIÓN AL CLIENTE -->
                 <div id="view-business-messages" class="view-pane px-6 pt-2 pb-28 space-y-4">
                     <div class="space-y-1 px-1">
                         <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">ATENCIÓN AL CLIENTE</span>
@@ -180,13 +207,16 @@
                     <div id="businessMessagesTabContent" class="space-y-3 pt-1"></div>
                 </div>
 
+                <!-- VISTA: PERFIL Y AJUSTES DE EMPRESA -->
                 <div id="view-business-profile" class="view-pane px-6 pt-2 pb-28 space-y-5">
                     <div id="businessProfileContentContainer" class="w-full"></div>
                 </div>
 
             </div>
 
-            <!-- VISTAS FLOTANTES / SUBMENÚS -->
+            <!-- VISTAS FLOTANTES Y SUBMENÚS MODULARES -->
+
+            <!-- VISTA CATEGORÍA -->
             <div id="view-category" class="absolute inset-0 bg-white z-25 hidden flex-col allow-scroll px-6 pt-24 pb-28 space-y-4">
                 <div class="flex items-center space-x-3 px-1">
                     <button onclick="switchTab('home')" class="w-10 h-10 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-black hover:bg-neutral-200 transition active:scale-95">
@@ -206,7 +236,7 @@
                 <div id="dynamicCategoryList" class="space-y-3 pt-2 pb-6"></div>
             </div>
 
-            <!-- VISTA DE PAGO -->
+            <!-- VISTA DE PAGO / TPV DIRECTO -->
             <div id="view-payment" class="absolute inset-0 bg-white z-50 hidden flex-col justify-between px-6 pt-6 pb-12">
                 <div class="flex items-center justify-between shrink-0">
                     <button onclick="closePaymentView()" class="w-10 h-10 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-black hover:bg-neutral-200 transition active:scale-95">
@@ -314,7 +344,7 @@
             <div id="view-public-business" class="absolute inset-0 bg-white z-30 hidden flex-col allow-scroll pb-28">
                 <div class="relative w-full h-[240px] bg-neutral-200 shrink-0">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10"></div>
-                    <img id="publicBizImage" src="juancp-cover.jpg" onerror="this.src='https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80'" alt="Comercio" class="w-full h-full object-cover">
+                    <img id="publicBizImage" src="https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80" alt="Comercio" class="w-full h-full object-cover">
                     
                     <button onclick="goBackFromBusiness()" class="absolute top-10 left-6 z-20 w-10 h-10 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/20 shadow-sm transition active:scale-95">
                         <i data-lucide="arrow-left" class="w-5 h-5"></i>
@@ -395,6 +425,9 @@
                 <div id="fullMenuDishesList" class="space-y-3 pt-2 pb-6 flex-1"></div>
             </div>
 
+            <!-- VISTA DEDICADA: EXPERIENCIA COMPLETA DE MESA (PANTALLA COMPLETA) -->
+            <div id="view-table-session" class="absolute inset-0 bg-white z-40 hidden flex-col allow-scroll px-6 pt-24 pb-28 space-y-4"></div>
+
             <!-- BARRA FLOTANTE GLOBAL DE CESTA -->
             <div id="publicBusinessCartBar" class="absolute bottom-24 left-6 right-6 z-50 transition-all duration-300 transform translate-y-64 opacity-0 pointer-events-none">
                 <button onclick="openCartSummary()" class="w-full bg-black text-white p-4 rounded-2xl flex justify-between items-center shadow-[0_20px_40px_rgba(0,0,0,0.35)] active:scale-95 transition-transform">
@@ -431,7 +464,7 @@
             <button id="biz-nav-btn-profile" onclick="switchTab('business-profile')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="store" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Negocio</span></button>
         </nav>
 
-        <!-- MODAL DINÁMICO -->
+        <!-- MODAL DINÁMICO REUTILIZABLE -->
         <div id="customModal" class="absolute inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
             <div class="bg-white w-full max-w-[400px] rounded-[40px] p-7 text-center space-y-4 shadow-[0_25px_60px_rgba(0,0,0,0.25)] scale-95 transition-transform duration-300 border border-neutral-100 flex flex-col overflow-hidden" id="modalContent">
                 <div id="modalBody" class="space-y-4 text-left"></div>
@@ -440,24 +473,24 @@
 
     </div>
 
-    <!-- SCRIPTS MODULARES -->
-    <script src="js/config.js?v=34"></script>
-    <script src="js/modal.js?v=34"></script>
-    <script src="js/toast.js?v=34"></script>
-    <script src="js/navigation.js?v=34"></script>
-    <script src="js/auth.js?v=34"></script>
-    <script src="js/directory.js?v=34"></script>
-    <script src="js/email-service.js?v=34"></script>
-    <script src="js/cart-state.js?v=34"></script>
-    <script src="js/music-studio.js?v=34"></script>
-    <script src="js/restaurant.js?v=34"></script>
-    <script src="js/catalog-cart.js?v=34"></script>
-    <script src="js/kitchen-kds.js?v=34"></script>
-    <script src="js/restaurant-admin.js?v=34"></script>
-    <script src="js/dashboard.js?v=34"></script>
-    <script src="js/scanner.js?v=34"></script>
-    <script src="js/payment.js?v=34"></script>
-    <script src="js/chat.js?v=34"></script>
+    <!-- SCRIPTS MODULARES (ORDEN ESTRICTO DE CARGA) -->
+    <script src="js/config.js?v=35"></script>
+    <script src="js/modal.js?v=35"></script>
+    <script src="js/toast.js?v=35"></script>
+    <script src="js/navigation.js?v=35"></script>
+    <script src="js/auth.js?v=35"></script>
+    <script src="js/directory.js?v=35"></script>
+    <script src="js/email-service.js?v=35"></script>
+    <script src="js/cart-state.js?v=35"></script>
+    <script src="js/music-studio.js?v=35"></script>
+    <script src="js/restaurant.js?v=35"></script>
+    <script src="js/catalog-cart.js?v=35"></script>
+    <script src="js/kitchen-kds.js?v=35"></script>
+    <script src="js/restaurant-admin.js?v=35"></script>
+    <script src="js/dashboard.js?v=35"></script>
+    <script src="js/scanner.js?v=35"></script>
+    <script src="js/payment.js?v=35"></script>
+    <script src="js/chat.js?v=35"></script>
 
 </body>
 </html>
