@@ -5,6 +5,7 @@ let currentChatCustomer = null;
 let chatRealtimeSubscription = null;
 let bizGlobalUnreadSubscription = null;
 
+// --- ABRIR CHAT DESDE EL CLIENTE HACIA EL COMERCIO ---
 function openCustomerChat(bizName) {
     if (typeof currentUser === 'undefined' || !currentUser) {
         if (typeof openAuthModal === 'function') openAuthModal('login');
@@ -16,6 +17,7 @@ function openCustomerChat(bizName) {
 
     window.openModalCustom(`
         <div class="flex flex-col h-[430px] justify-between text-left">
+            <!-- Header Chat -->
             <div class="flex items-center justify-between pb-3 border-b border-neutral-100 shrink-0">
                 <div class="flex items-center space-x-2.5">
                     <div class="w-9 h-9 rounded-2xl bg-black text-white flex items-center justify-center text-xs font-bold shadow-sm">
@@ -34,12 +36,14 @@ function openCustomerChat(bizName) {
                 </button>
             </div>
 
+            <!-- Contenedor Mensajes -->
             <div id="chatMessagesContainer" class="flex-1 overflow-y-auto py-3 space-y-2.5 pr-1 allow-scroll">
                 <div class="text-center py-6">
                     <i data-lucide="loader-2" class="w-4 h-4 mx-auto animate-spin text-neutral-400"></i>
                 </div>
             </div>
 
+            <!-- Input Envío -->
             <div class="pt-2 border-t border-neutral-100 flex items-center space-x-2 shrink-0">
                 <input type="text" id="chatInputText" placeholder="Escribe tu consulta o pedido a medida..." 
                     onkeydown="if(event.key === 'Enter') sendChatMessage('customer')"
@@ -54,6 +58,7 @@ function openCustomerChat(bizName) {
     loadChatMessages('customer');
 }
 
+// --- ACTUALIZACIÓN REACTIVA DEL BADGE ROJO EN LA BARRA INFERIOR ---
 async function updateBusinessNavUnreadBadge() {
     if (!currentBusiness) return;
     const dot = document.getElementById('bizNavUnreadDot');
@@ -80,6 +85,7 @@ async function updateBusinessNavUnreadBadge() {
     }
 }
 
+// --- RENDERIZADO DE LA PESTAÑA DEDICADA DE MENSAJES (MODO COMERCIO) ---
 async function renderBusinessMessagesTab() {
     if (!currentBusiness) return;
     const container = document.getElementById('businessMessagesTabContent');
@@ -91,7 +97,7 @@ async function renderBusinessMessagesTab() {
             <p class="text-xs text-neutral-400">Cargando conversaciones...</p>
         </div>
     `;
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 
     updateBusinessNavUnreadBadge();
 
@@ -100,7 +106,7 @@ async function renderBusinessMessagesTab() {
             .channel('public:messages_global_unread')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
                 updateBusinessNavUnreadBadge();
-                if (activeTab === 'business-messages') {
+                if (typeof activeTab !== 'undefined' && activeTab === 'business-messages') {
                     renderBusinessMessagesTab();
                 }
             })
@@ -125,7 +131,7 @@ async function renderBusinessMessagesTab() {
                     <p class="text-[10px] text-neutral-400">Cuando los clientes inicien un chat directo o pedido personalizado, aparecerán aquí en tiempo real.</p>
                 </div>
             `;
-            lucide.createIcons();
+            if (typeof lucide !== 'undefined') lucide.createIcons();
             return;
         }
 
@@ -208,7 +214,7 @@ async function renderBusinessMessagesTab() {
         });
 
         container.innerHTML = listHtml;
-        lucide.createIcons();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
 
     } catch (e) {
         console.error("Error cargando mensajes del negocio:", e);
@@ -216,18 +222,20 @@ async function renderBusinessMessagesTab() {
     }
 }
 
+// --- ABRIR CHAT INDIVIDUAL DEL NEGOCIO CON UN CLIENTE (MODAL) ---
 async function openBusinessChatWithCustomer(encodedClient, encodedAvatar = '') {
     const client = decodeURIComponent(encodedClient);
     const avatar = decodeURIComponent(encodedAvatar);
     currentChatBusiness = currentBusiness.name;
     currentChatCustomer = client;
 
+    // 1. Marcar mensajes de este cliente como leídos de inmediato
     try {
         await supabaseClient
             .from('messages')
             .update({ is_read: true })
             .ilike('business_name', `%${currentBusiness.name}%`)
-            .eq('sender_name', client)
+            .ilike('sender_name', `%${client}%`)
             .eq('sender_type', 'customer');
             
         updateBusinessNavUnreadBadge();
@@ -255,9 +263,10 @@ async function openBusinessChatWithCustomer(encodedClient, encodedAvatar = '') {
 
     window.openModalCustom(`
         <div class="flex flex-col h-[430px] justify-between text-left">
+            <!-- Header Chat Negocio -->
             <div class="flex items-center justify-between pb-3 border-b border-neutral-100 shrink-0">
                 <div class="flex items-center space-x-2.5">
-                    <button onclick="renderBusinessMessagesTab(); closeChatModal();" class="w-8 h-8 rounded-xl bg-neutral-100 flex items-center justify-center text-black active:scale-90 transition mr-0.5">
+                    <button onclick="closeChatModal(); renderBusinessMessagesTab();" class="w-8 h-8 rounded-xl bg-neutral-100 flex items-center justify-center text-black active:scale-90 transition mr-0.5">
                         <i data-lucide="arrow-left" class="w-4 h-4"></i>
                     </button>
                     ${headerAvatarMarkup}
@@ -266,17 +275,19 @@ async function openBusinessChatWithCustomer(encodedClient, encodedAvatar = '') {
                         <span class="text-[9px] text-neutral-400 font-mono block">Cliente Directo</span>
                     </div>
                 </div>
-                <button onclick="closeChatModal()" class="w-8 h-8 rounded-xl bg-neutral-100 flex items-center justify-center text-neutral-400 hover:text-black active:scale-90 transition">
+                <button onclick="closeChatModal(); renderBusinessMessagesTab();" class="w-8 h-8 rounded-xl bg-neutral-100 flex items-center justify-center text-neutral-400 hover:text-black active:scale-90 transition">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
 
+            <!-- Contenedor Mensajes -->
             <div id="chatMessagesContainer" class="flex-1 overflow-y-auto py-3 space-y-2.5 pr-1 allow-scroll">
                 <div class="text-center py-6">
                     <i data-lucide="loader-2" class="w-4 h-4 mx-auto animate-spin text-neutral-400"></i>
                 </div>
             </div>
 
+            <!-- Input Envío Negocio -->
             <div class="pt-2 border-t border-neutral-100 flex items-center space-x-2 shrink-0">
                 <input type="text" id="chatInputText" placeholder="Responder al cliente..." 
                     onkeydown="if(event.key === 'Enter') sendChatMessage('business')"
@@ -291,6 +302,7 @@ async function openBusinessChatWithCustomer(encodedClient, encodedAvatar = '') {
     loadChatMessages('business');
 }
 
+// --- CARGA Y RENDERIZADO DE MENSAJES CON REALTIME ---
 async function loadChatMessages(currentRole) {
     const container = document.getElementById('chatMessagesContainer');
     if (!container) return;
@@ -393,6 +405,7 @@ function appendSingleMessage(msg, currentRole) {
     container.scrollTop = container.scrollHeight;
 }
 
+// --- ENVÍO DE MENSAJES ---
 async function sendChatMessage(senderType) {
     const input = document.getElementById('chatInputText');
     if (!input || !input.value.trim()) return;

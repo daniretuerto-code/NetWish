@@ -1,16 +1,19 @@
 // js/auth.js
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Recuperación de contraseña vía enlace de correo
     const hash = window.location.hash;
     if (hash && hash.includes('type=recovery')) {
         if (typeof openNewPasswordModal === 'function') openNewPasswordModal();
     }
 
+    // 2. Sesión personal en Supabase
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
         currentUser = session.user;
     }
 
+    // 3. Sesión de comercio en localStorage
     const savedBusiness = localStorage.getItem('netwish_business');
     if (savedBusiness) {
         try {
@@ -29,7 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (typeof generateBusinessQR === 'function') generateBusinessQR(currentBusiness);
             if (typeof renderBusinessOrders === 'function') renderBusinessOrders();
             
-            switchTab('business-dashboard');
+            if (typeof switchTab === 'function') switchTab('business-dashboard');
             
             const titleEl = document.getElementById('businessTitleName');
             if (titleEl) titleEl.innerText = currentBusiness.name;
@@ -43,6 +46,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof loadPublicBusinesses === 'function') loadPublicBusinesses(); 
 });
 
+// =======================================================
+// RENDERIZADO DEL PERFIL (MODO COMERCIO / USUARIO / LOGIN)
+// =======================================================
 function renderProfileView() {
     const userContainer = document.getElementById('profileContentContainer');
     const bizContainer = document.getElementById('businessProfileContentContainer');
@@ -154,6 +160,9 @@ function renderProfileView() {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// =======================================================
+// SUBIDA DE IMAGEN DE PORTADA (BUCKET ROBUSTO)
+// =======================================================
 async function openBusinessCoverUploadModal() {
     if (!currentBusiness) return;
 
@@ -190,24 +199,32 @@ async function uploadBusinessCoverImage() {
 
     const file = fileInput.files[0];
     const fileExt = file.name.split('.').pop().toLowerCase();
-    const safeBiz = currentBusiness.name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+    const safeBiz = (currentBusiness.name || 'biz').replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
     const filePath = `covers/${safeBiz}_${Date.now()}.${fileExt}`;
 
     if (saveBtn) {
         saveBtn.disabled = true;
-        saveBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Subiendo...</span>`;
+        saveBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Subiendo portada...</span>`;
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 
     try {
-        const { error: uploadError } = await supabaseClient.storage
-            .from('public-images')
+        let bucketName = 'public-images';
+        let uploadRes = await supabaseClient.storage
+            .from(bucketName)
             .upload(filePath, file, { cacheControl: '3600', upsert: true });
 
-        if (uploadError) throw uploadError;
+        if (uploadRes.error) {
+            bucketName = 'beats';
+            uploadRes = await supabaseClient.storage
+                .from(bucketName)
+                .upload(filePath, file, { cacheControl: '3600', upsert: true });
+        }
+
+        if (uploadRes.error) throw uploadRes.error;
 
         const { data: publicUrlData } = supabaseClient.storage
-            .from('public-images')
+            .from(bucketName)
             .getPublicUrl(filePath);
 
         const coverUrl = publicUrlData.publicUrl;
@@ -217,15 +234,18 @@ async function uploadBusinessCoverImage() {
             .update({ cover_url: coverUrl })
             .ilike('name', `%${currentBusiness.name}%`);
 
+        currentBusiness.cover_url = coverUrl;
+        localStorage.setItem('netwish_business', JSON.stringify(currentBusiness));
+
         window.closeCustomModal();
         if (typeof window.showToast === 'function') {
-            window.showToast("Portada actualizada con éxito", "success");
+            window.showToast("Foto de portada actualizada con éxito", "success");
         } else {
-            alert("Portada actualizada con éxito.");
+            alert("Foto de portada actualizada con éxito.");
         }
         if (typeof loadPublicBusinesses === 'function') loadPublicBusinesses();
     } catch (err) {
-        alert("Error al subir portada: " + err.message);
+        alert("Error al guardar portada: " + err.message);
         if (saveBtn) {
             saveBtn.disabled = false;
             saveBtn.innerHTML = `<span>Reintentar</span>`;
@@ -233,6 +253,9 @@ async function uploadBusinessCoverImage() {
     }
 }
 
+// =======================================================
+// LOGIN Y ALTA DE COMERCIOS
+// =======================================================
 function openBusinessLoginModal() {
     window.openModalCustom(`
         <div class="space-y-4 text-left">
@@ -426,7 +449,7 @@ async function authenticateBusiness() {
     if (typeof generateBusinessQR === 'function') generateBusinessQR(currentBusiness);
     if (typeof renderBusinessOrders === 'function') renderBusinessOrders();
 
-    switchTab('business-dashboard');
+    if (typeof switchTab === 'function') switchTab('business-dashboard');
     
     const titleEl = document.getElementById('businessTitleName');
     if (titleEl) titleEl.innerText = currentBusiness.name;
@@ -437,9 +460,12 @@ function logoutBusiness() {
     currentBusiness = null;
     if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
     renderProfileView();
-    switchTab('home'); 
+    if (typeof switchTab === 'function') switchTab('home'); 
 }
 
+// =======================================================
+// MODAL DE AUTENTICACIÓN PERSONAL
+// =======================================================
 function openAuthModal(initialMode = 'login') {
     renderAuthForm(initialMode);
     const modal = document.getElementById('customModal');
@@ -597,7 +623,7 @@ async function processAuthAction(mode) {
     window.closeCustomModal();
     if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
     renderProfileView();
-    switchTab('home');
+    if (typeof switchTab === 'function') switchTab('home');
 }
 
 async function logoutUser() {
@@ -605,5 +631,5 @@ async function logoutUser() {
     currentUser = null;
     if (typeof updateHeaderAvatar === 'function') updateHeaderAvatar();
     renderProfileView();
-    switchTab('profile');
+    if (typeof switchTab === 'function') switchTab('profile');
 }
