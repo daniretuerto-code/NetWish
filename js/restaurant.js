@@ -5,6 +5,7 @@ window.restaurantState = {
     selectedTime: '',
     selectedGuests: 2,
     selectedZone: 'Sala Principal',
+    activeMenuCategory: 'Entrantes', // 'Entrantes' | 'Carnes' | 'Pescados' | 'Bebidas & Vinos' | 'Postres'
     allocatedTable: null,
     currentTableSession: null,
     sessionRealtimeSub: null,
@@ -38,7 +39,9 @@ window.restaurantState = {
     }
 };
 
-// 1. HUB PRINCIPAL DEL RESTAURANTE
+// =======================================================
+// 1. HUB PRINCIPAL DEL RESTAURANTE (3 BOTONES LIMPIOS)
+// =======================================================
 window.renderRestaurantHub = async function(container) {
     if (!container) return;
 
@@ -47,10 +50,11 @@ window.renderRestaurantHub = async function(container) {
 
     const isMenuActive = window.restaurantState.dailyMenu?.active;
     const menuPrice = window.restaurantState.dailyMenu?.price || 14.50;
+    const totalDishes = window.restaurantState.catalogDishes.length;
 
     container.innerHTML = `
         <div class="space-y-4">
-            <!-- Menú del Día -->
+            <!-- 1. Acceso: Menú del Día -->
             <button onclick="window.openDailyMenuModal()" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-[0.98] transition group">
                 <div class="flex items-center space-x-3.5">
                     <div class="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center shadow-md shrink-0">
@@ -71,7 +75,7 @@ window.renderRestaurantHub = async function(container) {
                 </div>
             </button>
 
-            <!-- Reserva de Mesa -->
+            <!-- 2. Acceso: Reservar Mesa -->
             <button onclick="window.openModernReservationModal()" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-[0.98] transition group">
                 <div class="flex items-center space-x-3.5">
                     <div class="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center shadow-md shrink-0">
@@ -90,23 +94,163 @@ window.renderRestaurantHub = async function(container) {
                 </div>
             </button>
 
-            <!-- Carta Digital -->
-            <div class="space-y-3 pt-2">
-                <div class="flex items-center justify-between px-1">
-                    <h4 class="text-[10px] font-mono font-bold text-neutral-400 uppercase tracking-widest">Carta Digital</h4>
-                    <span class="text-[9px] text-neutral-400 font-mono">Precios con IVA</span>
+            <!-- 3. Acceso: Carta Digital Completa -->
+            <button onclick="window.openCategorizedMenuModal()" class="w-full p-4 rounded-3xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-between shadow-sm active:scale-[0.98] transition group">
+                <div class="flex items-center space-x-3.5">
+                    <div class="w-10 h-10 rounded-2xl bg-black text-white flex items-center justify-center shadow-md shrink-0">
+                        <i data-lucide="book-open" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <div class="text-left">
+                        <div class="flex items-center space-x-2">
+                            <span class="block text-xs font-bold text-black tracking-tight">Carta Digital Completa</span>
+                            <span class="text-[9px] bg-neutral-200 text-neutral-700 font-mono font-bold px-2 py-0.5 rounded-full">${totalDishes} platos</span>
+                        </div>
+                        <span class="block text-[10px] text-neutral-400 mt-0.5">Entrantes, Carnes, Pescados, Bodega y Postres</span>
+                    </div>
                 </div>
-                <div class="space-y-3" id="restaurantMenuSectionsContainer">
-                    ${window.renderRestaurantMenuCards()}
+                <div class="w-7 h-7 rounded-full bg-white border border-neutral-200/60 flex items-center justify-center text-neutral-400 group-hover:text-black transition shrink-0 ml-2">
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
                 </div>
-            </div>
+            </button>
         </div>
     `;
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
 };
 
-// 2. CARGA DE LA CARTA
+// =======================================================
+// 2. MODAL DE CARTA DIGITAL POR CATEGORÍAS
+// =======================================================
+window.openCategorizedMenuModal = function(initialCategory = 'Entrantes') {
+    const modal = document.getElementById('customModal');
+    const modalContent = document.getElementById('modalContent');
+    const modalBody = document.getElementById('modalBody');
+    if (!modal || !modalBody) return;
+
+    window.restaurantState.activeMenuCategory = initialCategory;
+
+    const categories = [
+        { id: 'Entrantes', label: 'Entrantes' },
+        { id: 'Carnes', label: 'Carnes' },
+        { id: 'Pescados', label: 'Pescados' },
+        { id: 'Bebidas & Vinos', label: 'Bebidas & Bodega' },
+        { id: 'Postres', label: 'Postres' }
+    ];
+
+    modalBody.innerHTML = `
+        <div class="space-y-4 text-left">
+            <div class="flex items-center justify-between border-b border-neutral-100 pb-3">
+                <div>
+                    <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 font-bold">CARTA DIGITAL</span>
+                    <h3 class="text-base font-bold text-black">Nuestra Cocina</h3>
+                </div>
+                <button onclick="window.closeCustomModal()" class="w-7 h-7 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 hover:text-black">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- Selector de Categorías Horizontal -->
+            <div class="flex space-x-1.5 overflow-x-auto pb-1 no-scrollbar -mx-1 px-1">
+                ${categories.map(c => {
+                    const isSelected = window.restaurantState.activeMenuCategory === c.id;
+                    return `
+                        <button onclick="window.switchMenuCategory('${c.id}')" class="px-3 py-1.5 rounded-xl text-[11px] font-bold whitespace-nowrap transition ${isSelected ? 'bg-black text-white shadow-sm' : 'bg-neutral-100 text-neutral-600 hover:text-black'}">
+                            ${c.label}
+                        </button>
+                    `;
+                }).join('')}
+            </div>
+
+            <!-- Contenedor de Platos de la Categoría Seleccionada -->
+            <div id="categoryDishesContainer" class="space-y-2.5 max-h-[380px] overflow-y-auto pr-1 allow-scroll">
+                ${window.renderDishesForActiveCategory()}
+            </div>
+
+            <button onclick="window.closeCustomModal()" class="w-full py-3 bg-neutral-100 hover:bg-neutral-200 text-black font-bold rounded-xl text-xs transition">
+                Cerrar Carta
+            </button>
+        </div>
+    `;
+
+    modal.classList.remove('hidden');
+    modal.style.display = "flex";
+    setTimeout(() => { 
+        modal.classList.remove('opacity-0'); 
+        if (modalContent) modalContent.classList.remove('scale-95'); 
+    }, 10);
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+};
+
+window.switchMenuCategory = function(catId) {
+    window.restaurantState.activeMenuCategory = catId;
+    const container = document.getElementById('categoryDishesContainer');
+    if (container) {
+        container.innerHTML = window.renderDishesForActiveCategory();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+    
+    // Re-render tabs styles
+    const modalBody = document.getElementById('modalBody');
+    if (modalBody) {
+        window.openCategorizedMenuModal(catId);
+    }
+};
+
+window.renderDishesForActiveCategory = function() {
+    const activeCat = window.restaurantState.activeMenuCategory;
+    const allDishes = window.restaurantState.catalogDishes;
+
+    const filtered = allDishes.filter(d => {
+        const dSection = (d.section || '').toLowerCase();
+        const active = activeCat.toLowerCase();
+        
+        if (active.includes('entrante')) return dSection.includes('entrante') || dSection.includes('tapa');
+        if (active.includes('carne')) return dSection.includes('carne') || dSection.includes('lechazo') || dSection.includes('ternera');
+        if (active.includes('pescado')) return dSection.includes('pescado') || dSection.includes('mar');
+        if (active.includes('bebida') || active.includes('vino')) return dSection.includes('bebida') || dSection.includes('vino') || dSection.includes('bodega');
+        if (active.includes('postre')) return dSection.includes('postre') || dSection.includes('dulce');
+        
+        return dSection === active;
+    });
+
+    if (filtered.length === 0) {
+        return `
+            <div class="py-8 text-center space-y-1">
+                <p class="text-xs font-bold text-neutral-400">No hay platos dados de alta en ${activeCat}</p>
+                <p class="text-[10px] text-neutral-400">El negocio puede añadir productos en esta sección desde su panel.</p>
+            </div>
+        `;
+    }
+
+    return filtered.map(dish => {
+        const itemIdStr = String(dish.id);
+        const existingInCart = (window.appState?.cartItemsList || []).find(i => String(i.id) === itemIdStr);
+        const qty = existingInCart ? existingInCart.qty : 0;
+        const price = parseFloat(dish.price) || 0;
+
+        return `
+            <div class="p-3.5 rounded-2xl border border-neutral-200/80 bg-neutral-50 flex items-center justify-between transition">
+                <div class="space-y-0.5 max-w-[65%] pr-2">
+                    <h4 class="text-xs font-bold text-black truncate">${dish.name}</h4>
+                    <p class="text-[10px] text-neutral-400 line-clamp-2">${dish.description || ''}</p>
+                    <span class="text-xs font-extrabold text-black font-mono block pt-0.5">${price.toFixed(2)} €</span>
+                </div>
+                <div id="btn-container-${dish.id}" class="flex items-center space-x-2 shrink-0">
+                    ${typeof renderItemButtonHTML === 'function' ? renderItemButtonHTML(dish.id, encodeURIComponent(itemIdStr), encodeURIComponent(dish.name), price, qty) : `
+                        <button onclick="window.changeItemQuantity('${dish.id}', '${encodeURIComponent(dish.name)}', ${price}, 1)" class="w-8 h-8 rounded-xl bg-black text-white font-bold flex items-center justify-center active:scale-90 transition shadow-sm">
+                            +
+                        </button>
+                    `}
+                </div>
+            </div>
+        `;
+    }).join('');
+};
+
+// =======================================================
+// 3. CARGA DE LA CARTA DESDE SUPABASE
+// =======================================================
 window.loadRestaurantLiveCatalog = async function() {
     const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
     const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';
@@ -123,6 +267,19 @@ window.loadRestaurantLiveCatalog = async function() {
 
             if (filtered.length > 0) {
                 window.restaurantState.catalogDishes = filtered;
+            } else {
+                // Catálogo demo inicial clasificado
+                window.restaurantState.catalogDishes = [
+                    { id: 'rest_1', name: 'Tabla de Quesos de Cerrato', description: 'Selección de quesos curados palentinos con mermelada artesana', price: 14.00, section: 'Entrantes' },
+                    { id: 'rest_2', name: 'Croquetas de Jamón Ibérico (6 uds)', description: 'Rebozado crujiente y bechamel melosa', price: 9.50, section: 'Entrantes' },
+                    { id: 'rest_3', name: 'Lechazo Churro Asado de Palencia', description: 'Cuarto de lechazo asado en horno de leña tradicional', price: 26.50, section: 'Carnes' },
+                    { id: 'rest_4', name: 'Solomillo de Ternera de la Montaña Palentina', description: 'A la brasa con guarnición de pimientos confitados', price: 22.00, section: 'Carnes' },
+                    { id: 'rest_5', name: 'Bacalao al Ajoarriero con Pimientos', description: 'Lomo confitado sobre cama de pimientos asados', price: 18.50, section: 'Pescados' },
+                    { id: 'rest_6', name: 'Merluza del Cantábrico a la Cazuela', description: 'Con almejas y salsa verde tradicional', price: 19.00, section: 'Pescados' },
+                    { id: 'rest_7', name: 'Vino Tinto D.O. Arlanza (Botella)', description: 'Crianza de la provincia, Roble selección', price: 15.00, section: 'Bebidas & Vinos' },
+                    { id: 'rest_8', name: 'Agua Mineral de Fuentes de Lebanza (1L)', description: 'Manantial puro de la Montaña Palentina', price: 2.50, section: 'Bebidas & Vinos' },
+                    { id: 'rest_9', name: 'Brazo de San Antolín', description: 'Postre tradicional hojaldrado con crema pastelera', price: 5.50, section: 'Postres' }
+                ];
             }
         }
     } catch (e) {
@@ -130,38 +287,9 @@ window.loadRestaurantLiveCatalog = async function() {
     }
 };
 
-window.renderRestaurantMenuCards = function() {
-    const dishes = window.restaurantState.catalogDishes.length > 0 ? window.restaurantState.catalogDishes : [
-        { id: 'rest_1', name: 'Tabla de Quesos de Cerrato', description: 'Selección de quesos curados palentinos con mermelada artesana', price: 14.00 },
-        { id: 'rest_2', name: 'Lechazo Asado de Palencia', description: 'Cuarto de lechazo churro asado en horno tradicional', price: 26.50 },
-        { id: 'rest_3', name: 'Croquetas de Jamón Ibérico (6 uds)', description: 'Rebozado crujiente y bechamel melosa', price: 9.50 },
-        { id: 'rest_4', name: 'Brazo de San Antolín', description: 'Postre tradicional hojaldrado con crema pastelera', price: 5.50 }
-    ];
-
-    return dishes.map(dish => {
-        const itemIdStr = String(dish.id);
-        const existingInCart = (window.appState?.cartItemsList || []).find(i => String(i.id) === itemIdStr);
-        const qty = existingInCart ? existingInCart.qty : 0;
-        const price = parseFloat(dish.price) || 0;
-
-        return `
-            <div class="p-4 rounded-3xl border border-neutral-200/80 bg-white shadow-sm flex items-center justify-between transition">
-                <div class="space-y-1 max-w-[65%]">
-                    <h4 class="text-xs font-bold text-black truncate">${dish.name}</h4>
-                    <p class="text-[10px] text-neutral-400 line-clamp-2">${dish.description || ''}</p>
-                    <span class="text-xs font-extrabold text-black font-mono block pt-1">${price.toFixed(2)} €</span>
-                </div>
-                <div id="btn-container-${dish.id}" class="flex items-center space-x-2 shrink-0">
-                    ${typeof renderItemButtonHTML === 'function' ? renderItemButtonHTML(dish.id, encodeURIComponent(itemIdStr), encodeURIComponent(dish.name), price, qty) : ''}
-                </div>
-            </div>
-        `;
-    }).join('');
-};
-
-// ==========================================
-// 3. SESIÓN DE MESA Y COMANDAS
-// ==========================================
+// =======================================================
+// 4. SESIÓN DE MESA, COMANDAS Y SPLIT BILL
+// =======================================================
 window.openTableSessionView = async function(bizName, tableNumber) {
     const modal = document.getElementById('customModal');
     const modalContent = document.getElementById('modalContent');
@@ -183,10 +311,8 @@ window.openTableSessionView = async function(bizName, tableNumber) {
         if (modalContent) modalContent.classList.remove('scale-95'); 
     }, 10);
 
-    // Cargar la carta del local de fondo
     await window.loadRestaurantLiveCatalog();
 
-    // Intentar traer la sesión activa de la mesa con timeout de seguridad
     let session = null;
     try {
         const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
@@ -199,8 +325,7 @@ window.openTableSessionView = async function(bizName, tableNumber) {
                 .eq('status', 'open')
                 .maybeSingle();
 
-            // Timeout de 2 segundos para evitar bloqueos
-            const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ data: null }), 2000));
+            const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ data: null }), 1500));
             const res = await Promise.race([fetchPromise, timeoutPromise]);
             session = res?.data || null;
         }
@@ -220,14 +345,8 @@ window.renderTableSessionUI = function(bizName, tableNumber) {
     const session = window.restaurantState.currentTableSession;
     const cart = window.appState?.cartItemsList || [];
     const cartTotal = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
-    const dishes = window.restaurantState.catalogDishes.length > 0 ? window.restaurantState.catalogDishes : [
-        { id: 'rest_1', name: 'Tabla de Quesos de Cerrato', price: 14.00 },
-        { id: 'rest_2', name: 'Lechazo Asado de Palencia', price: 26.50 },
-        { id: 'rest_3', name: 'Croquetas de Jamón Ibérico (6 uds)', price: 9.50 },
-        { id: 'rest_4', name: 'Brazo de San Antolín', price: 5.50 }
-    ];
+    const dishes = window.restaurantState.catalogDishes;
 
-    // Caso A: Mesa abierta sin comanda enviada aún a cocina
     if (!session) {
         modalBody.innerHTML = `
             <div class="space-y-4 text-left">
@@ -241,7 +360,6 @@ window.renderTableSessionUI = function(bizName, tableNumber) {
                     </button>
                 </div>
 
-                <!-- Lista rápida de platos disponibles -->
                 <div class="space-y-2">
                     <span class="text-[10px] font-mono uppercase text-neutral-400 block font-bold">Carta de la Mesa</span>
                     <div class="max-h-44 overflow-y-auto space-y-1.5 pr-1 allow-scroll">
@@ -251,7 +369,7 @@ window.renderTableSessionUI = function(bizName, tableNumber) {
                                 <div class="flex items-center justify-between p-2.5 bg-neutral-50 rounded-2xl border border-neutral-200/70 text-xs">
                                     <div class="pr-2 truncate">
                                         <span class="font-bold text-black block truncate">${d.name}</span>
-                                        <span class="font-mono text-[10px] text-neutral-500">${pPrice.toFixed(2)} €</span>
+                                        <span class="font-mono text-[10px] text-neutral-500">${pPrice.toFixed(2)} € • ${d.section || 'Plato'}</span>
                                     </div>
                                     <button onclick="window.addDishToTableCart('${d.id}', '${encodeURIComponent(d.name)}', ${pPrice}, '${bizName}', ${tableNumber})" class="px-3 py-1.5 bg-black text-white font-bold rounded-xl text-[11px] active:scale-95 transition shrink-0">
                                         + Añadir
@@ -262,7 +380,6 @@ window.renderTableSessionUI = function(bizName, tableNumber) {
                     </div>
                 </div>
 
-                <!-- Resumen de lo que se va a enviar -->
                 ${cart.length > 0 ? `
                     <div class="p-3 bg-neutral-100 rounded-2xl border border-neutral-200 space-y-1.5">
                         <div class="flex justify-between items-center text-xs font-bold text-black">
@@ -284,7 +401,6 @@ window.renderTableSessionUI = function(bizName, tableNumber) {
             </div>
         `;
     } else {
-        // Caso B: Comanda activa con cuenta abierta para pagar
         const total = parseFloat(session.total_amount) || 0;
         const paid = parseFloat(session.paid_amount) || 0;
         const remaining = Math.max(0, total - paid);
@@ -303,7 +419,6 @@ window.renderTableSessionUI = function(bizName, tableNumber) {
                     </button>
                 </div>
 
-                <!-- Barra de Progreso en Tiempo Real -->
                 <div class="p-4 bg-neutral-50 rounded-2xl border border-neutral-200/70 space-y-2">
                     <div class="flex justify-between items-center text-xs font-mono">
                         <span class="text-neutral-500">Pagado: <strong>${paid.toFixed(2)} €</strong></span>
@@ -315,7 +430,6 @@ window.renderTableSessionUI = function(bizName, tableNumber) {
                     <span class="text-[9px] text-neutral-400 font-mono block text-center">${percent}% liquidado</span>
                 </div>
 
-                <!-- Historial de Aportaciones -->
                 <div class="space-y-1.5">
                     <span class="text-[10px] font-mono uppercase text-neutral-400 block font-bold">Aportaciones de la mesa</span>
                     <div class="max-h-24 overflow-y-auto space-y-1 pr-1 allow-scroll">
@@ -328,7 +442,6 @@ window.renderTableSessionUI = function(bizName, tableNumber) {
                     </div>
                 </div>
 
-                <!-- Acciones de Pago Directo -->
                 ${remaining > 0 ? `
                     <div class="space-y-2 pt-1 border-t border-neutral-100">
                         <label class="text-[9px] font-mono uppercase text-neutral-400 block font-bold">Importe a abonar por tu parte</label>
@@ -356,7 +469,6 @@ window.renderTableSessionUI = function(bizName, tableNumber) {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 };
 
-// 4. AÑADIR PLATO A LA MESA EN TIEMPO REAL
 window.addDishToTableCart = function(id, encName, price, bizName, tableNumber) {
     const name = decodeURIComponent(encName);
     window.appState = window.appState || {};
@@ -373,7 +485,6 @@ window.addDishToTableCart = function(id, encName, price, bizName, tableNumber) {
     window.renderTableSessionUI(bizName, tableNumber);
 };
 
-// 5. ENVIAR COMANDA A COCINA
 window.sendOrderToKitchen = async function(bizName, tableNumber) {
     const cart = window.appState?.cartItemsList || [];
     if (cart.length === 0) return;
@@ -439,7 +550,6 @@ window.sendOrderToKitchen = async function(bizName, tableNumber) {
     alert(`¡Comanda de la Mesa ${tableNumber} enviada a cocina!`);
 };
 
-// 6. APORTACIÓN DE PAGO EN CUENTA DIVIDIDA
 window.paySplitBill = async function(sessionId, tableNumber, amountVal) {
     const amount = parseFloat(amountVal);
     if (isNaN(amount) || amount <= 0) {
@@ -512,7 +622,6 @@ window.paySplitBill = async function(sessionId, tableNumber, amountVal) {
     window.renderTableSessionUI(session.business_name, tableNumber);
 };
 
-// 7. SUSCRIPCIÓN REALTIME
 window.subscribeToTableSession = function(bizName, tableNumber) {
     const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
     if (!client || typeof client.channel !== 'function') return;
@@ -537,7 +646,9 @@ window.subscribeToTableSession = function(bizName, tableNumber) {
         .subscribe();
 };
 
-// 8. MODAL DE RESERVAS
+// =======================================================
+// 5. RESERVAS POR TURNO Y AFORO
+// =======================================================
 window.openModernReservationModal = async function() {
     const modal = document.getElementById('customModal');
     const modalBody = document.getElementById('modalBody');
@@ -608,7 +719,8 @@ window.openModernReservationModal = async function() {
         </div>
     `;
 
-    modal.classList.remove('hidden', 'opacity-0');
+    modal.classList.remove('hidden');
+    modal.style.display = "flex";
     modal.classList.add('opacity-100');
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
@@ -840,7 +952,9 @@ window.processSmartReservation = async function() {
     alert(`¡Reserva confirmada con éxito!\n\nFecha: ${date}\nHora: ${startTime} h\nComensales: ${guests} personas\nMesa: Mesa ${table.table_number} (${zone})\n\nComprobante digital enviado a tu correo.`);
 };
 
-// 9. MODAL DEL MENÚ DEL DÍA
+// =======================================================
+// 6. MODAL DEL MENÚ DEL DÍA
+// =======================================================
 window.openDailyMenuModal = function() {
     const modal = document.getElementById('customModal');
     const modalBody = document.getElementById('modalBody');
@@ -893,7 +1007,8 @@ window.openDailyMenuModal = function() {
         </div>
     `;
 
-    modal.classList.remove('hidden', 'opacity-0');
+    modal.classList.remove('hidden');
+    modal.style.display = "flex";
     modal.classList.add('opacity-100');
     if (typeof lucide !== 'undefined') lucide.createIcons();
 };

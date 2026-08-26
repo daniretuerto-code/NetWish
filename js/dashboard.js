@@ -33,9 +33,9 @@ async function openStockControlModal() {
         btnText = "Publicar Beat con Preview";
     } else if (isRestaurant) {
         title = "Gestor de Carta Digital";
-        subtitle = "Añade platos, raciones y bebidas a la carta online.";
-        phName = "Nombre del Plato (ej. Lechazo Asado)";
-        phDesc = "Descripción e ingredientes (ej. Cuarto con patatas)";
+        subtitle = "Añade platos clasificados por sección y raciones.";
+        phName = "Nombre del Plato (ej. Lechazo Churro Asado)";
+        phDesc = "Ingredientes y alérgenos (ej. Horno tradicional con patatas)";
         btnText = "Añadir a la Carta";
     }
 
@@ -76,6 +76,7 @@ async function openStockControlModal() {
         const price = parseFloat(p.price) || 0;
         const hasAudio = Boolean(p.audio_url);
         const isFinished = p.is_finished_beat === true || (p.name || '').toLowerCase().includes('prueba1');
+        const sectionBadge = p.section ? `<span class="text-[8px] bg-neutral-200 text-neutral-700 font-mono font-bold px-1.5 py-0.5 rounded-md">${p.section}</span>` : '';
 
         productsHtml += `
             <div class="flex justify-between items-center bg-neutral-50 p-3.5 rounded-2xl border border-neutral-200/60 shadow-xs">
@@ -83,6 +84,7 @@ async function openStockControlModal() {
                     <div class="flex items-center space-x-1.5">
                         ${hasAudio ? '<i data-lucide="volume-2" class="w-3.5 h-3.5 text-amber-500 shrink-0"></i>' : ''}
                         <span class="text-xs font-bold block text-black truncate">${p.name}</span>
+                        ${sectionBadge}
                         ${isFinished ? '<span class="text-[8px] bg-amber-500/10 text-amber-600 font-bold px-1.5 py-0.5 rounded-full border border-amber-500/20">Finalizado</span>' : ''}
                     </div>
                     <span class="text-[10px] text-neutral-500 block truncate mt-0.5">${p.description || ''} • <strong class="text-black font-mono">${price.toFixed(2)} €</strong></span>
@@ -103,9 +105,23 @@ async function openStockControlModal() {
 
             <div class="space-y-2.5 pt-1 border-t border-neutral-100">
                 <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">Nuevo Registro</span>
+                
+                ${isRestaurant ? `
+                <div>
+                    <label class="text-[9px] font-mono uppercase text-neutral-400 block mb-1">Sección de la Carta</label>
+                    <select id="newProdSection" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black font-medium focus:outline-none focus:border-black transition">
+                        <option value="Entrantes">Entrantes & Raciones</option>
+                        <option value="Carnes">Principales: Carnes</option>
+                        <option value="Pescados">Principales: Pescados</option>
+                        <option value="Bebidas & Vinos">Bebidas & Bodega</option>
+                        <option value="Postres">Postres Caseros</option>
+                    </select>
+                </div>
+                ` : ''}
+
                 <input type="text" id="newProdName" placeholder="${phName}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black transition">
                 <input type="text" id="newProdDesc" placeholder="${phDesc}" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black transition">
-                <input type="number" step="0.01" id="newProdPrice" placeholder="Precio en € (ej. 14.50)" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black transition">
+                <input type="number" step="0.01" id="newProdPrice" placeholder="Precio en € (ej. 14.50)" class="w-full bg-neutral-50 border border-neutral-200 rounded-xl py-2.5 px-3 text-xs text-black focus:outline-none focus:border-black transition font-mono">
                 
                 ${isMusic ? `
                 <div class="p-3 bg-amber-500/5 rounded-2xl border border-amber-500/20 space-y-2">
@@ -152,6 +168,8 @@ async function saveNewStockProduct() {
     const name = document.getElementById('newProdName').value.trim();
     const desc = document.getElementById('newProdDesc').value.trim();
     const price = parseFloat(document.getElementById('newProdPrice').value);
+    const sectionEl = document.getElementById('newProdSection');
+    const section = sectionEl ? sectionEl.value : 'General';
     const audioInput = document.getElementById('newProdAudioFile');
     const isFinishedCheckbox = document.getElementById('newProdIsFinishedBeat');
     const saveBtn = document.getElementById('saveProdBtn');
@@ -205,6 +223,7 @@ async function saveNewStockProduct() {
             name: name, 
             description: desc, 
             price: price,
+            section: section,
             is_finished_beat: isFinished
         };
 
@@ -457,7 +476,6 @@ async function openRestaurantConfigModal() {
                 <p class="text-[11px] text-neutral-500">Configura turnos de servicio y capacidad de mesas.</p>
             </div>
 
-            <!-- Horarios Comidas y Cenas -->
             <div class="space-y-2.5 pt-2 border-t border-neutral-100">
                 <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">Horarios de Servicio</span>
                 <div class="grid grid-cols-2 gap-2">
@@ -480,7 +498,6 @@ async function openRestaurantConfigModal() {
                 </div>
             </div>
 
-            <!-- Editor de Mesas -->
             <div class="space-y-2.5 pt-2 border-t border-neutral-100">
                 <div class="flex justify-between items-center">
                     <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Inventario de Mesas</span>
@@ -957,7 +974,6 @@ window.renderKitchenOrdersList = async function() {
 
                     return `
                         <div class="p-4 bg-neutral-50 rounded-3xl border border-neutral-200/80 shadow-xs space-y-3 transition hover:border-black/30">
-                            <!-- Cabecera de la Comanda -->
                             <div class="flex justify-between items-start border-b border-neutral-200/60 pb-2.5">
                                 <div>
                                     <div class="flex items-center space-x-2">
@@ -969,7 +985,6 @@ window.renderKitchenOrdersList = async function() {
                                 <span class="text-xs font-black text-black font-mono">${parseFloat(order.total_amount || 0).toFixed(2)} €</span>
                             </div>
 
-                            <!-- Desglose de Platos -->
                             <div class="space-y-1.5">
                                 ${items.map(dish => `
                                     <div class="flex justify-between items-center text-xs p-2 bg-white rounded-xl border border-neutral-100 shadow-2xs">
@@ -981,11 +996,10 @@ window.renderKitchenOrdersList = async function() {
                                 `).join('')}
                             </div>
 
-                            <!-- Botones de Acción de Cocina -->
                             <div class="grid grid-cols-2 gap-2 pt-1">
                                 <button onclick="window.markKitchenOrderReady('${order.id}')" class="py-2.5 bg-white border border-neutral-200 hover:border-black text-black font-bold rounded-xl text-[11px] active:scale-95 transition flex items-center justify-center space-x-1.5 shadow-2xs">
                                     <i data-lucide="bell-ring" class="w-3.5 h-3.5 text-amber-500"></i>
-                                    <span>Avisar Camarero</span>
+                                    <span>Avisar Sala</span>
                                 </button>
                                 <button onclick="window.closeKitchenOrder('${order.id}')" class="py-2.5 bg-black hover:bg-neutral-800 text-white font-bold rounded-xl text-[11px] active:scale-95 transition flex items-center justify-center space-x-1.5 shadow-sm">
                                     <i data-lucide="check" class="w-3.5 h-3.5"></i>
