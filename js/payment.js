@@ -19,7 +19,7 @@ function clearNum() {
         window.rawAmountString = "0";
     }
     window.updateAmountDisplay();
-};
+}
 
 window.updateAmountDisplay = function() {
     const display = document.getElementById('payAmountDisplay');
@@ -115,11 +115,11 @@ window.executeFullPayment = async function(isReservation = false) {
         let customerEmail = (customerUser && customerUser.email) ? customerUser.email : (pDetails?.clientEmail || '');
 
         if (!customerEmail) {
-            customerEmail = prompt("Introduce tu correo electrónico para recibir el recibo y enlace de descarga:");
+            customerEmail = prompt("Introduce tu correo electrónico para enviarte el justificante:");
         }
 
         if (!customerEmail || !customerEmail.includes('@')) {
-            alert("Se necesita un correo electrónico válido para enviar el justificante.");
+            alert("Introduce un correo electrónico válido para completar el pedido.");
             return;
         }
 
@@ -173,7 +173,11 @@ window.executeFullPayment = async function(isReservation = false) {
             }
         }
 
-        // Disparo garantizado del correo con el enlace de descarga de beats
+        // Comprobar si el pedido contiene algún beat o archivo descargable
+        const hasDownloadable = (isCart && cItems.length > 0) 
+            ? cItems.some(i => Boolean(i.full_audio_url || i.audio_url || i.download_url)) 
+            : false;
+
         if (window.emailService) {
             const structuredOrder = {
                 businessName: tBusiness,
@@ -192,6 +196,10 @@ window.executeFullPayment = async function(isReservation = false) {
             }
         }
 
+        const confirmationMsg = hasDownloadable
+            ? `Recibo digital y enlace de descarga enviados a <b>${customerEmail}</b>.`
+            : `Recibo digital enviado a <b>${customerEmail}</b>.`;
+
         window.openModalCustom(`
             <div class="text-center space-y-4 py-3">
                 <div class="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
@@ -200,7 +208,7 @@ window.executeFullPayment = async function(isReservation = false) {
                 <div>
                     <h3 class="text-lg font-bold text-black">${isReservation ? 'Reserva Confirmada' : 'Pago Completado'}</h3>
                     <p class="text-xs text-neutral-500 mt-1">Registrado con éxito en ${tBusiness}.</p>
-                    <p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo digital y enlace de descarga enviados a ${customerEmail}.</p>
+                    <p class="text-[10px] text-neutral-400 mt-1 font-mono">${confirmationMsg}</p>
                 </div>
 
                 <div class="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-left space-y-1">
@@ -214,7 +222,6 @@ window.executeFullPayment = async function(isReservation = false) {
                 </button>
             </div>
         `);
-
         if (typeof lucide !== 'undefined') lucide.createIcons();
 
     } catch (criticalError) {
