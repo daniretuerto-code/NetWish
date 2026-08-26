@@ -19,7 +19,6 @@ window.emailService = {
                 maximumFractionDigits: 2 
             });
 
-            // Enlace de descarga master prioritario o fallback al audio preview si es de música
             const downloadLink = i.full_audio_url || i.download_url || (orderData.businessName && orderData.businessName.toUpperCase().includes('JUUANCP') ? i.audio_url : null);
 
             if (downloadLink) {
