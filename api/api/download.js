@@ -16,7 +16,7 @@ export default async function handler(req, res) {
 
         const safeFilename = (filename || 'beat-master.mp3').replace(/[^a-zA-Z0-9_\-\.]/g, '_');
 
-        // Forzar la cabecera de descarga estricta que evita el reproductor
+        // Forzar cabecera de descarga estricta que evita el reproductor web
         res.setHeader('Content-Type', 'application/octet-stream');
         res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
         

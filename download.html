@@ -2,15 +2,16 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NetWish — Descarga Segura</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-white text-black flex items-center justify-center h-[100dvh] font-sans">
     <div class="text-center space-y-4 p-6 max-w-sm">
-        <div class="w-12 h-12 bg-black text-white rounded-2xl flex items-center justify-center mx-auto font-black italic">NW</div>
-        <h2 class="text-base font-bold">Preparando tu descarga...</h2>
-        <p class="text-xs text-neutral-500" id="downloadStatus">Tu archivo master se descargará automáticamente en unos segundos.</p>
-        <a id="directLink" href="#" class="hidden inline-block px-6 py-3 bg-black text-white font-bold rounded-xl text-xs">Descargar Manualmente</a>
+        <div class="w-12 h-12 bg-black text-white rounded-2xl flex items-center justify-center mx-auto font-black italic shadow-md">NW</div>
+        <h2 class="text-base font-bold tracking-tight">Preparando tu descarga...</h2>
+        <p class="text-xs text-neutral-500 leading-relaxed" id="downloadStatus">Tu archivo master se descargará automáticamente en unos segundos.</p>
+        <a id="directLink" href="#" class="hidden inline-block px-6 py-3 bg-black text-white font-bold rounded-xl text-xs shadow-md transition active:scale-95">Descargar Manualmente</a>
     </div>
 
     <script>
@@ -19,9 +20,11 @@
         const fileName = params.get('name') || 'beat-master.mp3';
 
         if (fileUrl) {
-            // Forzar descarga mediante fetch y blob (evita que Safari abra el reproductor)
             fetch(fileUrl)
-                .then(response => response.blob())
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.blob();
+                })
                 .then(blob => {
                     const blobUrl = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -31,18 +34,19 @@
                     document.body.appendChild(a);
                     a.click();
                     window.URL.revokeObjectURL(blobUrl);
-                    document.getElementById('downloadStatus').innerText = "¡Descarga completada con éxito!";
+                    document.body.removeChild(a);
+                    document.getElementById('downloadStatus').innerText = "¡Descarga completada con éxito! Ya puedes cerrar esta ventana.";
                 })
                 .catch(err => {
                     console.error("Error en blob, abriendo enlace directo:", err);
-                    document.getElementById('downloadStatus').innerText = "Haz clic abajo si la descarga no empieza:";
+                    document.getElementById('downloadStatus').innerText = "Haz clic en el botón de abajo si la descarga no empieza automáticamente:";
                     const directBtn = document.getElementById('directLink');
                     directBtn.href = fileUrl;
-                    directBtn.download = fileName;
+                    directBtn.setAttribute('download', fileName);
                     directBtn.classList.remove('hidden');
                 });
         } else {
-            document.getElementById('downloadStatus').innerText = "Enlace de descarga no válido.";
+            document.getElementById('downloadStatus').innerText = "Enlace de descarga no válido o expirado.";
         }
     </script>
 </body>
