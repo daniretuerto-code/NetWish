@@ -24,7 +24,6 @@ window.emailService = {
 
             if (downloadLink) {
                 const safeFileName = (i.name || 'beat-master').replace(/[^a-zA-Z0-9]/g, '_') + '.mp3';
-                // Apuntamos a nuestra página puente de descarga automática
                 const bridgeDownloadUrl = `https://netwish.es/download.html?url=${encodeURIComponent(downloadLink)}&name=${encodeURIComponent(safeFileName)}`;
 
                 downloadSectionHtml += `
