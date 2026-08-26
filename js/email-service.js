@@ -19,14 +19,15 @@ window.emailService = {
                 maximumFractionDigits: 2 
             });
 
-            // Si el producto incluye un enlace de descarga master/beat entero
-            if (i.full_audio_url || i.download_url) {
-                const downloadLink = i.full_audio_url || i.download_url;
+            // Si el producto incluye un enlace de descarga master/beat entero o preview de música
+            const downloadLink = i.full_audio_url || i.download_url || (orderData.businessName && orderData.businessName.toUpperCase().includes('JUUANCP') ? i.audio_url : null);
+
+            if (downloadLink) {
                 downloadSectionHtml += `
                     <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 16px; background-color: #000000; border-radius: 16px; padding: 18px; text-align: center;">
                         <tr>
                             <td>
-                                <p style="font-size: 10px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; color: #a3a3a3; margin: 0 0 10px 0;">Archivo Master Disponible</p>
+                                <p style="font-size: 10px; font-family: monospace; text-transform: uppercase; letter-spacing: 0.15em; color: #a3a3a3; margin: 0 0 10px 0;">Archivo Master / Beat Exclusivo</p>
                                 <a href="${downloadLink}" target="_blank" style="display: inline-block; background-color: #ffffff; color: #000000; padding: 12px 24px; border-radius: 12px; font-size: 12px; font-weight: 800; text-decoration: none;">Descargar Beat en Alta Calidad</a>
                             </td>
                         </tr>
@@ -86,7 +87,7 @@ window.emailService = {
 
                                         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #fafafa; border-radius: 16px; padding: 14px; text-align: center; border: 1px solid #eeeeee; margin-top: 20px;">
                                             <tr>
-                                                <td style="font-size: 11px; color: #777777;">Muestra este justificante al acudir al establecimiento.</td>
+                                                <td style="font-size: 11px; color: #777777;">Muestra este justificante al acudir al establecimiento o guarda tus archivos descargados.</td>
                                             </tr>
                                         </table>
                                     </td>

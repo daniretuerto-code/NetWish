@@ -187,6 +187,7 @@ function renderSingleProductCard(item, isMusicBeat) {
     const safeItemId = encodeURIComponent(itemIdStr);
     const safeItemName = encodeURIComponent(item.name || 'Producto');
     const safeAudioUrl = encodeURIComponent(item.audio_url || '');
+    const safeFullAudioUrl = encodeURIComponent(item.full_audio_url || '');
 
     return `
         <div class="p-4 rounded-3xl bg-white border border-neutral-200/80 shadow-sm flex flex-col space-y-3 transition">
@@ -201,7 +202,7 @@ function renderSingleProductCard(item, isMusicBeat) {
                 </div>
                 
                 <div id="btn-container-${item.id}" class="flex items-center space-x-2 shrink-0">
-                    ${renderItemButtonHTML(item.id, safeItemId, safeItemName, price, qty)}
+                    ${renderItemButtonCustomHTML(item.id, safeItemId, safeItemName, price, qty, safeAudioUrl, safeFullAudioUrl)}
                 </div>
             </div>
 
@@ -218,6 +219,82 @@ function renderSingleProductCard(item, isMusicBeat) {
             ` : ''}
         </div>
     `;
+}
+
+function renderItemButtonCustomHTML(id, safeId, safeName, price, qty, audioUrl = '', fullAudioUrl = '') {
+    if (qty > 0) {
+        return `
+            <div class="flex items-center space-x-2 bg-neutral-100 p-1 rounded-2xl border border-neutral-200/80">
+                <button onclick="changeItemQuantity('${id}', '${safeName}', ${price}, -1)" class="w-7 h-7 rounded-xl bg-white text-black font-bold flex items-center justify-center shadow-xs active:scale-90 transition">-</button>
+                <span class="text-xs font-mono font-bold px-1 text-black">${qty}</span>
+                <button onclick="changeItemQuantity('${id}', '${safeName}', ${price}, 1, '${audioUrl}', '${fullAudioUrl}')" class="w-7 h-7 rounded-xl bg-black text-white font-bold flex items-center justify-center shadow-xs active:scale-90 transition">+</button>
+            </div>
+        `;
+    } else {
+        return `
+            <button onclick="changeItemQuantity('${id}', '${safeName}', ${price}, 1, '${audioUrl}', '${fullAudioUrl}')" class="px-4 py-2.5 bg-black text-white font-bold rounded-2xl text-xs shadow-md active:scale-95 transition flex items-center space-x-1.5">
+                <span>+ Añadir</span>
+            </button>
+        `;
+    }
+}
+
+function changeItemQuantity(id, encName, price, delta, audioUrl = '', fullAudioUrl = '') {
+    const name = decodeURIComponent(encName);
+    const decodedAudio = decodeURIComponent(audioUrl || '');
+    const decodedFullAudio = decodeURIComponent(fullAudioUrl || '');
+
+    window.appState = window.appState || {};
+    window.appState.cartItemsList = window.appState.cartItemsList || [];
+
+    const existing = window.appState.cartItemsList.find(i => String(i.id) === String(id));
+    if (existing) {
+        existing.qty += delta;
+        if (decodedAudio && !existing.audio_url) existing.audio_url = decodedAudio;
+        if (decodedFullAudio && !existing.full_audio_url) existing.full_audio_url = decodedFullAudio;
+
+        if (existing.qty <= 0) {
+            window.appState.cartItemsList = window.appState.cartItemsList.filter(i => String(i.id) !== String(id));
+        }
+    } else if (delta > 0) {
+        window.appState.cartItemsList.push({
+            id,
+            name,
+            price: parseFloat(price),
+            qty: 1,
+            audio_url: decodedAudio,
+            full_audio_url: decodedFullAudio
+        });
+    }
+
+    window.appState.cartsByBusiness[window.appState.activeBusinessName] = [...window.appState.cartItemsList];
+    window.appState.cartTotalValue = window.appState.cartItemsList.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
+    window.appState.cartItemCount = window.appState.cartItemsList.reduce((acc, curr) => acc + curr.qty, 0);
+
+    updateCartDisplay();
+    renderPublicCatalogItems();
+}
+
+function updateCartDisplay() {
+    const count = window.appState.cartItemCount || 0;
+    const total = window.appState.cartTotalValue || 0;
+
+    const cartBar = document.getElementById('publicBusinessCartBar');
+    const countEl = document.getElementById('cartCountDisplay');
+    const totalEl = document.getElementById('cartTotalDisplay');
+
+    if (countEl) countEl.innerText = count;
+    if (totalEl) totalEl.innerText = total.toLocaleString('es-ES', {minimumFractionDigits:2}) + ' €';
+
+    if (cartBar) {
+        if (count > 0) {
+            cartBar.classList.remove('translate-y-64', 'opacity-0', 'pointer-events-none');
+            cartBar.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+        } else {
+            cartBar.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+            cartBar.classList.add('translate-y-64', 'opacity-0', 'pointer-events-none');
+        }
+    }
 }
 
 function toggleScheduleSection() {
