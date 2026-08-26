@@ -110,12 +110,16 @@ window.executeFullPayment = async function(isReservation = false) {
 
         let customerName = customerUser
             ? (customerUser.user_metadata?.full_name || customerUser.user_metadata?.name || customerUser.email?.split('@')[0] || 'Cliente')
-            : 'Cliente';
+            : (pDetails?.clientName || 'Cliente');
 
-        let customerEmail = (customerUser && customerUser.email) ? customerUser.email : prompt("Introduce tu correo electrónico para recibir el recibo y enlace de descarga:");
+        let customerEmail = (customerUser && customerUser.email) ? customerUser.email : (pDetails?.clientEmail || '');
 
         if (!customerEmail) {
-            alert("Se necesita un correo electrónico para enviar el justificante.");
+            customerEmail = prompt("Introduce tu correo electrónico para recibir el recibo y enlace de descarga:");
+        }
+
+        if (!customerEmail || !customerEmail.includes('@')) {
+            alert("Se necesita un correo electrónico válido para enviar el justificante.");
             return;
         }
 
@@ -169,7 +173,7 @@ window.executeFullPayment = async function(isReservation = false) {
             }
         }
 
-        // DISPARO FORZOSO E INMEDIATO DEL CORREO
+        // Disparo garantizado del correo con el enlace de descarga de beats
         if (window.emailService) {
             const structuredOrder = {
                 businessName: tBusiness,
@@ -181,14 +185,11 @@ window.executeFullPayment = async function(isReservation = false) {
                 action: isReservation ? 'reserve' : 'pay'
             };
 
-            console.log("Enviando correo de cliente a:", customerEmail, structuredOrder);
             await window.emailService.sendClientReceipt(customerEmail, structuredOrder);
 
             if (targetBizEmail) {
                 await window.emailService.sendBusinessAlert(targetBizEmail, structuredOrder);
             }
-        } else {
-            console.error("CRÍTICO: window.emailService no está definido.");
         }
 
         window.openModalCustom(`
@@ -213,6 +214,8 @@ window.executeFullPayment = async function(isReservation = false) {
                 </button>
             </div>
         `);
+
+        if (typeof lucide !== 'undefined') lucide.createIcons();
 
     } catch (criticalError) {
         console.error("Fallo crítico en el proceso de pago:", criticalError);

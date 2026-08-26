@@ -26,38 +26,34 @@ export default async function handler(req, res) {
     }
 
     try {
-        // Usamos la API de Resend mediante fetch puro de Node (sin dependencias externas que fallen)
-        const RESEND_API_KEY = process.env.RESEND_API_KEY;
-        
-        if (!RESEND_API_KEY) {
-            console.warn("ADVERTENCIA: RESEND_API_KEY no está configurada en las variables de entorno de Vercel.");
-            // Simulamos éxito para que la app no se bloquee en local si no hay clave
+        const apiKey = process.env.RESEND_API_KEY;
+        if (!apiKey) {
+            console.warn("Falta RESEND_API_KEY en variables de entorno.");
             return res.status(200).json({ success: true, warning: 'Simulado por falta de API Key' });
         }
 
         const response = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${RESEND_API_KEY}`,
+                'Authorization': `Bearer ${apiKey}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 from: 'NetWish Palencia <onboarding@resend.dev>',
-                to: [to],
+                to: Array.isArray(to) ? to : [to],
                 subject: subject,
                 html: html
             })
         });
 
         const data = await response.json();
-
         if (!response.ok) {
-            throw new Error(data.message || 'Error enviando correo con Resend');
+            throw new Error(data.message || 'Error en Resend API');
         }
 
         return res.status(200).json({ success: true, data });
-    } catch (error) {
-        console.error("Error crítico en api/send-email:", error);
-        return res.status(500).json({ error: error.message });
+    } catch (err) {
+        console.error("Error en api/send-email:", err);
+        return res.status(500).json({ error: err.message });
     }
 }
