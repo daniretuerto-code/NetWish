@@ -185,7 +185,9 @@ window.emailService = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            return await res.json();
+            const data = await res.json();
+            console.log("Respuesta del servidor de correo:", data);
+            return data;
         } catch (err) {
             console.error("Error disparando petición de email:", err);
             return { error: err.message };

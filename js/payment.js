@@ -19,7 +19,7 @@ function clearNum() {
         window.rawAmountString = "0";
     }
     window.updateAmountDisplay();
-}
+};
 
 window.updateAmountDisplay = function() {
     const display = document.getElementById('payAmountDisplay');
@@ -112,7 +112,12 @@ window.executeFullPayment = async function(isReservation = false) {
             ? (customerUser.user_metadata?.full_name || customerUser.user_metadata?.name || customerUser.email?.split('@')[0] || 'Cliente')
             : 'Cliente';
 
-        let customerEmail = (customerUser && customerUser.email) ? customerUser.email : '';
+        let customerEmail = (customerUser && customerUser.email) ? customerUser.email : prompt("Introduce tu correo electrónico para recibir el recibo y enlace de descarga:");
+
+        if (!customerEmail) {
+            alert("Se necesita un correo electrónico para enviar el justificante.");
+            return;
+        }
 
         let orderDate = pDetails?.date || new Date().toISOString().split('T')[0];
         let orderTime = pDetails?.time || "Inmediato";
@@ -164,25 +169,26 @@ window.executeFullPayment = async function(isReservation = false) {
             }
         }
 
+        // DISPARO FORZOSO E INMEDIATO DEL CORREO
         if (window.emailService) {
             const structuredOrder = {
                 businessName: tBusiness,
                 clientName: customerName,
                 date: orderDate,
                 time: orderTime,
-                // Preservamos los ítems con sus full_audio_url / download_url intactos para el correo de descarga
                 items: (isCart && cItems.length > 0) ? [...cItems] : [{ name: 'Pago Directo Terminal', qty: 1, price: totalVal }],
                 total: totalVal,
                 action: isReservation ? 'reserve' : 'pay'
             };
 
-            if (customerEmail) {
-                window.emailService.sendClientReceipt(customerEmail, structuredOrder);
-            }
+            console.log("Enviando correo de cliente a:", customerEmail, structuredOrder);
+            await window.emailService.sendClientReceipt(customerEmail, structuredOrder);
 
             if (targetBizEmail) {
-                window.emailService.sendBusinessAlert(targetBizEmail, structuredOrder);
+                await window.emailService.sendBusinessAlert(targetBizEmail, structuredOrder);
             }
+        } else {
+            console.error("CRÍTICO: window.emailService no está definido.");
         }
 
         window.openModalCustom(`
@@ -193,7 +199,7 @@ window.executeFullPayment = async function(isReservation = false) {
                 <div>
                     <h3 class="text-lg font-bold text-black">${isReservation ? 'Reserva Confirmada' : 'Pago Completado'}</h3>
                     <p class="text-xs text-neutral-500 mt-1">Registrado con éxito en ${tBusiness}.</p>
-                    <p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo digital y enlace de descarga emitidos a tu correo.</p>
+                    <p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo digital y enlace de descarga enviados a ${customerEmail}.</p>
                 </div>
 
                 <div class="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-left space-y-1">
@@ -210,7 +216,7 @@ window.executeFullPayment = async function(isReservation = false) {
 
     } catch (criticalError) {
         console.error("Fallo crítico en el proceso de pago:", criticalError);
-        alert("Ocurrió un error al procesar la operación.");
+        alert("Ocurrió un error al procesar la operación: " + criticalError.message);
     }
 };
 
