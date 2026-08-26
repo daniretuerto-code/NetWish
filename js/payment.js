@@ -170,7 +170,8 @@ window.executeFullPayment = async function(isReservation = false) {
                 clientName: customerName,
                 date: orderDate,
                 time: orderTime,
-                items: (isCart && cItems.length > 0) ? cItems : [{ name: 'Pago Directo Terminal', qty: 1, price: totalVal }],
+                // Preservamos los ítems con sus full_audio_url / download_url intactos para el correo de descarga
+                items: (isCart && cItems.length > 0) ? [...cItems] : [{ name: 'Pago Directo Terminal', qty: 1, price: totalVal }],
                 total: totalVal,
                 action: isReservation ? 'reserve' : 'pay'
             };
@@ -192,7 +193,7 @@ window.executeFullPayment = async function(isReservation = false) {
                 <div>
                     <h3 class="text-lg font-bold text-black">${isReservation ? 'Reserva Confirmada' : 'Pago Completado'}</h3>
                     <p class="text-xs text-neutral-500 mt-1">Registrado con éxito en ${tBusiness}.</p>
-                    <p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo digital emitido a tu correo.</p>
+                    <p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo digital y enlace de descarga emitidos a tu correo.</p>
                 </div>
 
                 <div class="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 text-left space-y-1">
