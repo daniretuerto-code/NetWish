@@ -8,12 +8,12 @@ export default async function handler(req, res) {
     const { to, subject, html } = req.body;
 
     if (!to || !subject || !html) {
-        return res.status(400).json({ error: 'Faltan parámetros obligatorios (to, subject, html)' });
+        return res.status(400).json({ error: 'Faltan parámetros requeridos (to, subject, html)' });
     }
 
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
-        return res.status(500).json({ error: 'RESEND_API_KEY no configurada en Vercel' });
+        return res.status(500).json({ error: 'RESEND_API_KEY no configurada' });
     }
 
     try {
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                from: 'NetWish <notificaciones@netwish.es>',
+                from: 'NetWish Palencia <notificaciones@netwish.es>',
                 to: recipients,
                 subject: subject,
                 html: html
@@ -36,13 +36,11 @@ export default async function handler(req, res) {
         const data = await response.json();
 
         if (!response.ok) {
-            console.error("Error devuelto por Resend API:", data);
             return res.status(response.status).json(data);
         }
 
         return res.status(200).json(data);
     } catch (error) {
-        console.error("Error interno del servidor de correo:", error);
         return res.status(500).json({ error: error.message });
     }
 }

@@ -933,7 +933,7 @@ window.initHoldReservationButton = function() {
     btnContainer.addEventListener('mouseleave', stopHold);
 };
 
-// ÚNICO ENVÍO: Solo se notifica al cliente que su solicitud fue recibida
+// REGISTRO DE RESERVA: Solo emite el correo al cliente indicando el estado pendiente
 window.processSmartReservation = async function() {
     const table = window.restaurantState.allocatedTable;
     const date = window.restaurantState.selectedDate;
@@ -971,7 +971,6 @@ window.processSmartReservation = async function() {
         }
     }
 
-    // Único correo emitido: Recibo de solicitud pendiente al cliente
     if (window.emailService && customerUser?.email) {
         const orderSummary = {
             businessName: bizName,
