@@ -953,7 +953,7 @@ window.initHoldReservationButton = function() {
     btnContainer.addEventListener('mouseleave', stopHold);
 };
 
-// REGISTRO DE RESERVA (SIN CORREO AUTOMÁTICO AL CLIENTE HASTA QUE EL RESTAURANTE CONFIRMA)
+// REGISTRO DE RESERVA (SIN CORREO DE CONFIRMACIÓN AUTOMÁTICO)
 window.processSmartReservation = async function() {
     const table = window.restaurantState.allocatedTable;
     const date = window.restaurantState.selectedDate;
@@ -980,7 +980,7 @@ window.processSmartReservation = async function() {
         total: 0.00,
         date: date,
         time: `${startTime} - ${endTime}`,
-        status: 'Pendiente de Aprobación' // <--- Clave: Estado inicial pendiente
+        status: 'Pendiente de Aprobación' // <--- Queda registrado como pendiente
     };
 
     if (client) {
@@ -991,23 +991,29 @@ window.processSmartReservation = async function() {
         }
     }
 
-    // Alerta al negocio (sin enviar recibo automático al cliente todavía)
+    // Se notifica al cliente que su solicitud fue recibida (en estado pendiente)
     if (window.emailService) {
-        const bizEmail = window.appState?.activeBusinessEmail || 'contacto@netwish.es';
-        window.emailService.sendBusinessAlert(bizEmail, {
+        const orderSummary = {
             businessName: bizName,
             clientName: record.customer,
             date: date,
             time: `${startTime} h (Estancia hasta ${endTime} h)`,
             items: [{ name: `Solicitud de reserva para ${guests} comensales en ${zone} (Mesa ${table.table_number})`, qty: 1, price: 0 }],
             total: 0,
-            action: 'nueva_solicitud_reserva'
-        });
+            action: 'solicitud_reserva'
+        };
+
+        if (customerUser?.email) {
+            window.emailService.sendClientReceipt(customerUser.email, orderSummary);
+        }
+
+        const bizEmail = window.appState?.activeBusinessEmail || 'contacto@netwish.es';
+        window.emailService.sendBusinessAlert(bizEmail, orderSummary);
     }
 
     window.closeCustomModal();
     if (typeof window.showToast === 'function') {
-        window.showToast("¡Solicitud enviada! Pendiente de confirmación del restaurante.", "success");
+        window.showToast("¡Solicitud enviada! Pendiente de aprobación del local.", "success");
     } else {
         alert(`¡Solicitud enviada con éxito!\n\nFecha: ${date}\nHora: ${startTime} h\nMesa: Mesa ${table.table_number} (${zone})\n\nEl restaurante te confirmará en breve.`);
     }

@@ -387,7 +387,6 @@ async function renderBusinessOrders() {
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
     const isRestaurant = cat.includes('rest') || cat.includes('bar') || (currentBusiness.name || '').toLowerCase().includes('restaurante');
     
-    // Adaptar títulos de la pestaña si es restaurante
     const ordersTitleEl = document.getElementById('bizOrdersTitle');
     const ordersTagEl = document.getElementById('bizOrdersTag');
     const navOrdersTextEl = document.getElementById('bizNavOrdersText');
@@ -434,12 +433,11 @@ async function renderBusinessOrders() {
         return bizKeywords.some(keyword => oName.includes(keyword));
     });
 
-    // Si es restaurante, filtramos solo las reservas de mesa
     if (isRestaurant) {
         myOrders = myOrders.filter(o => {
             const itemsStr = (o.items || '').toLowerCase();
             const statusStr = (o.status || '').toLowerCase();
-            return itemsStr.includes('reserva') || itemsStr.includes('pax') || statusStr.includes('mesa') || statusStr.includes('aprobación') || statusStr.includes('confirmación');
+            return itemsStr.includes('reserva') || itemsStr.includes('pax') || statusStr.includes('mesa') || statusStr.includes('aprobación') || statusStr.includes('confirmación') || statusStr.includes('pendiente');
         });
     }
 
@@ -459,7 +457,6 @@ async function renderBusinessOrders() {
         const orderVal = parseFloat(o.total) || 0;
         if (o.status !== 'Cancelado') totalMoney += orderVal;
         
-        // Criterio estricto de separación: solo va a completados si el negocio ya la confirmó
         if (o.status === 'Completado' || o.status === 'Mesa Confirmada') {
             completedOrders.push(o);
         } else {
@@ -640,7 +637,7 @@ async function renderBusinessOrders() {
         const isCompleted = o.status === 'Completado' || o.status === 'Mesa Confirmada';
         const isPaid = o.status === 'Pagado Online';
         const iconBg = isCompleted ? 'bg-neutral-100 text-neutral-500' : (isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600');
-        const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
+        const iconName = (isRestaurant || cat.includes('pel')) ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
         const totalVal = parseFloat(o.total) || 0;
         
         dashHtml += `
