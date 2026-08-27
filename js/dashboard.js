@@ -324,7 +324,7 @@ function openHistoryModal(dateFilter = '') {
             const isCompleted = o.status === 'Completado' || o.status === 'Mesa Confirmada';
             const isPaid = o.status === 'Pagado Online';
             const iconBg = isCompleted ? 'bg-neutral-100 text-neutral-500' : (isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600');
-            const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
+            const iconName = (cat.includes('rest') || cat.includes('pel')) ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
             const totalVal = parseFloat(o.total) || 0;
             
             ordersHtml += `
@@ -340,7 +340,7 @@ function openHistoryModal(dateFilter = '') {
                         </div>
                     </div>
                     <div class="text-right shrink-0 ml-2">
-                        <span class="block text-sm font-bold text-black font-mono">${totalVal.toFixed(2)} €</span>
+                        ${!o.items.toLowerCase().includes('reserva') ? `<span class="block text-sm font-bold text-black font-mono">${totalVal.toFixed(2)} €</span>` : ''}
                         <span class="block text-[9px] ${isCompleted ? 'text-neutral-500' : (isPaid ? 'text-emerald-600' : 'text-amber-600')} font-bold">${o.status}</span>
                     </div>
                 </div>
@@ -653,7 +653,7 @@ async function renderBusinessOrders() {
                     </div>
                 </div>
                 <div class="text-right shrink-0">
-                    <span class="block text-sm font-bold text-black font-mono">${totalVal.toFixed(2)} €</span>
+                    ${!o.items.toLowerCase().includes('reserva') ? `<span class="block text-sm font-bold text-black font-mono">${totalVal.toFixed(2)} €</span>` : ''}
                     <span class="block text-[9px] ${isCompleted ? 'text-neutral-400' : (isPaid ? 'text-emerald-600' : 'text-amber-600')} font-bold">${o.status}</span>
                 </div>
             </div>
@@ -714,7 +714,7 @@ async function renderBusinessOrders() {
 
                         <div class="flex items-center space-x-2.5 shrink-0">
                             <div class="text-right">
-                                <span class="block text-sm font-bold text-black font-mono">${totalVal.toFixed(2)} €</span>
+                                ${!o.items.toLowerCase().includes('reserva') ? `<span class="block text-sm font-bold text-black font-mono">${totalVal.toFixed(2)} €</span>` : ''}
                                 <span class="block text-[9px] ${isCompleted ? 'text-emerald-700' : (isPaid ? 'text-emerald-600' : 'text-amber-600')} font-bold">${o.status}</span>
                             </div>
 
