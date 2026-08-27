@@ -118,7 +118,9 @@ window.executeFullPayment = async function(isReservation = false) {
 
         let orderDate = pDetails?.date || new Date().toISOString().split('T')[0];
         let orderTime = pDetails?.time || "Inmediato";
-        let statusText = isReservation ? 'Pendiente (Pago en local)' : 'Pagado Online';
+        
+        // Estado estricto
+        let statusText = isReservation ? 'Pendiente de Aprobación' : 'Pagado Online';
 
         const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
 
@@ -174,7 +176,7 @@ window.executeFullPayment = async function(isReservation = false) {
                 time: orderTime,
                 items: (isCart && cItems.length > 0) ? cItems : [{ name: 'Pago Directo Terminal', qty: 1, price: totalVal }],
                 total: totalVal,
-                action: isReservation ? 'reserve' : 'pay'
+                action: isReservation ? 'solicitud_reserva' : 'pay'
             };
 
             if (customerEmail) {
@@ -192,8 +194,8 @@ window.executeFullPayment = async function(isReservation = false) {
                     <i data-lucide="check" class="w-8 h-8"></i>
                 </div>
                 <div>
-                    <h3 class="text-lg font-bold text-black">${isReservation ? 'Reserva Confirmada' : 'Pago Completado'}</h3>
-                    <p class="text-xs text-neutral-500 mt-1">Registrado con éxito en ${tBusiness}.</p>
+                    <h3 class="text-lg font-bold text-black">${isReservation ? 'Solicitud de Reserva Enviada' : 'Pago Completado'}</h3>
+                    <p class="text-xs text-neutral-500 mt-1">${isReservation ? 'Tu solicitud ha sido recibida y está pendiente de aprobación por el local.' : `Registrado con éxito en ${tBusiness}.`}</p>
                     <p class="text-[10px] text-neutral-400 mt-1 font-mono">Recibo digital emitido a tu correo.</p>
                 </div>
 
@@ -239,8 +241,6 @@ window.finishPaymentFlow = function() {
     if (typeof switchTab === 'function') switchTab('home');
 };
 
-// CORRECCIÓN CLAVE: Al pulsar la flecha de atrás del TPV, cerramos la vista de pago
-// sin resetear obligatoriamente el importe si el usuario quiere volver a comprobarlo.
 window.closePaymentView = function() {
     const payView = document.getElementById('view-payment');
     if (payView) payView.classList.add('hidden');

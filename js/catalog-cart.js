@@ -23,7 +23,6 @@ function openPublicBusiness(safeName, safeType, safeEmail) {
 
     updateContactButtonLabel(isJuanStudio);
 
-    // Evitar parpadeo inicial mostrando un loader limpio de inmediato
     const catalogEl = document.getElementById('publicBizCatalog');
     if (catalogEl) {
         catalogEl.innerHTML = `
@@ -128,7 +127,7 @@ async function renderPublicCatalogItems() {
             <div class="p-6 rounded-3xl bg-neutral-50 border border-neutral-200/60 text-center space-y-2">
                 <i data-lucide="package-open" class="w-6 h-6 mx-auto text-neutral-300"></i>
                 <p class="text-xs font-bold text-black">Sin artículos disponibles</p>
-                <p class="text-[10px] text-neutral-400">Este establecimiento aún não ha publicado artículos en su catálogo.</p>
+                <p class="text-[10px] text-neutral-400">Este establecimiento aún no ha publicado artículos en su catálogo.</p>
             </div>
         `;
         if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -365,7 +364,6 @@ function openCartSummary() {
     if (itemsCont) itemsCont.innerHTML = html;
     if (sumTotal) sumTotal.innerText = window.appState.cartTotalValue.toLocaleString('es-ES', {minimumFractionDigits:2}) + ' €';
     
-    // Comprobar si es discografía / estudio de música para ocultar el selector de fecha y hora
     const isMusicBusiness = (window.appState.activeBusinessName || '').toUpperCase().includes('JUUANCP') ||
                             (window.appState.activeBusinessCategory || '').includes('disco') ||
                             (window.appState.activeBusinessCategory || '').includes('music') ||
@@ -479,14 +477,7 @@ function processCartChoice(action) {
     const cartView = document.getElementById('view-cart');
     if (cartView) cartView.classList.add('hidden');
 
-    if (action !== 'pay' && window.emailService) {
-        if (user?.email) {
-            window.emailService.sendClientReceipt(user.email, orderSummary);
-        }
-        const bizEmail = window.appState.activeBusinessEmail || 'contacto@netwish.es';
-        window.emailService.sendBusinessAlert(bizEmail, orderSummary);
-    }
-
+    // Control de flujos sin duplicar llamadas a emailService
     if (action === 'pay') {
         window.rawAmountString = Math.round(window.appState.cartTotalValue * 100).toString(); 
         if (typeof window.updateAmountDisplay === 'function') {

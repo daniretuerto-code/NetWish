@@ -279,7 +279,7 @@ async function completeBusinessOrder(orderId) {
             currentBusinessOrders[orderIndex].status = newStatus;
         }
 
-        // ÚNICO momento en que se envía el correo de confirmación de reserva
+        // ÚNICO momento en que se envía el correo de confirmación de reserva al cliente
         if (isResv && orderToConfirm && orderToConfirm.customer_email && window.emailService) {
             window.emailService.sendClientReceipt(orderToConfirm.customer_email, {
                 businessName: currentBusiness.name,
@@ -385,7 +385,7 @@ async function renderBusinessOrders() {
     
     const cat = (currentBusiness.category || '').toLowerCase();
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
-    const isRestaurant = cat.includes('rest') || cat.includes('bar') || (currentBusiness.name || '').toLowerCase().includes('restaurante');
+    const isRestaurant = cat.includes('rest') || cat.includes('bar') || cat.includes('hostel') || (currentBusiness.name || '').toLowerCase().includes('restaurante');
     
     const ordersTitleEl = document.getElementById('bizOrdersTitle');
     const ordersTagEl = document.getElementById('bizOrdersTag');
@@ -458,7 +458,7 @@ async function renderBusinessOrders() {
         const orderVal = parseFloat(o.total) || 0;
         if (o.status !== 'Cancelado') totalMoney += orderVal;
         
-        // Criterio de clasificación estricto
+        // Criterio de clasificación estricto: solo pasa a completado si fue confirmado
         if (o.status === 'Completado' || o.status === 'Mesa Confirmada' || o.status === 'Pagado Online') {
             completedOrders.push(o);
         } else {

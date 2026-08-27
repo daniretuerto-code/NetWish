@@ -952,6 +952,7 @@ window.initHoldReservationButton = function() {
     btnContainer.addEventListener('mouseleave', stopHold);
 };
 
+// REGISTRO DE RESERVA (SOLO ENVÍA EL CORREO DE "SOLICITUD RECIBIDA PENDIENTE")
 window.processSmartReservation = async function() {
     const table = window.restaurantState.allocatedTable;
     const date = window.restaurantState.selectedDate;
@@ -989,7 +990,7 @@ window.processSmartReservation = async function() {
         }
     }
 
-    // ÚNICO envío inicial: Informa al cliente que su reserva está pendiente de ser aprobada
+    // Único correo emitido al reservar: Notifica que está PENDIENTE
     if (window.emailService) {
         const orderSummary = {
             businessName: bizName,
@@ -1011,12 +1012,15 @@ window.processSmartReservation = async function() {
 
     window.closeCustomModal();
     if (typeof window.showToast === 'function') {
-        window.showToast("¡Solicitud enviada! Pendiente de aprobación del local.", "success");
+        window.showToast("¡Solicitud enviada! Pendiente de aprobación del restaurante.", "success");
     } else {
         alert(`¡Solicitud enviada con éxito!\n\nFecha: ${date}\nHora: ${startTime} h\nMesa: Mesa ${table.table_number} (${zone})\n\nEl restaurante te confirmará en breve.`);
     }
 };
 
+// =======================================================
+// 6. MODAL DEL MENÚ DEL DÍA
+// =======================================================
 window.openDailyMenuModal = function() {
     const menu = window.restaurantState.dailyMenu;
     const price = menu?.price || 14.50;
@@ -1042,9 +1046,7 @@ window.openDailyMenuModal = function() {
                 </div>
                 <div>
                     <h5 class="font-mono text-[9px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">Segundos Platos (A elegir)</h5>
-                    <div class="space-y-1 text-neutral-700">
-                        ${(menu?.second_courses || []).map(sc => `<p class="p-2 rounded-xl bg-neutral-50 border border-neutral-100/80 font-medium">• ${sc}</p>`).join('')}
-                    </div>
+                    <div class="space-y-1 text-neutral-700">${(menu?.second_courses || []).map(sc => `<p class="p-2 rounded-xl bg-neutral-50 border border-neutral-100/80 font-medium">• ${sc}</p>`).join('')}</div>
                 </div>
                 <div>
                     <h5 class="font-mono text-[9px] uppercase tracking-wider text-neutral-400 mb-1 font-bold">Incluye</h5>
