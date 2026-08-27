@@ -264,7 +264,7 @@ async function deleteStockProduct(productId) {
 async function completeBusinessOrder(orderId) {
     try {
         const orderToConfirm = currentBusinessOrders.find(o => String(o.id) === String(orderId));
-        const isResv = orderToConfirm && ((orderToConfirm.items || '').toLowerCase().includes('reserva') || (orderToConfirm.status || '').toLowerCase().includes('confirmación') || (orderToConfirm.status || '').toLowerCase().includes('pendiente'));
+        const isResv = orderToConfirm && ((orderToConfirm.items || '').toLowerCase().includes('reserva') || (orderToConfirm.status || '').toLowerCase().includes('aprobación') || (orderToConfirm.status || '').toLowerCase().includes('confirmación') || (orderToConfirm.status || '').toLowerCase().includes('pendiente'));
         const newStatus = isResv ? 'Mesa Confirmada' : 'Completado';
 
         const { error } = await supabaseClient
@@ -279,7 +279,7 @@ async function completeBusinessOrder(orderId) {
             currentBusinessOrders[orderIndex].status = newStatus;
         }
 
-        // Si es una reserva, enviar el correo de confirmación oficial al cliente en este momento
+        // Enviar el correo de confirmación oficial al cliente en este momento
         if (isResv && orderToConfirm && orderToConfirm.customer_email && window.emailService) {
             window.emailService.sendClientReceipt(orderToConfirm.customer_email, {
                 businessName: currentBusiness.name,
@@ -352,7 +352,7 @@ function openHistoryModal(dateFilter = '') {
         <div class="space-y-4 text-left">
             <div class="text-center space-y-1">
                 <h3 class="text-base font-bold text-black">Historial Completo</h3>
-                <p class="text-[11px] text-neutral-500">Revisa y filtra los pedidos recibidos.</p>
+                <p class="text-[11px] text-neutral-500">Revisa y filtra los registros recibidos.</p>
             </div>
 
             <div class="pt-2 border-t border-neutral-100">
@@ -387,6 +387,20 @@ async function renderBusinessOrders() {
     const isMusic = cat.includes('disco') || cat.includes('music') || cat.includes('produ') || cat.includes('estudio');
     const isRestaurant = cat.includes('rest') || cat.includes('bar') || (currentBusiness.name || '').toLowerCase().includes('restaurante');
     
+    // Adaptar títulos de la pestaña si es restaurante
+    const ordersTitleEl = document.getElementById('bizOrdersTitle');
+    const ordersTagEl = document.getElementById('bizOrdersTag');
+    const navOrdersTextEl = document.getElementById('bizNavOrdersText');
+    if (isRestaurant) {
+        if (ordersTitleEl) ordersTitleEl.innerText = "Gestión de Reservas";
+        if (ordersTagEl) ordersTagEl.innerText = "HOSTELERÍA";
+        if (navOrdersTextEl) navOrdersTextEl.innerText = "Reservas";
+    } else {
+        if (ordersTitleEl) ordersTitleEl.innerText = "Pedidos & Reservas";
+        if (ordersTagEl) ordersTagEl.innerText = "GESTIÓN ACTIVA";
+        if (navOrdersTextEl) navOrdersTextEl.innerText = "Pedidos";
+    }
+
     if (!ordersRealtimeSubscription && typeof supabaseClient.channel === 'function') {
         ordersRealtimeSubscription = supabaseClient
             .channel('public:orders')
@@ -420,6 +434,15 @@ async function renderBusinessOrders() {
         return bizKeywords.some(keyword => oName.includes(keyword));
     });
 
+    // Si es restaurante, filtramos solo las reservas de mesa
+    if (isRestaurant) {
+        myOrders = myOrders.filter(o => {
+            const itemsStr = (o.items || '').toLowerCase();
+            const statusStr = (o.status || '').toLowerCase();
+            return itemsStr.includes('reserva') || itemsStr.includes('pax') || statusStr.includes('mesa') || statusStr.includes('aprobación') || statusStr.includes('confirmación');
+        });
+    }
+
     myOrders.sort((a, b) => {
         const timeA = a.created_at ? new Date(a.created_at).getTime() : (parseInt(a.id, 10) || 0);
         const timeB = b.created_at ? new Date(b.created_at).getTime() : (parseInt(b.id, 10) || 0);
@@ -436,6 +459,7 @@ async function renderBusinessOrders() {
         const orderVal = parseFloat(o.total) || 0;
         if (o.status !== 'Cancelado') totalMoney += orderVal;
         
+        // Criterio estricto de separación: solo va a completados si el negocio ya la confirmó
         if (o.status === 'Completado' || o.status === 'Mesa Confirmada') {
             completedOrders.push(o);
         } else {
@@ -503,11 +527,11 @@ async function renderBusinessOrders() {
         dashHtml += `
             <div class="grid grid-cols-3 gap-3">
                 <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
-                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Reservas</span>
+                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Pendientes</span>
                     <h3 class="text-lg font-extrabold text-black font-mono">${pendingOrders.length}</h3>
                 </div>
                 <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
-                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Completadas</span>
+                    <span class="text-[9px] text-neutral-400 font-mono uppercase tracking-wider mb-1">Confirmadas</span>
                     <h3 class="text-lg font-extrabold text-black font-mono">${completedOrders.length}</h3>
                 </div>
                 <div class="p-4 rounded-3xl bg-neutral-50 border border-neutral-200/70 flex flex-col justify-between">
@@ -517,9 +541,9 @@ async function renderBusinessOrders() {
             </div>
             
             <div class="grid grid-cols-2 gap-2">
-                <button onclick="window.openKitchenOrdersModal()" class="py-3.5 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex items-center justify-center space-x-2 text-xs col-span-2 border border-black">
+                <button onclick="if(typeof window.openKitchenOrdersModal === 'function') window.openKitchenOrdersModal()" class="py-3.5 bg-black text-white font-bold rounded-2xl shadow-md active:scale-95 transition flex items-center justify-center space-x-2 text-xs col-span-2 border border-black">
                     <i data-lucide="utensils" class="w-4 h-4 text-emerald-400 animate-pulse"></i>
-                    <span>Comandas Cocina en Directo</span>
+                    <span>Pantalla de Cocina en Directo</span>
                 </button>
                 <button onclick="openDailyMenuConfigModal()" class="py-3 bg-neutral-50 border border-neutral-200 text-black font-bold rounded-2xl active:scale-95 transition flex items-center justify-center space-x-2 text-xs">
                     <i data-lucide="chef-hat" class="w-4 h-4 text-amber-500"></i>
@@ -642,16 +666,18 @@ async function renderBusinessOrders() {
     if (ordersContainer) {
         const isPendingTab = activeOrdersTab === 'pending';
         const displayList = isPendingTab ? pendingOrders : completedOrders;
+        const pendingLabel = isRestaurant ? "Pendientes Aprobación" : "Pendientes";
+        const completedLabel = isRestaurant ? "Confirmadas" : "Completados";
 
         let ordersHtml = `
             <div class="flex justify-between items-center px-1">
                 <div class="flex items-center space-x-1.5 bg-neutral-100 p-1 rounded-2xl border border-neutral-200/60 shadow-inner">
                     <button onclick="setOrdersTab('pending')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${isPendingTab ? 'bg-white text-black shadow-sm' : 'text-neutral-400 hover:text-black'} flex items-center space-x-1.5">
-                        <span>Pendientes</span>
+                        <span>${pendingLabel}</span>
                         <span class="w-4 h-4 rounded-full ${isPendingTab ? 'bg-black text-white' : 'bg-neutral-200 text-neutral-600'} text-[9px] flex items-center justify-center font-mono">${pendingOrders.length}</span>
                     </button>
                     <button onclick="setOrdersTab('completed')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${!isPendingTab ? 'bg-white text-black shadow-sm' : 'text-neutral-400 hover:text-black'} flex items-center space-x-1.5">
-                        <span>Completados</span>
+                        <span>${completedLabel}</span>
                         <span class="w-4 h-4 rounded-full ${!isPendingTab ? 'bg-black text-white' : 'bg-neutral-200 text-neutral-600'} text-[9px] flex items-center justify-center font-mono">${completedOrders.length}</span>
                     </button>
                 </div>
@@ -662,14 +688,16 @@ async function renderBusinessOrders() {
         `;
 
         if (displayList.length === 0) {
-            const emptyMsg = isPendingTab ? "No tienes pedidos ni reservas pendientes." : "Aún no hay registros completados.";
+            const emptyMsg = isPendingTab 
+                ? (isRestaurant ? "No hay reservas pendientes de aprobación." : "No tienes pedidos ni reservas pendientes.") 
+                : (isRestaurant ? "Aún no hay reservas confirmadas." : "Aún no hay registros completados.");
             ordersHtml += `<p class="text-xs text-neutral-400 text-center py-8 bg-neutral-50/60 rounded-3xl border border-neutral-100">${emptyMsg}</p>`;
         } else {
             displayList.forEach(o => {
                 const isCompleted = o.status === 'Completado' || o.status === 'Mesa Confirmada';
                 const isPaid = o.status === 'Pagado Online';
                 const iconBg = isCompleted ? 'bg-neutral-100 text-neutral-400' : (isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600');
-                const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
+                const iconName = (isRestaurant || cat.includes('pel')) ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
                 const totalVal = parseFloat(o.total) || 0;
                 
                 ordersHtml += `
@@ -688,11 +716,11 @@ async function renderBusinessOrders() {
                         <div class="flex items-center space-x-2.5 shrink-0">
                             <div class="text-right">
                                 <span class="block text-sm font-bold text-black font-mono">${totalVal.toFixed(2)} €</span>
-                                <span class="block text-[9px] ${isCompleted ? 'text-neutral-400' : (isPaid ? 'text-emerald-600' : 'text-amber-600')} font-bold">${o.status}</span>
+                                <span class="block text-[9px] ${isCompleted ? 'text-emerald-700' : (isPaid ? 'text-emerald-600' : 'text-amber-600')} font-bold">${o.status}</span>
                             </div>
 
                             ${!isCompleted ? `
-                                <button onclick="completeBusinessOrder('${o.id}')" title="Aceptar y Confirmar Reserva" class="w-9 h-9 rounded-2xl bg-black text-white hover:bg-neutral-800 flex items-center justify-center active:scale-90 transition shadow-md shrink-0">
+                                <button onclick="completeBusinessOrder('${o.id}')" title="Aprobar y Confirmar Reserva" class="w-9 h-9 rounded-2xl bg-black text-white hover:bg-neutral-800 flex items-center justify-center active:scale-90 transition shadow-md shrink-0">
                                     <i data-lucide="check" class="w-4 h-4"></i>
                                 </button>
                             ` : `

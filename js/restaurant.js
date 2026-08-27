@@ -310,16 +310,15 @@ window.openTableSessionView = async function(bizName, tableNumber) {
 
     let page = document.getElementById('view-table-session');
     if (!page) {
-        const newPage = document.createElement('div');
-        newPage.id = 'view-table-session';
-        newPage.className = 'absolute inset-0 bg-white z-40 flex flex-col allow-scroll px-6 pt-20 pb-28 space-y-4';
-        document.getElementById('mainContentArea').appendChild(newPage);
+        page = document.createElement('div');
+        page.id = 'view-table-session';
+        page.className = 'absolute inset-0 bg-white z-40 flex flex-col allow-scroll px-6 pt-20 pb-28 space-y-4';
+        document.getElementById('mainContentArea').appendChild(page);
     }
 
-    const container = document.getElementById('view-table-session');
-    container.classList.remove('hidden');
-    container.classList.add('flex');
-    container.scrollTop = 0;
+    page.classList.remove('hidden');
+    page.classList.add('flex');
+    page.scrollTop = 0;
 
     await window.loadRestaurantLiveCatalog();
     await window.loadRestaurantSettingsFromDB();
@@ -386,7 +385,6 @@ window.renderTableSessionUI = function(bizName, tableNumber) {
         container.innerHTML = `
             ${sessionHeaderHTML}
 
-            <!-- 1. Menú del Día de la Mesa -->
             <div class="p-4 bg-neutral-50 rounded-3xl border border-neutral-200/70 space-y-2">
                 <div class="flex justify-between items-center">
                     <div class="flex items-center space-x-2">
@@ -401,7 +399,6 @@ window.renderTableSessionUI = function(bizName, tableNumber) {
                 </button>
             </div>
 
-            <!-- 2. Carta Completa para pedir a la mesa -->
             <div class="space-y-2 flex-1">
                 <div class="flex justify-between items-center px-1">
                     <span class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 font-bold">Carta & Raciones</span>
@@ -426,7 +423,6 @@ window.renderTableSessionUI = function(bizName, tableNumber) {
                 </div>
             </div>
 
-            <!-- 3. Comanda seleccionada lista para cocina -->
             ${cart.length > 0 ? `
                 <div class="p-4 bg-black text-white rounded-3xl space-y-3 shadow-xl">
                     <div class="flex justify-between items-center text-xs font-bold border-b border-white/10 pb-2">
@@ -448,7 +444,6 @@ window.renderTableSessionUI = function(bizName, tableNumber) {
             `}
         `;
     } else {
-        // Cuenta compartida en directo (Split Bill)
         const total = parseFloat(session.total_amount) || 0;
         const paid = parseFloat(session.paid_amount) || 0;
         const remaining = Math.max(0, total - paid);
@@ -985,7 +980,7 @@ window.processSmartReservation = async function() {
         total: 0.00,
         date: date,
         time: `${startTime} - ${endTime}`,
-        status: 'Pendiente de Confirmación' // <--- Clave: No se confirma hasta que el local pulsa el check
+        status: 'Pendiente de Aprobación' // <--- Clave: Estado inicial pendiente
     };
 
     if (client) {
@@ -996,7 +991,7 @@ window.processSmartReservation = async function() {
         }
     }
 
-    // Alerta al negocio (pero sin enviar recibo automático al cliente todavía)
+    // Alerta al negocio (sin enviar recibo automático al cliente todavía)
     if (window.emailService) {
         const bizEmail = window.appState?.activeBusinessEmail || 'contacto@netwish.es';
         window.emailService.sendBusinessAlert(bizEmail, {
@@ -1012,7 +1007,7 @@ window.processSmartReservation = async function() {
 
     window.closeCustomModal();
     if (typeof window.showToast === 'function') {
-        window.showToast("¡Solicitud enviada! Pendiente de aprobación del local.", "success");
+        window.showToast("¡Solicitud enviada! Pendiente de confirmación del restaurante.", "success");
     } else {
         alert(`¡Solicitud enviada con éxito!\n\nFecha: ${date}\nHora: ${startTime} h\nMesa: Mesa ${table.table_number} (${zone})\n\nEl restaurante te confirmará en breve.`);
     }
@@ -1041,21 +1036,15 @@ window.openDailyMenuModal = function() {
                 <div>
                     <h5 class="font-mono text-[9px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">Primeros Platos (A elegir)</h5>
                     <div class="space-y-1 text-neutral-700">
-                        ${(menu?.first_courses || []).map(fc => `
-                            <p class="p-2 rounded-xl bg-neutral-50 border border-neutral-100/80 font-medium">• ${fc}</p>
-                        `).join('')}
+                        ${(menu?.first_courses || []).map(fc => `<p class="p-2 rounded-xl bg-neutral-50 border border-neutral-100/80 font-medium">• ${fc}</p>`).join('')}
                     </div>
                 </div>
-
                 <div>
                     <h5 class="font-mono text-[9px] uppercase tracking-wider text-neutral-400 mb-1.5 font-bold">Segundos Platos (A elegir)</h5>
                     <div class="space-y-1 text-neutral-700">
-                        ${(menu?.second_courses || []).map(sc => `
-                            <p class="p-2 rounded-xl bg-neutral-50 border border-neutral-100/80 font-medium">• ${sc}</p>
-                        `).join('')}
+                        ${(menu?.second_courses || []).map(sc => `<p class="p-2 rounded-xl bg-neutral-50 border border-neutral-100/80 font-medium">• ${sc}</p>`).join('')}
                     </div>
                 </div>
-
                 <div>
                     <h5 class="font-mono text-[9px] uppercase tracking-wider text-neutral-400 mb-1 font-bold">Incluye</h5>
                     <p class="text-[10px] text-neutral-500">${menu?.includes || 'Pan, bebida y postre incluido.'}</p>
@@ -1070,13 +1059,5 @@ window.openDailyMenuModal = function() {
     `);
 };
 
-window.timeToMinutes = (str) => {
-    const [h, m] = str.split(':').map(Number);
-    return h * 60 + m;
-};
-
-window.minutesToTime = (min) => {
-    const h = Math.floor(min / 60).toString().padStart(2, '0');
-    const m = (min % 60).toString().padStart(2, '0');
-    return `${h}:${m}`;
-};
+window.timeToMinutes = (str) => { const [h, m] = str.split(':').map(Number); return h * 60 + m; };
+window.minutesToTime = (min) => { const h = Math.floor(min / 60).toString().padStart(2, '0'); const m = (min % 60).toString().padStart(2, '0'); return `${h}:${m}`; };
