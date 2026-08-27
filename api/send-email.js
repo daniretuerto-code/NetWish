@@ -8,12 +8,12 @@ export default async function handler(req, res) {
     const { to, subject, html } = req.body;
 
     if (!to || !subject || !html) {
-        return res.status(400).json({ error: 'Faltan parámetros requeridos (to, subject, html)' });
+        return res.status(400).json({ error: 'Faltan parámetros requeridos' });
     }
 
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
-        return res.status(500).json({ error: 'RESEND_API_KEY no configurada' });
+        return res.status(500).json({ error: 'RESEND_API_KEY no configurada en Vercel' });
     }
 
     try {
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                from: 'NetWish Palencia <notificaciones@netwish.es>',
+                from: 'NetWish <notificaciones@netwish.es>',
                 to: recipients,
                 subject: subject,
                 html: html
@@ -34,7 +34,6 @@ export default async function handler(req, res) {
         });
 
         const data = await response.json();
-
         if (!response.ok) {
             return res.status(response.status).json(data);
         }

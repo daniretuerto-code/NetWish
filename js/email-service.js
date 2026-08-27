@@ -31,7 +31,7 @@ window.emailService = {
         let itemsContentHtml = '';
 
         if (isReservation) {
-            // Diseño limpio exclusivo para reservas (sin importes de 0,00 €)
+            // Diseño limpio para reservas: sin importes ni 0,00 €
             const detailText = (orderData.items && orderData.items[0]) ? (orderData.items[0].name || orderData.items[0]) : 'Reserva de Mesa';
             itemsContentHtml = `
                 <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #fafafa; border-radius: 16px; padding: 16px; border: 1px solid #f0f0f0; margin-bottom: 20px;">
@@ -47,7 +47,7 @@ window.emailService = {
                 </table>
             `;
         } else {
-            // Diseño estándar para compras de catálogo y descargas
+            // Diseño estándar para compras de catálogo, productos y beats
             const totalFormatted = Number(orderData.total || 0).toLocaleString('es-ES', { 
                 minimumFractionDigits: 2, 
                 maximumFractionDigits: 2 
@@ -59,6 +59,7 @@ window.emailService = {
                     maximumFractionDigits: 2 
                 });
 
+                // Enlace de descarga master prioritario o fallback a audio preview
                 const downloadLink = i.full_audio_url || i.download_url || (orderData.businessName && orderData.businessName.toUpperCase().includes('JUUANCP') ? i.audio_url : null);
 
                 if (downloadLink) {
@@ -151,7 +152,9 @@ window.emailService = {
     sendBusinessAlert: async function(bizEmail, orderData) {
         if (!bizEmail) return;
 
-        const isResv = orderData.action === 'nueva_solicitud_reserva' || orderData.action === 'solicitud_reserva' || (orderData.items && orderData.items.some && orderData.items.some(i => (i.name || '').includes('Reserva')));
+        const isResv = orderData.action === 'nueva_solicitud_reserva' || 
+                       orderData.action === 'solicitud_reserva' || 
+                       (orderData.items && orderData.items.some && orderData.items.some(i => (i.name || '').toLowerCase().includes('reserva')));
         const isMusic = (orderData.businessName || '').toUpperCase().includes('JUUANCP');
 
         let subject = `⚡ Nuevo Pedido Recibido — ${orderData.clientName || 'Cliente'}`;
