@@ -27,7 +27,7 @@
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <link rel="stylesheet" href="css/styles.css?v=36">
+    <link rel="stylesheet" href="css/styles.css?v=37">
 </head>
 <body class="bg-neutral-100 text-black select-none">
 
@@ -190,8 +190,8 @@
                 <div id="view-business-orders" class="view-pane px-6 pt-2 pb-28 space-y-4">
                     <div class="flex items-center justify-between px-1">
                         <div>
-                            <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400">GESTIÓN ACTIVA</span>
-                            <h2 class="text-xl font-bold text-black tracking-tight">Pedidos & Reservas</h2>
+                            <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400" id="bizOrdersTag">GESTIÓN ACTIVA</span>
+                            <h2 class="text-xl font-bold text-black tracking-tight" id="bizOrdersTitle">Pedidos & Reservas</h2>
                         </div>
                         <button onclick="openHistoryModal()" class="text-xs font-bold text-black underline">Historial</button>
                     </div>
@@ -215,6 +215,27 @@
             </div>
 
             <!-- VISTAS FLOTANTES Y SUBMENÚS MODULARES -->
+
+            <!-- VISTA: PANTALLA DE COCINA EN DIRECTO (KDS) A PANTALLA COMPLETA -->
+            <div id="view-kitchen-kds" class="absolute inset-0 bg-white z-40 hidden flex-col allow-scroll px-6 pt-24 pb-28 space-y-4">
+                <div class="flex items-center justify-between border-b border-neutral-100 pb-3 shrink-0">
+                    <div class="flex items-center space-x-3">
+                        <button onclick="window.closeKitchenOrdersModal()" class="w-10 h-10 rounded-2xl bg-neutral-100 border border-neutral-200/60 flex items-center justify-center text-black hover:bg-neutral-200 transition active:scale-95">
+                            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                        </button>
+                        <div>
+                            <span class="text-[9px] font-mono uppercase tracking-widest text-neutral-400 font-bold block">PANTALLA DE COCINA</span>
+                            <h2 class="text-xl font-bold text-black tracking-tight">Comandas Activas</h2>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span class="text-[9px] font-mono font-bold text-emerald-700">EN DIRECTO</span>
+                    </div>
+                </div>
+
+                <div class="space-y-3 flex-1 overflow-y-auto pr-1 allow-scroll" id="kitchenDedicatedContainer"></div>
+            </div>
 
             <!-- VISTA CATEGORÍA -->
             <div id="view-category" class="absolute inset-0 bg-white z-25 hidden flex-col allow-scroll px-6 pt-24 pb-28 space-y-4">
@@ -305,7 +326,6 @@
                     </div>
                 </div>
 
-                <!-- Tarjeta con ID para ocultar automáticamente en discográficas -->
                 <div id="orderScheduleCardContainer" class="bg-white p-5 rounded-3xl border border-neutral-200/80 shadow-sm space-y-4">
                     <div class="flex items-center justify-between">
                         <h3 class="text-[10px] font-bold text-neutral-400 uppercase tracking-widest flex items-center space-x-2">
@@ -452,7 +472,7 @@
 
         <nav id="business-nav" class="hidden absolute bottom-4 left-4 right-4 border border-neutral-800 bg-black/95 backdrop-blur-2xl px-4 py-3.5 rounded-[32px] flex justify-around items-center z-40 shadow-[0_20px_40px_rgba(0,0,0,0.4)]">
             <button id="biz-nav-btn-dashboard" onclick="switchTab('business-dashboard')" class="flex flex-col items-center text-white space-y-1 transition group"><i data-lucide="layout-dashboard" class="w-5 h-5 transition-transform group-active:scale-90 scale-110"></i><span class="text-[9px] font-medium tracking-tight">Panel</span></button>
-            <button id="biz-nav-btn-orders" onclick="switchTab('business-orders')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="clipboard-list" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight">Pedidos</span></button>
+            <button id="biz-nav-btn-orders" onclick="switchTab('business-orders')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group"><i data-lucide="clipboard-list" class="w-5 h-5 transition-transform group-active:scale-90"></i><span class="text-[9px] font-medium tracking-tight" id="bizNavOrdersText">Pedidos</span></button>
             
             <button id="biz-nav-btn-messages" onclick="switchTab('business-messages')" class="flex flex-col items-center text-neutral-400 transition space-y-1 group relative">
                 <div class="relative">
@@ -474,24 +494,24 @@
 
     </div>
 
-    <!-- SCRIPTS MODULARES (ORDEN ESTRICTO DE CARGA) -->
-    <script src="js/config.js?v=36"></script>
-    <script src="js/modal.js?v=36"></script>
-    <script src="js/toast.js?v=36"></script>
-    <script src="js/navigation.js?v=36"></script>
-    <script src="js/auth.js?v=36"></script>
-    <script src="js/directory.js?v=36"></script>
-    <script src="js/email-service.js?v=36"></script>
-    <script src="js/cart-state.js?v=36"></script>
-    <script src="js/music-studio.js?v=36"></script>
-    <script src="js/restaurant.js?v=36"></script>
-    <script src="js/catalog-cart.js?v=36"></script>
-    <script src="js/kitchen-kds.js?v=36"></script>
-    <script src="js/restaurant-admin.js?v=36"></script>
-    <script src="js/dashboard.js?v=36"></script>
-    <script src="js/scanner.js?v=36"></script>
-    <script src="js/payment.js?v=36"></script>
-    <script src="js/chat.js?v=36"></script>
+    <!-- SCRIPTS MODULARES -->
+    <script src="js/config.js?v=37"></script>
+    <script src="js/modal.js?v=37"></script>
+    <script src="js/toast.js?v=37"></script>
+    <script src="js/navigation.js?v=37"></script>
+    <script src="js/auth.js?v=37"></script>
+    <script src="js/directory.js?v=37"></script>
+    <script src="js/email-service.js?v=37"></script>
+    <script src="js/cart-state.js?v=37"></script>
+    <script src="js/music-studio.js?v=37"></script>
+    <script src="js/restaurant.js?v=37"></script>
+    <script src="js/catalog-cart.js?v=37"></script>
+    <script src="js/kitchen-kds.js?v=37"></script>
+    <script src="js/restaurant-admin.js?v=37"></script>
+    <script src="js/dashboard.js?v=37"></script>
+    <script src="js/scanner.js?v=37"></script>
+    <script src="js/payment.js?v=37"></script>
+    <script src="js/chat.js?v=37"></script>
 
 </body>
 </html>
