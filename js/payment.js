@@ -3,6 +3,8 @@
 window.rawAmountString = window.rawAmountString || "000";
 
 function appendNum(num) {
+    // Si estamos pagando un carrito con artículos fijos, no permitimos alterar el importe manualmente con el teclado
+    if (window.appState && window.appState.isCartCheckout) return;
     if (window.rawAmountString.length >= 8) return;
     if (window.rawAmountString === "000" || window.rawAmountString === "0") {
         window.rawAmountString = num;
@@ -13,6 +15,7 @@ function appendNum(num) {
 }
 
 function clearNum() {
+    if (window.appState && window.appState.isCartCheckout) return;
     if (window.rawAmountString.length > 1) {
         window.rawAmountString = window.rawAmountString.slice(0, -1);
     } else {

@@ -23,6 +23,18 @@ function openPublicBusiness(safeName, safeType, safeEmail) {
 
     updateContactButtonLabel(isJuanStudio);
 
+    // Evitar parpadeo inicial mostrando un loader limpio de inmediato
+    const catalogEl = document.getElementById('publicBizCatalog');
+    if (catalogEl) {
+        catalogEl.innerHTML = `
+            <div class="py-12 text-center space-y-2">
+                <i data-lucide="loader-2" class="w-5 h-5 mx-auto animate-spin text-neutral-400"></i>
+                <p class="text-[11px] text-neutral-400">Cargando establecimiento...</p>
+            </div>
+        `;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
     const currentBizObj = (window.allPublicBusinesses || allPublicBusinesses || []).find(b => {
         const bName = (b.name || b.Nombre || b.username || '').toLowerCase().trim();
         return bName === window.appState.activeBusinessName.toLowerCase().trim();
@@ -116,7 +128,7 @@ async function renderPublicCatalogItems() {
             <div class="p-6 rounded-3xl bg-neutral-50 border border-neutral-200/60 text-center space-y-2">
                 <i data-lucide="package-open" class="w-6 h-6 mx-auto text-neutral-300"></i>
                 <p class="text-xs font-bold text-black">Sin artículos disponibles</p>
-                <p class="text-[10px] text-neutral-400">Este establecimiento aún no ha publicado artículos en su catálogo.</p>
+                <p class="text-[10px] text-neutral-400">Este establecimiento aún não ha publicado artículos en su catálogo.</p>
             </div>
         `;
         if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -286,8 +298,19 @@ function updateCartDisplay() {
     if (countEl) countEl.innerText = count;
     if (totalEl) totalEl.innerText = total.toLocaleString('es-ES', {minimumFractionDigits:2}) + ' €';
 
+    const pubBizView = document.getElementById('view-public-business');
+    const beatsView = document.getElementById('view-beats-catalog');
+    const isInsideBusiness = (pubBizView && !pubBizView.classList.contains('hidden')) || 
+                             (beatsView && !beatsView.classList.contains('hidden'));
+
+    const cartView = document.getElementById('view-cart');
+    const isCartOpen = cartView && !cartView.classList.contains('hidden');
+
+    const paymentView = document.getElementById('view-payment');
+    const isPaymentOpen = paymentView && !paymentView.classList.contains('hidden');
+
     if (cartBar) {
-        if (count > 0) {
+        if (count > 0 && isInsideBusiness && !isCartOpen && !isPaymentOpen) {
             cartBar.classList.remove('translate-y-64', 'opacity-0', 'pointer-events-none');
             cartBar.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
         } else {
@@ -342,6 +365,23 @@ function openCartSummary() {
     if (itemsCont) itemsCont.innerHTML = html;
     if (sumTotal) sumTotal.innerText = window.appState.cartTotalValue.toLocaleString('es-ES', {minimumFractionDigits:2}) + ' €';
     
+    // Comprobar si es discografía / estudio de música para ocultar el selector de fecha y hora
+    const isMusicBusiness = (window.appState.activeBusinessName || '').toUpperCase().includes('JUUANCP') ||
+                            (window.appState.activeBusinessCategory || '').includes('disco') ||
+                            (window.appState.activeBusinessCategory || '').includes('music') ||
+                            (window.appState.activeBusinessCategory || '').includes('produ');
+
+    const scheduleCardContainer = document.getElementById('orderScheduleCardContainer');
+    if (scheduleCardContainer) {
+        if (isMusicBusiness) {
+            scheduleCardContainer.style.display = 'none';
+            window.appState.isScheduleEnabled = false;
+        } else {
+            scheduleCardContainer.style.display = 'block';
+            window.appState.isScheduleEnabled = true;
+        }
+    }
+
     const today = new Date().toISOString().split('T')[0];
     const dateInput = document.getElementById('orderDate');
     if (dateInput) {
@@ -349,11 +389,11 @@ function openCartSummary() {
         dateInput.min = today;
     }
     
-    window.appState.isScheduleEnabled = true;
+    window.appState.isScheduleEnabled = !isMusicBusiness;
     const toggleBtn = document.getElementById('scheduleToggleBtn');
     const toggleKnob = document.getElementById('scheduleToggleKnob');
     const container = document.getElementById('scheduleInputsContainer');
-    if (toggleBtn && toggleKnob && container) {
+    if (toggleBtn && toggleKnob && container && !isMusicBusiness) {
         toggleBtn.classList.remove('bg-neutral-200');
         toggleBtn.classList.add('bg-black');
         toggleKnob.classList.remove('translate-x-0');
@@ -407,7 +447,11 @@ function processCartChoice(action) {
     let date = "Inmediato / Sin Cita";
     let time = "--:--";
 
-    if (window.appState.isScheduleEnabled) {
+    const isMusicBusiness = (window.appState.activeBusinessName || '').toUpperCase().includes('JUUANCP') ||
+                            (window.appState.activeBusinessCategory || '').includes('disco') ||
+                            (window.appState.activeBusinessCategory || '').includes('music');
+
+    if (window.appState.isScheduleEnabled && !isMusicBusiness) {
         const d = document.getElementById('orderDate')?.value;
         const t = document.getElementById('orderTime')?.value;
         if (!d || !t) { 

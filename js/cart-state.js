@@ -86,7 +86,10 @@ function updateCartDisplay() {
     const cartView = document.getElementById('view-cart');
     const isCartOpen = cartView && !cartView.classList.contains('hidden');
 
-    if (window.appState.cartItemCount > 0 && isInsideBusiness && !isCartOpen) {
+    const paymentView = document.getElementById('view-payment');
+    const isPaymentOpen = paymentView && !paymentView.classList.contains('hidden');
+
+    if (window.appState.cartItemCount > 0 && isInsideBusiness && !isCartOpen && !isPaymentOpen) {
         cartBar.classList.remove('translate-y-64', 'opacity-0', 'pointer-events-none');
         cartBar.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
         const totalEl = document.getElementById('cartTotalDisplay');
