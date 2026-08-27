@@ -279,7 +279,7 @@ async function completeBusinessOrder(orderId) {
             currentBusinessOrders[orderIndex].status = newStatus;
         }
 
-        // Enviar el correo de confirmación oficial al cliente en este momento
+        // ÚNICO momento en que se envía el correo de confirmación de reserva
         if (isResv && orderToConfirm && orderToConfirm.customer_email && window.emailService) {
             window.emailService.sendClientReceipt(orderToConfirm.customer_email, {
                 businessName: currentBusiness.name,
@@ -430,6 +430,7 @@ async function renderBusinessOrders() {
         const rawName = o.business_name || o.businessName || '';
         const oName = rawName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         if (oName === cleanCurrentBiz || oName.includes(cleanCurrentBiz) || cleanCurrentBiz.includes(oName)) return true;
+        if (isRestaurant && (oName.includes('restaurante') || oName.includes('dani'))) return true;
         return bizKeywords.some(keyword => oName.includes(keyword));
     });
 
@@ -457,7 +458,8 @@ async function renderBusinessOrders() {
         const orderVal = parseFloat(o.total) || 0;
         if (o.status !== 'Cancelado') totalMoney += orderVal;
         
-        if (o.status === 'Completado' || o.status === 'Mesa Confirmada') {
+        // Criterio de clasificación estricto
+        if (o.status === 'Completado' || o.status === 'Mesa Confirmada' || o.status === 'Pagado Online') {
             completedOrders.push(o);
         } else {
             pendingOrders.push(o);

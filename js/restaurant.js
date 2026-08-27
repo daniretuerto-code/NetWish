@@ -906,7 +906,6 @@ window.selectReservationTime = function(timeStr, tableNum) {
     }
 };
 
-// CONTROL DE MANTENER PULSADO PARA LA RESERVA
 window.initHoldReservationButton = function() {
     const btnContainer = document.getElementById('holdReservationContainer');
     if (!btnContainer) return;
@@ -953,7 +952,6 @@ window.initHoldReservationButton = function() {
     btnContainer.addEventListener('mouseleave', stopHold);
 };
 
-// REGISTRO DE RESERVA (SIN CORREO DE CONFIRMACIÓN AUTOMÁTICO)
 window.processSmartReservation = async function() {
     const table = window.restaurantState.allocatedTable;
     const date = window.restaurantState.selectedDate;
@@ -980,7 +978,7 @@ window.processSmartReservation = async function() {
         total: 0.00,
         date: date,
         time: `${startTime} - ${endTime}`,
-        status: 'Pendiente de Aprobación' // <--- Queda registrado como pendiente
+        status: 'Pendiente de Aprobación'
     };
 
     if (client) {
@@ -991,7 +989,7 @@ window.processSmartReservation = async function() {
         }
     }
 
-    // Se notifica al cliente que su solicitud fue recibida (en estado pendiente)
+    // ÚNICO envío inicial: Informa al cliente que su reserva está pendiente de ser aprobada
     if (window.emailService) {
         const orderSummary = {
             businessName: bizName,
@@ -1019,9 +1017,6 @@ window.processSmartReservation = async function() {
     }
 };
 
-// =======================================================
-// 6. MODAL DEL MENÚ DEL DÍA
-// =======================================================
 window.openDailyMenuModal = function() {
     const menu = window.restaurantState.dailyMenu;
     const price = menu?.price || 14.50;
