@@ -18,7 +18,13 @@ window.restaurantState = {
         includes: "Pan de leña, Agua o Vino de la casa y Postre casero"
     },
 
-    catalogDishes: [],
+    catalogDishes: [
+        { id: 'rest_1', name: 'Tabla de Quesos de Cerrato', description: 'Selección de quesos curados palentinos', price: 14.00, section: 'Entrantes' },
+        { id: 'rest_2', name: 'Croquetas de Jamón Ibérico (6 uds)', description: 'Rebozado crujiente y bechamel melosa', price: 9.50, section: 'Entrantes' },
+        { id: 'rest_3', name: 'Lechazo Churro Asado de Palencia', description: 'Cuarto de lechazo en horno de leña', price: 26.50, section: 'Carnes' },
+        { id: 'rest_4', name: 'Solomillo de Ternera de la Montaña', description: 'A la brasa con guarnición', price: 22.00, section: 'Carnes' },
+        { id: 'rest_5', name: 'Bacalao al Ajoarriero con Pimientos', description: 'Lomo confitado con pimientos asados', price: 18.50, section: 'Pescados' }
+    ],
 
     config: {
         lunch_start: '13:00',
@@ -40,13 +46,25 @@ window.restaurantState = {
 };
 
 // =======================================================
-// 1. HUB PRINCIPAL DEL RESTAURANTE (VISTA PÚBLICA)
+// 1. HUB PRINCIPAL DEL RESTAURANTE (PINTADO INSTANTÁNEO SIN DELAY)
 // =======================================================
-window.renderRestaurantHub = async function(container) {
+window.renderRestaurantHub = function(container) {
     if (!container) return;
 
-    await window.loadRestaurantLiveCatalog();
-    await window.loadRestaurantSettingsFromDB();
+    // Pintamos la interfaz de inmediato usando el estado actual por defecto (cero parpadeos)
+    window.drawRestaurantHubHTML(container);
+
+    // Sincronizamos con Supabase en segundo plano de manera silenciosa
+    window.loadRestaurantLiveCatalog().then(() => {
+        window.drawRestaurantHubHTML(container);
+    });
+    window.loadRestaurantSettingsFromDB().then(() => {
+        window.drawRestaurantHubHTML(container);
+    });
+};
+
+window.drawRestaurantHubHTML = function(container) {
+    if (!container) return;
 
     const isMenuActive = window.restaurantState.dailyMenu?.active;
     const menuPrice = window.restaurantState.dailyMenu?.price || 14.50;
@@ -228,7 +246,7 @@ window.renderDishesForActiveCategory = function() {
 };
 
 // =======================================================
-// 3. CARGA DE CATÁLOGO Y CONFIGURACIÓN
+// 3. CARGA DE CATÁLOGO Y CONFIGURACIÓN EN SEGUNDO PLANO
 // =======================================================
 window.loadRestaurantLiveCatalog = async function() {
     const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
@@ -245,14 +263,6 @@ window.loadRestaurantLiveCatalog = async function() {
 
             if (filtered.length > 0) {
                 window.restaurantState.catalogDishes = filtered;
-            } else {
-                window.restaurantState.catalogDishes = [
-                    { id: 'rest_1', name: 'Tabla de Quesos de Cerrato', description: 'Selección de quesos curados palentinos', price: 14.00, section: 'Entrantes' },
-                    { id: 'rest_2', name: 'Croquetas de Jamón Ibérico (6 uds)', description: 'Rebozado crujiente y bechamel melosa', price: 9.50, section: 'Entrantes' },
-                    { id: 'rest_3', name: 'Lechazo Churro Asado de Palencia', description: 'Cuarto de lechazo en horno de leña', price: 26.50, section: 'Carnes' },
-                    { id: 'rest_4', name: 'Solomillo de Ternera de la Montaña', description: 'A la brasa con guarnición', price: 22.00, section: 'Carnes' },
-                    { id: 'rest_5', name: 'Bacalao al Ajoarriero con Pimientos', description: 'Lomo confitado con pimientos asados', price: 18.50, section: 'Pescados' }
-                ];
             }
         }
     } catch (e) {
@@ -302,7 +312,6 @@ window.openTableSessionView = async function(bizName, tableNumber) {
 
     const page = document.getElementById('view-table-session');
     if (!page) {
-        // Fallback dinámico si no existe el contenedor en el DOM
         const newPage = document.createElement('div');
         newPage.id = 'view-table-session';
         newPage.className = 'absolute inset-0 bg-white z-40 flex flex-col allow-scroll px-6 pt-20 pb-28 space-y-4';
@@ -379,7 +388,7 @@ window.renderTableSessionUI = function(bizName, tableNumber) {
         container.innerHTML = `
             ${sessionHeaderHTML}
 
-            <!-- 1. Acceso al Menú del Día de la Mesa -->
+            <!-- 1. Menú del Día de la Mesa -->
             <div class="p-4 bg-neutral-50 rounded-3xl border border-neutral-200/70 space-y-2">
                 <div class="flex justify-between items-center">
                     <div class="flex items-center space-x-2">
@@ -441,7 +450,6 @@ window.renderTableSessionUI = function(bizName, tableNumber) {
             `}
         `;
     } else {
-        // Cuenta compartida en directo (Split Bill)
         const total = parseFloat(session.total_amount) || 0;
         const paid = parseFloat(session.paid_amount) || 0;
         const remaining = Math.max(0, total - paid);

@@ -3,7 +3,6 @@
 window.rawAmountString = window.rawAmountString || "000";
 
 function appendNum(num) {
-    // Si estamos pagando un carrito con artículos fijos, no permitimos alterar el importe manualmente con el teclado
     if (window.appState && window.appState.isCartCheckout) return;
     if (window.rawAmountString.length >= 8) return;
     if (window.rawAmountString === "000" || window.rawAmountString === "0") {
@@ -240,14 +239,22 @@ window.finishPaymentFlow = function() {
     if (typeof switchTab === 'function') switchTab('home');
 };
 
+// CORRECCIÓN CLAVE: Al pulsar la flecha de atrás del TPV, cerramos la vista de pago
+// sin resetear obligatoriamente el importe si el usuario quiere volver a comprobarlo.
 window.closePaymentView = function() {
-    window.rawAmountString = "000";
-    window.updateAmountDisplay();
-    if (typeof switchTab === 'function') {
-        if (window.appState && window.appState.activeBusinessName) {
-            switchTab('public-business');
-        } else {
-            switchTab('home');
+    const payView = document.getElementById('view-payment');
+    if (payView) payView.classList.add('hidden');
+
+    if (window.appState && window.appState.isCartCheckout) {
+        const cartView = document.getElementById('view-cart');
+        if (cartView) cartView.classList.remove('hidden');
+    } else {
+        if (typeof switchTab === 'function') {
+            if (window.appState && window.appState.activeBusinessName) {
+                switchTab('public-business');
+            } else {
+                switchTab('home');
+            }
         }
     }
 };
