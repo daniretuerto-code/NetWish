@@ -562,19 +562,6 @@ window.sendOrderToKitchen = async function(bizName, tableNumber) {
         window.restaurantState.currentTableSession = { ...sessionPayload, id: 'temp_' + Date.now() };
     }
 
-    if (window.emailService) {
-        const bizEmail = window.appState?.activeBusinessEmail || 'contacto@netwish.es';
-        window.emailService.sendBusinessAlert(bizEmail, {
-            businessName: bizName,
-            clientName: `Comensales Mesa ${tableNumber}`,
-            date: new Date().toISOString().split('T')[0],
-            time: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-            items: cart,
-            total: total,
-            action: 'comanda'
-        });
-    }
-
     window.appState.cartItemsList = [];
     window.renderTableSessionUI(bizName, tableNumber);
     if (typeof window.showToast === 'function') {
@@ -645,12 +632,6 @@ window.paySplitBill = async function(sessionId, tableNumber, amountVal) {
         newPayers.forEach(p => {
             if (p.email) window.emailService.sendClientReceipt(p.email, orderSummary);
         });
-
-        const bizEmail = window.appState?.activeBusinessEmail || 'contacto@netwish.es';
-        window.emailService.sendBusinessAlert(bizEmail, {
-            ...orderSummary,
-            action: 'table_settled'
-        });
     }
 
     window.renderTableSessionUI(session.business_name, tableNumber);
@@ -681,7 +662,7 @@ window.subscribeToTableSession = function(bizName, tableNumber) {
 };
 
 // =======================================================
-// 5. RESERVAS CON BOTÓN DE MANTENER PULSADO Y ESTADO DIFERIDO
+// 5. RESERVAS CON BOTÓN DE MANTENER PULSADO
 // =======================================================
 window.openModernReservationModal = async function() {
     const today = new Date().toISOString().split('T')[0];
@@ -952,7 +933,7 @@ window.initHoldReservationButton = function() {
     btnContainer.addEventListener('mouseleave', stopHold);
 };
 
-// REGISTRO DE RESERVA (SOLO ENVÍA EL CORREO DE "SOLICITUD RECIBIDA PENDIENTE")
+// ÚNICO ENVÍO: Solo se notifica al cliente que su solicitud fue recibida
 window.processSmartReservation = async function() {
     const table = window.restaurantState.allocatedTable;
     const date = window.restaurantState.selectedDate;
@@ -990,8 +971,8 @@ window.processSmartReservation = async function() {
         }
     }
 
-    // Único correo emitido al reservar: Notifica que está PENDIENTE
-    if (window.emailService) {
+    // Único correo emitido: Recibo de solicitud pendiente al cliente
+    if (window.emailService && customerUser?.email) {
         const orderSummary = {
             businessName: bizName,
             clientName: record.customer,
@@ -1002,25 +983,17 @@ window.processSmartReservation = async function() {
             action: 'solicitud_reserva'
         };
 
-        if (customerUser?.email) {
-            window.emailService.sendClientReceipt(customerUser.email, orderSummary);
-        }
-
-        const bizEmail = window.appState?.activeBusinessEmail || 'contacto@netwish.es';
-        window.emailService.sendBusinessAlert(bizEmail, orderSummary);
+        window.emailService.sendClientReceipt(customerUser.email, orderSummary);
     }
 
     window.closeCustomModal();
     if (typeof window.showToast === 'function') {
-        window.showToast("¡Solicitud enviada! Pendiente de aprobación del restaurante.", "success");
+        window.showToast("¡Solicitud enviada! Pendiente de confirmación del restaurante.", "success");
     } else {
         alert(`¡Solicitud enviada con éxito!\n\nFecha: ${date}\nHora: ${startTime} h\nMesa: Mesa ${table.table_number} (${zone})\n\nEl restaurante te confirmará en breve.`);
     }
 };
 
-// =======================================================
-// 6. MODAL DEL MENÚ DEL DÍA
-// =======================================================
 window.openDailyMenuModal = function() {
     const menu = window.restaurantState.dailyMenu;
     const price = menu?.price || 14.50;
