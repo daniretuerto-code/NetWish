@@ -260,23 +260,44 @@ async function deleteStockProduct(productId) {
     }
 }
 
+// CONFIRMAR PEDIDO O RESERVA (Al hacer click el restaurante, se confirma y se envía el correo al cliente)
 async function completeBusinessOrder(orderId) {
     try {
+        const orderToConfirm = currentBusinessOrders.find(o => String(o.id) === String(orderId));
+        const isResv = orderToConfirm && ((orderToConfirm.items || '').toLowerCase().includes('reserva') || (orderToConfirm.status || '').toLowerCase().includes('confirmación') || (orderToConfirm.status || '').toLowerCase().includes('pendiente'));
+        const newStatus = isResv ? 'Mesa Confirmada' : 'Completado';
+
         const { error } = await supabaseClient
             .from('orders')
-            .update({ status: 'Completado' })
+            .update({ status: newStatus })
             .eq('id', orderId);
             
         if (error) throw error;
 
         const orderIndex = currentBusinessOrders.findIndex(o => String(o.id) === String(orderId));
         if (orderIndex >= 0) {
-            currentBusinessOrders[orderIndex].status = 'Completado';
+            currentBusinessOrders[orderIndex].status = newStatus;
+        }
+
+        // Si es una reserva, enviar el correo de confirmación oficial al cliente en este momento
+        if (isResv && orderToConfirm && orderToConfirm.customer_email && window.emailService) {
+            window.emailService.sendClientReceipt(orderToConfirm.customer_email, {
+                businessName: currentBusiness.name,
+                clientName: orderToConfirm.customer,
+                date: orderToConfirm.date,
+                time: orderToConfirm.time,
+                items: [{ name: orderToConfirm.items, qty: 1, price: orderToConfirm.total }],
+                total: orderToConfirm.total,
+                action: 'confirmacion_reserva'
+            });
         }
 
         renderBusinessOrders();
+        if (typeof window.showToast === 'function') {
+            window.showToast(isResv ? "¡Reserva aprobada y correo de confirmación enviado!" : "Pedido marcado como completado.", "success");
+        }
     } catch (err) {
-        alert("No se pudo actualizar el pedido: " + err.message);
+        alert("No se pudo actualizar el registro: " + err.message);
     }
 }
 
@@ -300,7 +321,7 @@ function openHistoryModal(dateFilter = '') {
         ordersHtml = '<p class="text-xs text-neutral-400 text-center py-6">No hay actividad para esta fecha.</p>';
     } else {
         filteredOrders.forEach(o => {
-            const isCompleted = o.status === 'Completado';
+            const isCompleted = o.status === 'Completado' || o.status === 'Mesa Confirmada';
             const isPaid = o.status === 'Pagado Online';
             const iconBg = isCompleted ? 'bg-neutral-100 text-neutral-500' : (isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600');
             const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
@@ -415,7 +436,7 @@ async function renderBusinessOrders() {
         const orderVal = parseFloat(o.total) || 0;
         if (o.status !== 'Cancelado') totalMoney += orderVal;
         
-        if (o.status === 'Completado') {
+        if (o.status === 'Completado' || o.status === 'Mesa Confirmada') {
             completedOrders.push(o);
         } else {
             pendingOrders.push(o);
@@ -592,7 +613,7 @@ async function renderBusinessOrders() {
         dashHtml += '<p class="text-xs text-neutral-400 text-center py-4 bg-neutral-50 rounded-3xl border border-neutral-100">No hay actividad reciente registrada.</p>';
     } else {
         const o = myOrders[0]; 
-        const isCompleted = o.status === 'Completado';
+        const isCompleted = o.status === 'Completado' || o.status === 'Mesa Confirmada';
         const isPaid = o.status === 'Pagado Online';
         const iconBg = isCompleted ? 'bg-neutral-100 text-neutral-500' : (isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600');
         const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
@@ -645,7 +666,7 @@ async function renderBusinessOrders() {
             ordersHtml += `<p class="text-xs text-neutral-400 text-center py-8 bg-neutral-50/60 rounded-3xl border border-neutral-100">${emptyMsg}</p>`;
         } else {
             displayList.forEach(o => {
-                const isCompleted = o.status === 'Completado';
+                const isCompleted = o.status === 'Completado' || o.status === 'Mesa Confirmada';
                 const isPaid = o.status === 'Pagado Online';
                 const iconBg = isCompleted ? 'bg-neutral-100 text-neutral-400' : (isPaid ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600');
                 const iconName = cat.includes('pel') ? 'calendar' : (isPaid ? 'shopping-bag' : 'clock');
@@ -671,7 +692,7 @@ async function renderBusinessOrders() {
                             </div>
 
                             ${!isCompleted ? `
-                                <button onclick="completeBusinessOrder('${o.id}')" title="Marcar como atendido/completado" class="w-9 h-9 rounded-2xl bg-black text-white hover:bg-neutral-800 flex items-center justify-center active:scale-90 transition shadow-md shrink-0">
+                                <button onclick="completeBusinessOrder('${o.id}')" title="Aceptar y Confirmar Reserva" class="w-9 h-9 rounded-2xl bg-black text-white hover:bg-neutral-800 flex items-center justify-center active:scale-90 transition shadow-md shrink-0">
                                     <i data-lucide="check" class="w-4 h-4"></i>
                                 </button>
                             ` : `

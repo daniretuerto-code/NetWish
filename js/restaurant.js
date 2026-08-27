@@ -46,15 +46,13 @@ window.restaurantState = {
 };
 
 // =======================================================
-// 1. HUB PRINCIPAL DEL RESTAURANTE (PINTADO INSTANTÁNEO SIN DELAY)
+// 1. HUB PRINCIPAL DEL RESTAURANTE (VISTA PÚBLICA)
 // =======================================================
 window.renderRestaurantHub = function(container) {
     if (!container) return;
 
-    // Pintamos la interfaz de inmediato usando el estado actual por defecto (cero parpadeos)
     window.drawRestaurantHubHTML(container);
 
-    // Sincronizamos con Supabase en segundo plano de manera silenciosa
     window.loadRestaurantLiveCatalog().then(() => {
         window.drawRestaurantHubHTML(container);
     });
@@ -310,7 +308,7 @@ window.openTableSessionView = async function(bizName, tableNumber) {
     window.appState.activeBusinessName = bizName;
     window.appState.activeTableNumber = tableNumber;
 
-    const page = document.getElementById('view-table-session');
+    let page = document.getElementById('view-table-session');
     if (!page) {
         const newPage = document.createElement('div');
         newPage.id = 'view-table-session';
@@ -450,6 +448,7 @@ window.renderTableSessionUI = function(bizName, tableNumber) {
             `}
         `;
     } else {
+        // Cuenta compartida en directo (Split Bill)
         const total = parseFloat(session.total_amount) || 0;
         const paid = parseFloat(session.paid_amount) || 0;
         const remaining = Math.max(0, total - paid);
@@ -687,7 +686,7 @@ window.subscribeToTableSession = function(bizName, tableNumber) {
 };
 
 // =======================================================
-// 5. RESERVAS POR TURNO Y AFORO
+// 5. RESERVAS CON BOTÓN DE MANTENER PULSADO Y ESTADO DIFERIDO
 // =======================================================
 window.openModernReservationModal = async function() {
     const today = new Date().toISOString().split('T')[0];
@@ -748,14 +747,16 @@ window.openModernReservationModal = async function() {
                 </div>
             </div>
 
-            <button onclick="window.processSmartReservation()" id="btnConfirmReservation" class="w-full py-4 bg-black text-white rounded-2xl text-xs font-bold tracking-wide active:scale-95 transition shadow-lg flex items-center justify-center space-x-2">
-                <i data-lucide="check" class="w-4 h-4"></i>
-                <span id="btnConfirmReservationText">Confirmar Reserva</span>
-            </button>
+            <!-- BOTÓN DE MANTENER PULSADO PARA CONFIRMAR RESERVA -->
+            <div id="holdReservationContainer" class="relative w-full h-14 bg-black rounded-2xl overflow-hidden shadow-lg cursor-pointer flex items-center justify-center select-none" style="touch-action: none;">
+                <div id="reservationProgressBar" class="absolute top-0 left-0 bottom-0 w-0 bg-emerald-500 pointer-events-none transition-[width] duration-75"></div>
+                <span class="relative z-10 text-white font-bold text-xs tracking-widest uppercase pointer-events-none" id="holdResvText">MANTENER PARA RESERVAR</span>
+            </div>
         </div>
     `);
 
     await window.recalculateSlotsAvailability();
+    window.initHoldReservationButton();
 };
 
 window.generateSlotsFromSettings = function() {
@@ -866,27 +867,13 @@ window.recalculateSlotsAvailability = async function() {
 
     slotsGrid.innerHTML = validSlotsHTML;
 
-    const confirmBtn = document.getElementById('btnConfirmReservation');
-    const confirmText = document.getElementById('btnConfirmReservationText');
-
     if (!isCurrentTimeValid) {
         const firstBtn = slotsGrid.querySelector('button');
         if (firstBtn) {
             firstBtn.click();
         } else {
             window.restaurantState.allocatedTable = null;
-            if (confirmBtn) {
-                confirmBtn.disabled = true;
-                confirmBtn.classList.add('opacity-50', 'pointer-events-none');
-            }
-            if (confirmText) confirmText.innerText = `Aforo completo en ${zone}`;
         }
-    } else {
-        if (confirmBtn) {
-            confirmBtn.disabled = false;
-            confirmBtn.classList.remove('opacity-50', 'pointer-events-none');
-        }
-        if (confirmText) confirmText.innerText = `Confirmar Reserva a las ${window.restaurantState.selectedTime}`;
     }
 };
 
@@ -922,11 +909,56 @@ window.selectReservationTime = function(timeStr, tableNum) {
     if (activeBtn) {
         activeBtn.className = "py-2.5 px-1 rounded-xl border text-xs font-mono font-bold transition bg-black text-white border-black shadow-sm";
     }
-
-    const confirmText = document.getElementById('btnConfirmReservationText');
-    if (confirmText) confirmText.innerText = `Confirmar Reserva a las ${timeStr}`;
 };
 
+// CONTROL DE MANTENER PULSADO PARA LA RESERVA
+window.initHoldReservationButton = function() {
+    const btnContainer = document.getElementById('holdReservationContainer');
+    if (!btnContainer) return;
+
+    let holdTimer = null;
+    let holdProgress = 0;
+    let isHolding = false;
+
+    const startHold = (e) => {
+        if (e.cancelable) e.preventDefault();
+        isHolding = true;
+        holdProgress = 0;
+        const progressBar = document.getElementById('reservationProgressBar');
+
+        clearInterval(holdTimer);
+        holdTimer = setInterval(() => {
+            if (!isHolding) return;
+            holdProgress += 4;
+            if (progressBar) progressBar.style.width = holdProgress + '%';
+
+            if (holdProgress >= 100) {
+                clearInterval(holdTimer);
+                isHolding = false;
+                if (progressBar) progressBar.style.width = '0%';
+                window.processSmartReservation();
+            }
+        }, 30);
+    };
+
+    const stopHold = () => {
+        if (!isHolding) return;
+        isHolding = false;
+        clearInterval(holdTimer);
+        holdProgress = 0;
+        const progressBar = document.getElementById('reservationProgressBar');
+        if (progressBar) progressBar.style.width = '0%';
+    };
+
+    btnContainer.addEventListener('touchstart', startHold, { passive: false });
+    btnContainer.addEventListener('touchend', stopHold);
+    btnContainer.addEventListener('touchcancel', stopHold);
+    btnContainer.addEventListener('mousedown', startHold);
+    window.addEventListener('mouseup', stopHold);
+    btnContainer.addEventListener('mouseleave', stopHold);
+};
+
+// REGISTRO DE RESERVA (SIN CORREO AUTOMÁTICO AL CLIENTE HASTA QUE EL RESTAURANTE CONFIRMA)
 window.processSmartReservation = async function() {
     const table = window.restaurantState.allocatedTable;
     const date = window.restaurantState.selectedDate;
@@ -937,7 +969,10 @@ window.processSmartReservation = async function() {
     const endTime = window.minutesToTime(window.timeToMinutes(startTime) + duration);
     const bizName = window.appState?.activeBusinessName || 'Restaurante Dani';
     
-    if (!table) return;
+    if (!table) {
+        alert("Por favor, selecciona un horario disponible.");
+        return;
+    }
 
     const client = (typeof supabaseClient !== 'undefined') ? supabaseClient : window.supabase;
     const customerUser = typeof currentUser !== 'undefined' ? currentUser : null;
@@ -950,7 +985,7 @@ window.processSmartReservation = async function() {
         total: 0.00,
         date: date,
         time: `${startTime} - ${endTime}`,
-        status: 'Mesa Confirmada'
+        status: 'Pendiente de Confirmación' // <--- Clave: No se confirma hasta que el local pulsa el check
     };
 
     if (client) {
@@ -961,29 +996,25 @@ window.processSmartReservation = async function() {
         }
     }
 
+    // Alerta al negocio (pero sin enviar recibo automático al cliente todavía)
     if (window.emailService) {
-        const orderSummary = {
+        const bizEmail = window.appState?.activeBusinessEmail || 'contacto@netwish.es';
+        window.emailService.sendBusinessAlert(bizEmail, {
             businessName: bizName,
             clientName: record.customer,
             date: date,
             time: `${startTime} h (Estancia hasta ${endTime} h)`,
-            items: [{ name: `Reserva para ${guests} comensales en ${zone} (Mesa ${table.table_number})`, qty: 1, price: 0 }],
+            items: [{ name: `Solicitud de reserva para ${guests} comensales en ${zone} (Mesa ${table.table_number})`, qty: 1, price: 0 }],
             total: 0,
-            action: 'reserve'
-        };
-
-        if (customerUser?.email) {
-            window.emailService.sendClientReceipt(customerUser.email, orderSummary);
-        }
-        const bizEmail = window.appState?.activeBusinessEmail || 'contacto@netwish.es';
-        window.emailService.sendBusinessAlert(bizEmail, orderSummary);
+            action: 'nueva_solicitud_reserva'
+        });
     }
 
     window.closeCustomModal();
     if (typeof window.showToast === 'function') {
-        window.showToast("¡Reserva confirmada!", "success");
+        window.showToast("¡Solicitud enviada! Pendiente de aprobación del local.", "success");
     } else {
-        alert(`¡Reserva confirmada con éxito!\n\nFecha: ${date}\nHora: ${startTime} h\nMesa: Mesa ${table.table_number} (${zone})`);
+        alert(`¡Solicitud enviada con éxito!\n\nFecha: ${date}\nHora: ${startTime} h\nMesa: Mesa ${table.table_number} (${zone})\n\nEl restaurante te confirmará en breve.`);
     }
 };
 
