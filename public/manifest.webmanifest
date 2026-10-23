@@ -1,0 +1,9 @@
+{
+  "name": "NetWish Palencia",
+  "short_name": "NetWish",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F2F0EB",
+  "theme_color": "#F2F0EB",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
