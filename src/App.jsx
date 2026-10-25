@@ -21,6 +21,7 @@ const BizMessages = lazy(() => import('./screens/business/Messages.jsx'));
 const BizSettings = lazy(() => import('./screens/business/Settings.jsx'));
 const BizHours = lazy(() => import('./screens/business/Hours.jsx'));
 const BizPortal = lazy(() => import('./screens/business/Portal.jsx'));
+const Admin = lazy(() => import('./screens/business/Admin.jsx'));
 const BizPersonalize = lazy(() => import('./screens/business/Setup.jsx'));
 const BizOnboarding = lazy(() => import('./screens/business/Setup.jsx').then((m) => ({ default: m.Onboarding })));
 const BizSection = lazy(() => import('./screens/business/Setup.jsx').then((m) => ({ default: m.SectionWizard })));
@@ -75,6 +76,7 @@ export default function App() {
           <Route path="chat/:name" element={<Chat />} />
         </Route>
         <Route path="negocios" element={<BizPortal />} />
+        <Route path="admin" element={<Admin />} />
         <Route path="panel" element={<RequireBusiness><BusinessShell /></RequireBusiness>}>
           <Route index element={<BizOverview />} />
           <Route path="pedidos" element={<BizOrders />} />

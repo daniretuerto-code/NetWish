@@ -3,13 +3,15 @@ import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
 import { Mono, PageHeader, Sheet, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { claimBusiness, requestBusinessSignup } from '../../lib/data.js';
-import { CATEGORIES } from '../../lib/categories.js';
+import { claimBusiness } from '../../lib/data.js';
 
-export function AuthForms({ next = '/cuenta' }) {
+// At least 8 characters with letters and numbers; Supabase stores only a hash.
+const weakPassword = (p) => p.length < 8 || !/[a-zA-Z]/.test(p) || !/\d/.test(p);
+
+export function AuthForms({ next = '/cuenta', initialTab = 'in' }) {
   const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
   const toast = useToast();
-  const [tab, setTab] = useState('in');
+  const [tab, setTab] = useState(initialTab);
   const [form, setForm] = useState({ email: '', password: '', name: '', surname: '' });
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
@@ -21,8 +23,8 @@ export function AuthForms({ next = '/cuenta' }) {
     try {
       if (tab === 'in') await signIn(form.email.trim(), form.password);
       else if (tab === 'up') {
-        if (form.password.length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres');
-        const res = await signUp({ ...form, email: form.email.trim() });
+        if (weakPassword(form.password)) throw new Error('La contraseña necesita al menos 8 caracteres, con letras y números');
+        const res = await signUp({ ...form, email: form.email.trim(), next });
         if (!res.session) setSent(true);
       } else {
         await resetPassword(form.email.trim());
@@ -61,7 +63,11 @@ export function AuthForms({ next = '/cuenta' }) {
         )}
         <div className="field"><label htmlFor="au-email">Correo</label><input id="au-email" className="input" type="email" required value={form.email} onChange={set('email')} autoComplete="email" /></div>
         {tab !== 'reset' && (
-          <div className="field"><label htmlFor="au-pass">Contraseña</label><input id="au-pass" className="input" type="password" required value={form.password} onChange={set('password')} autoComplete={tab === 'up' ? 'new-password' : 'current-password'} /></div>
+          <div className="field">
+            <label htmlFor="au-pass">Contraseña</label>
+            <input id="au-pass" className="input" type="password" required minLength={tab === 'up' ? 8 : undefined} value={form.password} onChange={set('password')} autoComplete={tab === 'up' ? 'new-password' : 'current-password'} />
+            {tab === 'up' && <span className="small muted">Mínimo 8 caracteres, con letras y números. Se guarda cifrada: nadie puede verla.</span>}
+          </div>
         )}
         <button className="btn primary block" disabled={busy}>
           {busy ? 'Un momento…' : tab === 'in' ? 'Entrar' : tab === 'up' ? 'Crear cuenta' : 'Enviar enlace'}
@@ -113,63 +119,6 @@ export function ClaimSheet({ open, onClose }) {
   );
 }
 
-export function SignupSheet({ open, onClose, email }) {
-  const toast = useToast();
-  const [form, setForm] = useState({ name: '', city: 'Palencia', address: '', category: CATEGORIES[0].label, modality: 'Local físico', email: email || '', phone: '' });
-  const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value.slice(0, 200) }));
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      await requestBusinessSignup({ ...form, name: form.name.trim(), email: form.email.trim() });
-      setDone(true);
-    } catch (err) {
-      toast(err.message, 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Sheet open={open} onClose={onClose} title="Dar de alta mi negocio">
-      {done ? (
-        <div className="stack" style={{ alignItems: 'center', textAlign: 'center', padding: '12px 0' }}>
-          <span className="mono lg" style={{ background: 'var(--accent)', color: 'var(--ink)' }}><Icon name="check" size={28} stroke={3} /></span>
-          <h2 className="title-lg">Solicitud enviada</h2>
-          <p className="muted">Te escribiremos a {form.email} en cuanto tu negocio esté listo.</p>
-          <button className="btn primary block" onClick={onClose}>Hecho</button>
-        </div>
-      ) : (
-        <form className="stack" onSubmit={submit}>
-          <div className="field"><label htmlFor="bs-name">Nombre del negocio</label><input id="bs-name" className="input" required minLength={2} value={form.name} onChange={set('name')} /></div>
-          <div className="bento">
-            <div className="field"><label htmlFor="bs-cat">Sector</label>
-              <select id="bs-cat" className="input" value={form.category} onChange={set('category')}>
-                {CATEGORIES.map((c) => <option key={c.key}>{c.label}</option>)}
-              </select>
-            </div>
-            <div className="field"><label htmlFor="bs-mod">Modalidad</label>
-              <select id="bs-mod" className="input" value={form.modality} onChange={set('modality')}>
-                <option>Local físico</option><option>Online</option><option>A domicilio</option>
-              </select>
-            </div>
-          </div>
-          <div className="bento">
-            <div className="field"><label htmlFor="bs-city">Ciudad</label><input id="bs-city" className="input" value={form.city} onChange={set('city')} /></div>
-            <div className="field"><label htmlFor="bs-phone">Teléfono</label><input id="bs-phone" className="input" type="tel" value={form.phone} onChange={set('phone')} /></div>
-          </div>
-          <div className="field"><label htmlFor="bs-addr">Dirección</label><input id="bs-addr" className="input" value={form.address} onChange={set('address')} /></div>
-          <div className="field"><label htmlFor="bs-email">Correo de contacto</label><input id="bs-email" className="input" type="email" required value={form.email} onChange={set('email')} /></div>
-          <button className="btn primary block" disabled={busy}>{busy ? 'Enviando…' : 'Enviar solicitud'}</button>
-        </form>
-      )}
-    </Sheet>
-  );
-}
-
 export default function Account() {
   const { user, business, displayName, avatar, signOut } = useAuth();
   const navigate = useNavigate();
@@ -181,7 +130,7 @@ export default function Account() {
       {!user ? (
         <>
           <AuthForms />
-          <Link to="/negocios" className="widget link row" style={{ textDecoration: 'none' }}>
+          <Link to="/negocios" className="widget link row" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
             <span className="mono" style={{ background: 'var(--ink)', color: 'var(--accent)' }}><Icon name="store" /></span>
             <span className="grow stack" style={{ gap: 0 }}>
               <strong>¿Tienes un negocio en Palencia?</strong>
@@ -211,7 +160,7 @@ export default function Account() {
             </Link>
           </div>
 
-          <Link to={business ? '/panel' : '/negocios'} className="widget dark link row" style={{ textDecoration: 'none' }}>
+          <Link to={business ? '/panel' : '/negocios'} className="widget dark link row" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
             <span className="mono" style={{ background: 'var(--accent)', color: 'var(--ink)' }}><Icon name="store" /></span>
             <span className="grow stack" style={{ gap: 0 }}>
               <span className="eyebrow">Para negocios</span>
