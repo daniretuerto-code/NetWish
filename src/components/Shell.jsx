@@ -3,6 +3,9 @@ import Icon from './Icon.jsx';
 import { Mono } from './ui.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { kindOf } from '../lib/categories.js';
+import useAsync from '../hooks/useAsync.js';
+import { getRestaurantSettings } from '../lib/data.js';
+import { modulesFor } from '../lib/questionnaire.js';
 
 const CUSTOMER_NAV = [
   { to: '/', label: 'Hoy', icon: 'today', end: true },
@@ -88,12 +91,16 @@ export function BusinessShell() {
   const kind = kindOf(business);
   const isRestaurant = kind === 'restaurant';
   const isBeauty = kind === 'beauty';
+  // Panel sections follow the business's questionnaire answers.
+  const { data: settings, reload: reloadSettings } = useAsync(() => getRestaurantSettings(business.name, kind), [business.name, kind]);
+  const mods = modulesFor(settings?.profile);
   const nav = [
     { to: '/panel', label: 'Resumen', icon: 'chart', end: true },
-    { to: '/panel/pedidos', label: isRestaurant ? 'Reservas y mesas' : 'Reservas', icon: 'calendar' },
-    ...(isRestaurant ? [{ to: '/panel/cocina', label: 'Cocina', icon: 'flame' }] : []),
+    ...(!isRestaurant || mods.reservas || mods.pedidosQr ? [{ to: '/panel/pedidos', label: isRestaurant ? (mods.reservas ? 'Reservas y mesas' : 'Comandas') : 'Reservas', icon: 'calendar' }] : []),
+    ...(isRestaurant && mods.cocina ? [{ to: '/panel/cocina', label: 'Cocina', icon: 'flame' }] : []),
     { to: '/panel/carta', label: isRestaurant ? 'Carta' : isBeauty ? 'Servicios' : 'Catálogo', icon: isBeauty ? 'scissors' : 'book' },
-    ...(isRestaurant ? [{ to: '/panel/mesas', label: 'Mesas y QR', icon: 'grid' }] : []),
+    ...(isRestaurant && (mods.reservas || mods.pedidosQr) ? [{ to: '/panel/mesas', label: 'Mesas y QR', icon: 'grid' }] : []),
+    ...(isRestaurant ? [{ to: '/panel/personalizar', label: 'Personalizar', icon: 'gear' }] : []),
     ...(isBeauty ? [{ to: '/panel/horario', label: 'Horario y equipo', icon: 'calendar' }] : []),
     { to: '/panel/mensajes', label: 'Mensajes', icon: 'chat' },
     { to: '/panel/ajustes', label: 'Ajustes', icon: 'gear' },
@@ -114,7 +121,7 @@ export function BusinessShell() {
         )}
       />
       <main className="shell-main">
-        <Outlet />
+        <Outlet context={{ settings, reloadSettings, modules: mods }} />
       </main>
       <TabBar items={mobileNav} />
     </div>

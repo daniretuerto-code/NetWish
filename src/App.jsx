@@ -21,6 +21,9 @@ const BizMessages = lazy(() => import('./screens/business/Messages.jsx'));
 const BizSettings = lazy(() => import('./screens/business/Settings.jsx'));
 const BizHours = lazy(() => import('./screens/business/Hours.jsx'));
 const BizPortal = lazy(() => import('./screens/business/Portal.jsx'));
+const BizPersonalize = lazy(() => import('./screens/business/Setup.jsx'));
+const BizOnboarding = lazy(() => import('./screens/business/Setup.jsx').then((m) => ({ default: m.Onboarding })));
+const BizSection = lazy(() => import('./screens/business/Setup.jsx').then((m) => ({ default: m.SectionWizard })));
 
 // Printed QR codes point to /?biz=NAME&table=N, so keep that entry point working.
 function LegacyLinks() {
@@ -81,6 +84,9 @@ export default function App() {
           <Route path="mensajes" element={<BizMessages />} />
           <Route path="ajustes" element={<BizSettings />} />
           <Route path="horario" element={<BizHours />} />
+          <Route path="empezar" element={<BizOnboarding />} />
+          <Route path="personalizar" element={<BizPersonalize />} />
+          <Route path="personalizar/:key" element={<BizSection />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
