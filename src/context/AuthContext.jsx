@@ -62,13 +62,13 @@ export function AuthProvider({ children }) {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw new Error(error.message === 'Invalid login credentials' ? 'Correo o contraseña incorrectos' : error.message);
     },
-    async signUp({ email, password, name, surname }) {
+    async signUp({ email, password, name, surname, next = '/' }) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: { name, surname, full_name: `${name} ${surname}`.trim() },
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: window.location.origin + next,
         },
       });
       if (error) throw new Error(error.message);

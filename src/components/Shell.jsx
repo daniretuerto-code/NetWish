@@ -115,12 +115,24 @@ export function BusinessShell() {
             <Mono name={business.name} image={business.image} />
             <span className="stack" style={{ gap: 0, minWidth: 0 }}>
               <span style={{ fontWeight: 800, fontSize: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{business.name}</span>
-              <span className="small" style={{ color: 'var(--accent)' }}>● Recibiendo reservas</span>
+              <span className="small" style={{ color: 'var(--accent)' }}>{business.status === 'approved' ? '● Recibiendo reservas' : '● Pendiente de aprobación'}</span>
             </span>
           </div>
         )}
       />
       <main className="shell-main">
+        {business.status === 'pending' && (
+          <div className="widget row" style={{ margin: '12px var(--gutter) 0', background: 'var(--accent)', gap: 12 }} role="status">
+            <Icon name="bell" size={20} />
+            <span className="small" style={{ fontWeight: 600 }}>Estamos revisando tu alta. Mientras, prepara tu panel: tu página será pública en cuanto la aprobemos.</span>
+          </div>
+        )}
+        {business.status === 'rejected' && (
+          <div className="widget row" style={{ margin: '12px var(--gutter) 0', background: '#F3C9C9', gap: 12 }} role="status">
+            <Icon name="bell" size={20} />
+            <span className="small" style={{ fontWeight: 600 }}>No hemos podido aprobar tu negocio. Escríbenos desde "Contactar con NetWish" y lo vemos.</span>
+          </div>
+        )}
         <Outlet context={{ settings, reloadSettings, modules: mods }} />
       </main>
       <TabBar items={mobileNav} />

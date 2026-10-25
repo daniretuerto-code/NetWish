@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
+import ContactTeam from '../../components/ContactTeam.jsx';
 import { PageHeader, Ring, Spinner, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { saveRestaurantSettings } from '../../lib/data.js';
@@ -204,6 +205,7 @@ export default function Personalize() {
           );
         })}
       </div>
+      <ContactTeam />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { businessInbox, businessOrders, isReservation, kitchenSessions, STATUS, 
 import { kindOf } from '../../lib/categories.js';
 import { greeting, longDate, money, todayISO } from '../../lib/format.js';
 import { profileProgress } from '../../lib/questionnaire.js';
+import ContactTeam from '../../components/ContactTeam.jsx';
 
 const ACTIVE = [STATUS.KITCHEN];
 
@@ -133,6 +134,7 @@ export default function Overview() {
         ))}
         {data.orders.length === 0 && <p className="small muted" style={{ padding: '10px 0' }}>Cuando lleguen reservas aparecerán aquí.</p>}
       </div>
+      <ContactTeam />
     </div>
   );
 }

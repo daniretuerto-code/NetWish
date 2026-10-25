@@ -1,7 +1,7 @@
 import { supabase } from './supabase.js';
 import { normalize, todayISO, nowTime } from './format.js';
 
-const BUSINESS_COLUMNS = 'username, name, category, telefono, image, cover_url, owner_id';
+const BUSINESS_COLUMNS = 'username, name, category, telefono, image, cover_url, owner_id, status, address';
 
 const escapeLike = (s) => String(s || '').trim().replace(/[\\%_]/g, (c) => `\\${c}`);
 
@@ -14,7 +14,7 @@ let businessCache = null;
 
 export async function listBusinesses({ fresh = false } = {}) {
   if (businessCache && !fresh) return businessCache;
-  const { data, error } = await supabase.from('businesses').select(BUSINESS_COLUMNS).order('name');
+  const { data, error } = await supabase.from('businesses').select(BUSINESS_COLUMNS).eq('status', 'approved').order('name');
   fail(error);
   const seen = new Set();
   businessCache = (data || []).filter((b) => {
@@ -29,7 +29,41 @@ export async function listBusinesses({ fresh = false } = {}) {
 export async function findBusiness(name) {
   const list = await listBusinesses();
   const key = normalize(name);
-  return list.find((b) => normalize(b.name) === key) || list.find((b) => normalize(b.username) === key) || null;
+  const found = list.find((b) => normalize(b.name) === key) || list.find((b) => normalize(b.username) === key);
+  if (found) return found;
+  // A pending business is hidden from the directory but its owner can preview it.
+  const { data } = await supabase.from('businesses').select(BUSINESS_COLUMNS).ilike('name', escapeLike(name)).maybeSingle();
+  return data || null;
+}
+
+// Self-service sign-up: the business exists at once, pending until an admin approves it.
+export async function createMyBusiness({ name, category, phone, address }) {
+  const { data, error } = await supabase.rpc('create_my_business', { p_name: name, p_category: category, p_phone: phone, p_address: address });
+  fail(error);
+  businessCache = null;
+  notifyTeam({ kind: 'nuevo', name: data.name, category, phone, address });
+  return data;
+}
+
+export async function isAdmin() {
+  const { data } = await supabase.rpc('is_admin');
+  return data === true;
+}
+
+export async function adminOverview() {
+  const [biz, req] = await Promise.all([
+    supabase.from('businesses').select(`${BUSINESS_COLUMNS}, notification_email, created_at`).neq('status', 'approved').order('created_at', { ascending: false }),
+    supabase.from('business_requests').select('*').order('created_at', { ascending: false }).limit(100),
+  ]);
+  fail(biz.error);
+  fail(req.error);
+  return { pending: biz.data || [], requests: req.data || [] };
+}
+
+export async function setBusinessStatus(username, status) {
+  const { error } = await supabase.rpc('set_business_status', { p_username: username, p_status: status });
+  fail(error);
+  businessCache = null;
 }
 
 export async function myBusiness(userId) {
@@ -312,14 +346,19 @@ export async function markThreadRead(businessName, customerId) {
 }
 
 // ---------- Business sign-up requests ----------
-export async function requestBusinessSignup(form) {
-  const { error } = await supabase.from('business_requests').insert([form]);
-  fail(error);
+function notifyTeam(payload) {
   fetch('/api/business-request', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(form),
+    body: JSON.stringify(payload),
   }).catch(() => {});
+}
+
+// kind: 'alta' (a type we don't support yet), 'otro' (described in their words) or 'contacto'.
+export async function requestBusinessSignup(form) {
+  const { error } = await supabase.from('business_requests').insert([form]);
+  fail(error);
+  notifyTeam(form);
 }
 
 // ---------- Realtime ----------
