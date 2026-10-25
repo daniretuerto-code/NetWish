@@ -71,7 +71,7 @@ function ProductList({ biz, products, music }) {
     return <div className="widget"><Empty icon="book" title="Aún no hay productos">Este comercio todavía no ha publicado su catálogo.</Empty></div>;
   }
 
-  return sections.map(([section, items]) => (
+  return <div className="menu-grid">{sections.map(([section, items]) => (
     <section key={section} className="widget" style={{ paddingBottom: 4 }}>
       <h2 className="title-lg" style={{ marginBottom: 4 }}>{section}</h2>
       {items.map((p) => (
@@ -86,7 +86,7 @@ function ProductList({ biz, products, music }) {
         </div>
       ))}
     </section>
-  ));
+  ))}</div>;
 }
 
 function DailyMenu({ menu }) {
