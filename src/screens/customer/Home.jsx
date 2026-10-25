@@ -64,7 +64,7 @@ export default function Home() {
 
       <div className="two-col">
         <div className="stack">
-          {featured && <CoverCard biz={featured} eyebrow="Destacado hoy" subtitle={kindOf(featured) === 'restaurant' ? 'Reserva o pide desde tu mesa' : featured.category} />}
+          {featured && <CoverCard featured biz={featured} eyebrow="Destacado hoy" subtitle={kindOf(featured) === 'restaurant' ? 'Reserva o pide desde tu mesa' : featured.category} />}
 
           <div className="bento">
             <Link to="/escanear" className="widget dark link" style={{ minHeight: 168, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>

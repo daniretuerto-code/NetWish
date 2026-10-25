@@ -6,9 +6,9 @@ import { initials, toneFor } from '../lib/format.js';
 
 export const bizPath = (b) => `/negocio/${encodeURIComponent(b.name)}`;
 
-export function CoverCard({ biz, eyebrow, title, subtitle, cta = 'Ver', minHeight = 300 }) {
+export function CoverCard({ biz, eyebrow, title, subtitle, cta = 'Ver', minHeight = 300, featured = false }) {
   return (
-    <Link to={bizPath(biz)} className="cover" style={{ background: toneFor(biz.name), minHeight }}>
+    <Link to={bizPath(biz)} className={`cover${featured ? ' featured' : ''}`} style={{ background: toneFor(biz.name), '--cover-min': `${minHeight}px` }}>
       {biz.cover_url ? (
         <>
           <img className="cover-img" src={biz.cover_url} alt="" />

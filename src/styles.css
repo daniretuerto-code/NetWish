@@ -25,6 +25,7 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --gutter: 16px;
   --tabbar-space: calc(110px + var(--safe-bottom));
+  --z: 1;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -48,6 +49,7 @@ h1, h2, h3, p { margin: 0; }
 .grow { flex: 1; min-width: 0; }
 .bento { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .span-2 { grid-column: span 2; }
+.menu-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
 .cards-grid { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 14px; }
 
 @media (min-width: 640px) {
@@ -81,7 +83,7 @@ h1, h2, h3, p { margin: 0; }
 .widget.link { display: block; text-decoration: none; transition: transform 0.15s ease; }
 .widget.link:active { transform: scale(0.98); }
 
-.cover { position: relative; overflow: hidden; border-radius: var(--r-xl); background: var(--cover); color: #fff; display: flex; flex-direction: column; justify-content: space-between; text-decoration: none; box-shadow: 0 16px 36px rgba(0, 0, 0, 0.14); min-height: 260px; }
+.cover { position: relative; overflow: hidden; border-radius: var(--r-xl); background: var(--cover); color: #fff; display: flex; flex-direction: column; justify-content: space-between; text-decoration: none; box-shadow: 0 16px 36px rgba(0, 0, 0, 0.14); min-height: var(--cover-min, 260px); }
 .cover img.cover-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .cover .cover-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.45) 100%); }
 .cover .ghost { position: absolute; right: -30px; top: 50px; font-size: 200px; font-weight: 800; letter-spacing: -0.06em; color: rgba(255, 255, 255, 0.1); line-height: 1; pointer-events: none; user-select: none; }
@@ -165,7 +167,7 @@ textarea.input { height: auto; min-height: 96px; padding: 12px 16px; resize: ver
 .sidebar { display: none; }
 @media (min-width: 900px) {
   .tabbar { display: none; }
-  .cta-bar { left: calc(266px + var(--gutter) + 16px); max-width: 640px; }
+  .cta-bar { left: calc((282px + var(--gutter)) / var(--z)); right: calc(var(--gutter) / var(--z)); max-width: 640px; }
   .sidebar { display: flex; flex-direction: column; gap: 20px; width: 250px; flex: none; padding: 22px 14px; border-radius: 30px; background: var(--ink); color: #fff; position: sticky; top: 16px; height: calc(100dvh - 32px); overflow-y: auto; }
   .sidebar .brand { display: flex; align-items: center; gap: 12px; padding: 0 6px; text-decoration: none; }
   .sidebar nav { display: flex; flex-direction: column; gap: 4px; }
@@ -231,3 +233,27 @@ textarea.input { height: auto; min-height: 96px; padding: 12px 16px; resize: ver
   .inbox { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); }
 }
 .list-row[aria-current="true"] { background: var(--bg); border-radius: 16px; padding-left: 8px; padding-right: 8px; }
+
+/* ---------- Large screens (laptops and desktop monitors) ----------
+   Everything in the main area scales up together, so cards, text and touch
+   targets keep the same proportions as on the iPad but fill the screen. */
+@media (min-width: 1280px) {
+  :root { --z: 1.12; --gutter: 32px; }
+  .shell-main { zoom: var(--z); }
+  .page { max-width: 1440px; padding-top: 32px; gap: 18px; }
+  .two-col { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 18px; }
+  .bento, .cards-grid { gap: 16px; }
+  .title-xl { font-size: 44px; }
+  .cover.featured { min-height: max(var(--cover-min, 260px), 400px); }
+  .cover .cover-title { font-size: 34px; }
+  .menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .sheet { max-height: calc((100dvh - 40px) / var(--z)); }
+  .sidebar { width: 272px; padding: 26px 16px; }
+  .sidebar nav a { height: 52px; font-size: 17px; }
+  .cta-bar { left: calc((304px + var(--gutter)) / var(--z)); }
+}
+@media (min-width: 1600px) {
+  :root { --z: 1.22; }
+  .cards-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .cover.featured { min-height: max(var(--cover-min, 260px), 440px); }
+}
