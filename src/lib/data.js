@@ -94,16 +94,35 @@ export const DEFAULT_SETTINGS = {
   turn_duration_min: 90,
   tables: [],
   daily_menu: null,
+  staff: [],
+  closed_days: [],
 };
 
-export async function getRestaurantSettings(businessName) {
+// Salons work in a morning and an afternoon shift and usually close on Sundays.
+const BEAUTY_SETTINGS = {
+  ...DEFAULT_SETTINGS,
+  lunch_start: '10:00',
+  lunch_end: '14:00',
+  dinner_start: '16:30',
+  dinner_end: '20:30',
+  closed_days: [0],
+};
+
+export async function getRestaurantSettings(businessName, kind) {
   const { data, error } = await supabase
     .from('restaurant_settings')
     .select('*')
     .ilike('business_name', escapeLike(businessName))
     .maybeSingle();
   fail(error);
-  return { ...DEFAULT_SETTINGS, ...(data || {}), tables: data?.tables || [] };
+  const defaults = kind === 'beauty' ? BEAUTY_SETTINGS : DEFAULT_SETTINGS;
+  return {
+    ...defaults,
+    ...(data || {}),
+    tables: data?.tables || [],
+    staff: data?.staff || [],
+    closed_days: data?.closed_days || defaults.closed_days,
+  };
 }
 
 export async function saveRestaurantSettings(businessName, patch) {
@@ -120,7 +139,7 @@ export async function reservationsOn(businessName, date) {
 
 // ---------- Orders ----------
 export const STATUS = {
-  PAID: 'Pagado Online',
+  PAID: 'Pagado Online', // only on old orders: NetWish no longer takes payments
   PENDING: 'Pendiente de Aprobación',
   KITCHEN: 'Comanda en Cocina',
   CONFIRMED: 'Mesa Confirmada',
@@ -211,18 +230,6 @@ export async function addItemsToTable(businessName, table, items, customer) {
     p_table: table,
     p_items: items.map(({ id, name, price, qty }) => ({ id, name, price: Number(price), qty })),
     p_customer: customer || null,
-  });
-  fail(error);
-  return data;
-}
-
-export async function payTable(sessionId, amount, user) {
-  const meta = user?.user_metadata || {};
-  const { data, error } = await supabase.rpc('table_pay', {
-    p_session: sessionId,
-    p_amount: amount,
-    p_name: meta.full_name || meta.name || user?.email?.split('@')[0] || null,
-    p_email: user?.email || null,
   });
   fail(error);
   return data;

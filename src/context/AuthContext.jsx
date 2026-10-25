@@ -74,10 +74,10 @@ export function AuthProvider({ children }) {
       if (error) throw new Error(error.message);
       return data;
     },
-    async signInWithGoogle() {
+    async signInWithGoogle(path = '/cuenta') {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: window.location.origin + '/cuenta', queryParams: { prompt: 'select_account' } },
+        options: { redirectTo: window.location.origin + path, queryParams: { prompt: 'select_account' } },
       });
       if (error) throw new Error(error.message);
     },

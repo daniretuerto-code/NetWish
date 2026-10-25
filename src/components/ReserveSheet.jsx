@@ -5,6 +5,7 @@ import Icon from './Icon.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { createOrder, reservationsOn, STATUS } from '../lib/data.js';
 import { minutesToTime, timeToMinutes, todayISO } from '../lib/format.js';
+import { isClosed } from '../lib/booking.js';
 
 const DEFAULT_TABLES = [
   { table_number: 1, capacity: 2, zone: 'Sala Principal' },
@@ -59,6 +60,7 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
     const now = new Date();
     const isToday = date === todayISO();
     const nowMin = now.getHours() * 60 + now.getMinutes();
+    if (isClosed(settings, date)) return [];
     return [...slots(settings.lunch_start, settings.lunch_end), ...slots(settings.dinner_start, settings.dinner_end)]
       .filter((t) => !isToday || timeToMinutes(t) > nowMin + 30);
   }, [settings, date]);
@@ -144,7 +146,7 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
                 );
               })}
             </div>
-            {allSlots.length === 0 && <p className="small muted" style={{ marginTop: 8 }}>No quedan horas libres para este día.</p>}
+            {allSlots.length === 0 && <p className="small muted" style={{ marginTop: 8 }}>{isClosed(settings, date) ? 'Este día el restaurante cierra.' : 'No quedan horas libres para este día.'}</p>}
           </div>
 
           <button className="btn primary block" disabled={!time || saving} onClick={submit}>

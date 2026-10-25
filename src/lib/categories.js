@@ -18,5 +18,13 @@ export const kindOf = (biz) => {
   const key = categoryOf(biz).key;
   if (key === 'rest') return 'restaurant';
   if (key === 'music') return 'music';
+  if (key === 'pel') return 'beauty';
   return 'shop';
 };
+
+// One line under each business in lists, matching what you can do there.
+export const taglineFor = (biz) => ({
+  restaurant: 'Carta y reserva de mesa',
+  beauty: 'Reserva tu cita online',
+  music: 'Escucha sus beats',
+}[kindOf(biz)] || 'Catálogo y contacto');

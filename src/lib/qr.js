@@ -11,7 +11,9 @@ export function parseNetWishQR(raw) {
       if (biz && table) return { type: 'table', business: biz, table: parseInt(table, 10) || 1 };
       if (biz) return { type: 'business', business: biz };
       const pay = url.searchParams.get('pay');
-      if (pay) return { type: 'pay', business: pay };
+      if (pay) return { type: 'business', business: pay };
+      const page = /^\/negocio\/([^/]+)\/?$/.exec(url.pathname);
+      if (page && url.origin === window.location.origin) return { type: 'business', business: decodeURIComponent(page[1]) };
     } catch {
       return null;
     }
@@ -20,11 +22,12 @@ export function parseNetWishQR(raw) {
 
   const [prefix, a, b] = text.split(':');
   if (prefix === 'NETWISH_TABLE' && a) return { type: 'table', business: a, table: parseInt(b, 10) || 1 };
-  if ((prefix === 'NETWISH_PAY' || prefix === 'NETWISH_BUSINESS') && a) return { type: 'pay', business: a };
+  if ((prefix === 'NETWISH_PAY' || prefix === 'NETWISH_BUSINESS') && a) return { type: 'business', business: a };
   return null;
 }
 
 export const tableUrl = (business, table) =>
   `${window.location.origin}/?biz=${encodeURIComponent(business)}&table=${table}`;
 
-export const payCode = (business) => `NETWISH_BUSINESS:${business}`;
+export const businessUrl = (business) =>
+  `${window.location.origin}/negocio/${encodeURIComponent(business)}`;

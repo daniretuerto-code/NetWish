@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { businessOrders, isReservation, notifyOrder, setOrderStatus, STATUS, subscribe } from '../../lib/data.js';
 import { money, todayISO } from '../../lib/format.js';
+import { kindOf } from '../../lib/categories.js';
 
 const dateLabel = (iso) => {
   if (iso === todayISO()) return 'Hoy';
@@ -48,6 +49,7 @@ function Column({ title, count, accent, children }) {
 
 export default function Orders() {
   const { business } = useAuth();
+  const isRestaurant = kindOf(business) === 'restaurant';
   const toast = useToast();
   const [busy, setBusy] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
@@ -77,18 +79,20 @@ export default function Orders() {
   const reservations = orders.filter((o) => isReservation(o) && o.status === STATUS.PENDING);
   const preparing = orders.filter((o) => !isReservation(o) && [STATUS.PAID, STATUS.KITCHEN].includes(o.status));
   const ready = orders.filter((o) => !isReservation(o) && o.status === STATUS.READY);
-  const upcoming = orders.filter((o) => isReservation(o) && o.status === STATUS.CONFIRMED && o.date >= todayISO());
+  const upcoming = orders
+    .filter((o) => isReservation(o) && o.status === STATUS.CONFIRMED && o.date >= todayISO())
+    .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
   const history = orders.filter((o) => [STATUS.DONE, STATUS.REJECTED].includes(o.status) || (isReservation(o) && o.status === STATUS.CONFIRMED && o.date < todayISO()));
 
   return (
     <div className="page">
-      <PageHeader eyebrow={business.name} title="Pedidos" />
+      <PageHeader eyebrow={business.name} title={isRestaurant ? 'Reservas y mesas' : 'Reservas'} />
 
       {orders.length === 0 ? (
-        <div className="widget"><Empty icon="bag" title="Aún no hay pedidos">Cuando un cliente pida o reserve, lo verás aquí al momento.</Empty></div>
+        <div className="widget"><Empty icon="calendar" title="Aún no hay reservas">Cuando un cliente reserve, lo verás aquí al momento.</Empty></div>
       ) : (
         <>
-          <div className="kanban">
+          <div className={isRestaurant ? 'kanban' : 'stack'}>
             <Column title="Reservas por confirmar" count={reservations.length} accent>
               {reservations.map((o) => (
                 <OrderCard key={o.id} order={o} busy={busy === o.id} actions={[
@@ -97,6 +101,7 @@ export default function Orders() {
                 ]} />
               ))}
             </Column>
+            {isRestaurant && (<>
             <Column title="En preparación" count={preparing.length} accent>
               {preparing.map((o) => (
                 <OrderCard key={o.id} order={o} busy={busy === o.id} actions={[{ label: 'Listo', run: () => move(o, STATUS.READY) }]} />
@@ -107,11 +112,12 @@ export default function Orders() {
                 <OrderCard key={o.id} order={o} busy={busy === o.id} actions={[{ label: 'Entregado', kind: 'accent', run: () => move(o, STATUS.DONE) }]} />
               ))}
             </Column>
+            </>)}
           </div>
 
           {upcoming.length > 0 && (
             <div className="widget" style={{ paddingBottom: 4 }}>
-              <h2 className="title-lg">Reservas confirmadas</h2>
+              <h2 className="title-lg">Próximas reservas confirmadas</h2>
               {upcoming.map((o) => (
                 <div key={o.id} className="list-row">
                   <span className="grow stack" style={{ gap: 1 }}>
@@ -127,7 +133,7 @@ export default function Orders() {
           <div className="widget" style={{ paddingBottom: 4 }}>
             <button className="row between" style={{ width: '100%', background: 'none', border: 0, padding: 0, minHeight: 44 }} onClick={() => setShowHistory((v) => !v)} aria-expanded={showHistory}>
               <h2 className="title-lg">Historial</h2>
-              <span className="small muted">{showHistory ? 'Ocultar' : `${history.length} ${history.length === 1 ? 'pedido' : 'pedidos'}`}</span>
+              <span className="small muted">{showHistory ? 'Ocultar' : `${history.length} ${history.length === 1 ? 'registro' : 'registros'}`}</span>
             </button>
             {showHistory && history.map((o) => (
               <div key={o.id} className="list-row">

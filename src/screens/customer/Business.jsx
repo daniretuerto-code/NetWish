@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
-import { BackButton, Empty, Spinner, Stepper } from '../../components/ui.jsx';
+import { BackButton, Empty, Spinner } from '../../components/ui.jsx';
 import ReserveSheet from '../../components/ReserveSheet.jsx';
-import { useCart } from '../../context/CartContext.jsx';
+import ServiceBooking from '../../components/ServiceBooking.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { findBusiness, getRestaurantSettings, listProducts } from '../../lib/data.js';
 import { categoryOf, kindOf } from '../../lib/categories.js';
@@ -38,8 +38,6 @@ function AudioPreview({ src, playing, onToggle, name }) {
 }
 
 function ProductList({ biz, products, music }) {
-  const cart = useCart();
-  const current = cart.cartFor(biz.name);
   const audio = useRef(null);
   const [playing, setPlaying] = useState(null);
 
@@ -71,22 +69,39 @@ function ProductList({ biz, products, music }) {
     return <div className="widget"><Empty icon="book" title="Aún no hay productos">Este comercio todavía no ha publicado su catálogo.</Empty></div>;
   }
 
-  return <div className="menu-grid">{sections.map(([section, items]) => (
-    <section key={section} className="widget" style={{ paddingBottom: 4 }}>
-      <h2 className="title-lg" style={{ marginBottom: 4 }}>{section}</h2>
-      {items.map((p) => (
-        <div key={p.id} className="list-row">
-          {music && <AudioPreview src={p.audio_url} name={p.name} playing={playing === p.id} onToggle={() => toggle(p)} />}
-          <span className="grow stack" style={{ gap: 1 }}>
-            <span className="t">{p.name}</span>
-            {p.description && <span className="s">{p.description}</span>}
-            <span className="s price" style={{ color: 'var(--ink-2)' }}>{money(p.price)}</span>
-          </span>
-          <Stepper qty={current.qtyOf(p.id)} onAdd={() => cart.add(biz.name, p)} onRemove={() => cart.remove(biz.name, p)} />
-        </div>
-      ))}
-    </section>
-  ))}</div>;
+  return (
+    <>
+      {music && <p className="small muted" style={{ margin: '0 4px' }}>¿Te gusta alguno? Escríbele por el chat a {biz.name} para comprarlo.</p>}
+      <div className="menu-grid">{sections.map(([section, items]) => (
+        <section key={section} className="widget" style={{ paddingBottom: 4 }}>
+          <h2 className="title-lg" style={{ marginBottom: 4 }}>{section}</h2>
+          {items.map((p) => (
+            <div key={p.id} className="list-row">
+              {music && <AudioPreview src={p.audio_url} name={p.name} playing={playing === p.id} onToggle={() => toggle(p)} />}
+              <span className="grow stack" style={{ gap: 1 }}>
+                <span className="t">{p.name}</span>
+                {p.description && <span className="s">{p.description}</span>}
+              </span>
+              <span className="price" style={{ fontSize: 15, fontWeight: 700 }}>{money(p.price)}</span>
+            </div>
+          ))}
+        </section>
+      ))}</div>
+    </>
+  );
+}
+
+function Hours({ settings }) {
+  const days = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  const closed = (settings.closed_days || []).map((d) => days[d]);
+  return (
+    <div className="widget stack" style={{ gap: 0 }}>
+      <h2 className="title-lg" style={{ marginBottom: 4 }}>Horario</h2>
+      <div className="list-row"><span className="grow t">Mañanas</span><span className="s">{settings.lunch_start} – {settings.lunch_end}</span></div>
+      <div className="list-row"><span className="grow t">Tardes</span><span className="s">{settings.dinner_start} – {settings.dinner_end}</span></div>
+      {closed.length > 0 && <div className="list-row"><span className="grow t">Cerrado</span><span className="s">{closed.join(', ')}</span></div>}
+    </div>
+  );
 }
 
 function DailyMenu({ menu }) {
@@ -114,8 +129,6 @@ function DailyMenu({ menu }) {
 
 export default function Business() {
   const { name } = useParams();
-  const navigate = useNavigate();
-  const cart = useCart();
   const [tab, setTab] = useState('carta');
   const [reserveOpen, setReserveOpen] = useState(false);
 
@@ -125,7 +138,7 @@ export default function Business() {
     const kind = kindOf(biz);
     const [products, settings] = await Promise.all([
       listProducts(biz.name),
-      kind === 'restaurant' ? getRestaurantSettings(biz.name) : Promise.resolve(null),
+      kind === 'restaurant' || kind === 'beauty' ? getRestaurantSettings(biz.name, kind) : Promise.resolve(null),
     ]);
     return { biz, kind, products, settings };
   }, [name]);
@@ -141,42 +154,46 @@ export default function Business() {
   }
 
   const { biz, kind, products, settings } = data;
-  const current = cart.cartFor(biz.name);
   const isRestaurant = kind === 'restaurant';
+  const isBeauty = kind === 'beauty';
+  const tile = { textDecoration: 'none', gap: 8, boxShadow: 'var(--shadow)' };
+
+  const tiles = [
+    isRestaurant && (
+      <button key="res" className="widget tight stack" style={{ ...tile, border: 0, textAlign: 'left' }} onClick={() => setReserveOpen(true)}>
+        <span className="small muted">Mesa</span>
+        <span style={{ fontSize: 16, fontWeight: 800 }}>Reservar</span>
+      </button>
+    ),
+    isBeauty && (
+      <a key="cita" href="#servicios" className="widget tight stack" style={tile}>
+        <span className="small muted">Cita</span>
+        <span style={{ fontSize: 16, fontWeight: 800 }}>Reservar</span>
+      </a>
+    ),
+    biz.telefono ? (
+      <a key="tel" href={`tel:${biz.telefono}`} className="widget tight stack" style={tile}>
+        <span className="small muted">Teléfono</span>
+        <span style={{ fontSize: 16, fontWeight: 800 }}>Llamar</span>
+      </a>
+    ) : (
+      <a key="map" href={`https://www.google.com/maps/search/${encodeURIComponent(`${biz.name} Palencia`)}`} target="_blank" rel="noreferrer" className="widget tight stack" style={tile}>
+        <span className="small muted">Mapa</span>
+        <span style={{ fontSize: 16, fontWeight: 800 }}>Cómo llegar</span>
+      </a>
+    ),
+    <Link key="chat" to={`/chat/${encodeURIComponent(biz.name)}`} className="widget dark tight stack" style={tile}>
+      <span className="small muted">Chat</span>
+      <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--accent)' }}>Escribir</span>
+    </Link>,
+  ].filter(Boolean);
 
   return (
-    <div className="page flush-top" style={{ paddingBottom: current.count ? 120 : undefined }}>
+    <div className="page flush-top" style={{ paddingBottom: isRestaurant || isBeauty ? 120 : undefined }}>
       <Hero biz={biz} />
 
       <div className="overlap stack">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
-          {isRestaurant ? (
-            <button className="widget tight stack" style={{ border: 0, textAlign: 'left', gap: 8, boxShadow: 'var(--shadow)' }} onClick={() => setReserveOpen(true)}>
-              <span className="small muted">Mesa</span>
-              <span style={{ fontSize: 16, fontWeight: 800 }}>Reservar</span>
-            </button>
-          ) : (
-            <Link to={`/pagar/${encodeURIComponent(biz.name)}`} className="widget tight stack" style={{ textDecoration: 'none', gap: 8, boxShadow: 'var(--shadow)' }}>
-              <span className="small muted">Importe libre</span>
-              <span style={{ fontSize: 16, fontWeight: 800 }}>Pagar</span>
-            </Link>
-          )}
-          {biz.telefono ? (
-            <a href={`tel:${biz.telefono}`} className="widget tight stack" style={{ textDecoration: 'none', gap: 8, boxShadow: 'var(--shadow)' }}>
-              <span className="small muted">Teléfono</span>
-              <span style={{ fontSize: 16, fontWeight: 800 }}>Llamar</span>
-            </a>
-          ) : (
-            <a href={`https://www.google.com/maps/search/${encodeURIComponent(`${biz.name} Palencia`)}`} target="_blank" rel="noreferrer" className="widget tight stack" style={{ textDecoration: 'none', gap: 8, boxShadow: 'var(--shadow)' }}>
-              <span className="small muted">Mapa</span>
-              <span style={{ fontSize: 16, fontWeight: 800 }}>Cómo llegar</span>
-            </a>
-          )}
-          <Link to={`/chat/${encodeURIComponent(biz.name)}`} className="widget dark tight stack" style={{ textDecoration: 'none', gap: 8, boxShadow: 'var(--shadow)' }}>
-            <span className="small muted">Chat</span>
-            <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--accent)' }}>Escribir</span>
-          </Link>
-        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${tiles.length}, minmax(0, 1fr))`, gap: 10 }}>{tiles}</div>
 
         {isRestaurant && (
           <div className="segmented" role="tablist" aria-label="Secciones">
@@ -186,23 +203,27 @@ export default function Business() {
           </div>
         )}
 
-        {(!isRestaurant || tab === 'carta') && <ProductList biz={biz} products={products} music={kind === 'music'} />}
+        {isBeauty ? (
+          <>
+            <ServiceBooking biz={biz} services={products} settings={settings} />
+            <Hours settings={settings} />
+          </>
+        ) : (
+          (!isRestaurant || tab === 'carta') && <ProductList biz={biz} products={products} music={kind === 'music'} />
+        )}
         {isRestaurant && tab === 'menu' && <DailyMenu menu={settings?.daily_menu} />}
         {isRestaurant && tab === 'info' && (
           <div className="widget stack">
             <div className="list-row"><span className="grow t">Comidas</span><span className="s">{settings.lunch_start} – {settings.lunch_end}</span></div>
             <div className="list-row"><span className="grow t">Cenas</span><span className="s">{settings.dinner_start} – {settings.dinner_end}</span></div>
-            <button className="btn primary block" onClick={() => setReserveOpen(true)}>Reservar mesa</button>
           </div>
         )}
       </div>
 
-      {current.count > 0 && (
-        <button className="cta-bar" onClick={() => navigate(`/negocio/${encodeURIComponent(biz.name)}/pedido`)}>
-          <span style={{ fontSize: 17, fontWeight: 800 }}>
-            {money(current.total)} <span style={{ fontWeight: 400, opacity: 0.6 }}>· {current.count} {current.count === 1 ? 'producto' : 'productos'}</span>
-          </span>
-          <span className="go">Pedir</span>
+      {isRestaurant && (
+        <button className="cta-bar" onClick={() => setReserveOpen(true)}>
+          <span style={{ fontSize: 16, fontWeight: 800 }}>Reserva tu mesa</span>
+          <span className="go">Reservar</span>
         </button>
       )}
 

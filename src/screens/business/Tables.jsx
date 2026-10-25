@@ -25,7 +25,7 @@ function QrSheet({ table, business, onClose }) {
       <div className="stack printable" style={{ alignItems: 'center', textAlign: 'center' }}>
         <div className="qr-box"><QrImage text={url} /></div>
         <strong style={{ fontSize: 22 }}>{business.name} · Mesa {table.table_number}</strong>
-        <span className="small muted">Escanea para pedir y pagar desde tu móvil</span>
+        <span className="small muted">Escanea para ver la carta y pedir desde tu móvil</span>
       </div>
       <div className="row" style={{ marginTop: 14 }}>
         <button className="btn primary grow" onClick={() => window.print()}><Icon name="printer" size={18} /> Imprimir</button>

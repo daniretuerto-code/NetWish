@@ -8,11 +8,12 @@ import { businessInbox, businessOrders, isReservation, kitchenSessions, STATUS, 
 import { kindOf } from '../../lib/categories.js';
 import { greeting, longDate, money, todayISO } from '../../lib/format.js';
 
-const ACTIVE = [STATUS.PAID, STATUS.KITCHEN, STATUS.CONFIRMED];
+const ACTIVE = [STATUS.KITCHEN];
 
 export default function Overview() {
   const { business } = useAuth();
-  const isRestaurant = kindOf(business) === 'restaurant';
+  const kind = kindOf(business);
+  const isRestaurant = kind === 'restaurant';
   const { data, loading, reload } = useAsync(async () => {
     const [orders, inbox, sessions] = await Promise.all([
       businessOrders(business.name),
@@ -27,7 +28,11 @@ export default function Overview() {
   if (loading && !data) return <Spinner />;
   const today = todayISO();
   const todays = data.orders.filter((o) => o.date === today && o.status !== STATUS.REJECTED);
-  const sales = todays.filter((o) => !isReservation(o)).reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+  const todaysBookings = todays
+    .filter((o) => isReservation(o) && [STATUS.PENDING, STATUS.CONFIRMED].includes(o.status))
+    .sort((a, b) => String(a.time).localeCompare(String(b.time)));
+  const nowHHMM = new Date().toTimeString().slice(0, 5);
+  const nextBooking = todaysBookings.find((o) => String(o.time).slice(0, 5) >= nowHHMM);
   const pendingRes = data.orders.filter((o) => isReservation(o) && o.status === STATUS.PENDING);
   const inProgress = data.orders.filter((o) => !isReservation(o) && ACTIVE.includes(o.status) && o.date === today);
   const unread = data.inbox.reduce((n, t) => n + t.unread, 0);
@@ -40,18 +45,22 @@ export default function Overview() {
 
       <div className="bento">
         <div className="widget dark span-2 stack" style={{ gap: 6 }}>
-          <span className="eyebrow">Ventas de hoy</span>
-          <span className="price" style={{ fontSize: 48, fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1 }}>{money(sales)}</span>
-          <span className="small" style={{ opacity: 0.7 }}>{todays.length} {todays.length === 1 ? 'pedido' : 'pedidos'} · {done} {done === 1 ? 'completado' : 'completados'}</span>
+          <span className="eyebrow">Reservas de hoy</span>
+          <span className="price" style={{ fontSize: 48, fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1 }}>{todaysBookings.length}</span>
+          <span className="small" style={{ opacity: 0.7 }}>
+            {nextBooking ? `Próxima: ${String(nextBooking.time).slice(0, 5)} · ${nextBooking.customer}` : 'No quedan más por hoy'}
+          </span>
         </div>
 
-        <Link to="/panel/pedidos" className="widget link stack" style={{ justifyContent: 'space-between', minHeight: 150 }}>
-          <Ring value={todays.length ? Math.min(1, done / todays.length) : 0} label="Pedidos completados hoy" />
-          <span className="stack" style={{ gap: 0 }}>
-            <span className="eyebrow">En curso</span>
-            <span className="title-lg">{inProgress.length} {inProgress.length === 1 ? 'pedido' : 'pedidos'}</span>
-          </span>
-        </Link>
+        {isRestaurant && (
+          <Link to="/panel/pedidos" className="widget link stack" style={{ justifyContent: 'space-between', minHeight: 150 }}>
+            <Ring value={todays.length ? Math.min(1, done / todays.length) : 0} label="Comandas servidas hoy" />
+            <span className="stack" style={{ gap: 0 }}>
+              <span className="eyebrow">Comandas en curso</span>
+              <span className="title-lg">{inProgress.length}</span>
+            </span>
+          </Link>
+        )}
 
         <Link to="/panel/pedidos" className="widget link stack" style={{ justifyContent: 'space-between', minHeight: 150, background: pendingRes.length ? 'var(--accent)' : undefined }}>
           <span className="mono" style={{ background: 'var(--ink)', color: 'var(--accent)' }}><Icon name="calendar" /></span>
@@ -81,7 +90,7 @@ export default function Overview() {
           <Link to="/panel/carta" className="widget link stack" style={{ justifyContent: 'space-between', minHeight: 150, background: 'var(--cover)', color: '#fff' }}>
             <span className="mono" style={{ background: 'rgba(255,255,255,.16)', color: '#fff' }}><Icon name="book" /></span>
             <span className="stack" style={{ gap: 0 }}>
-              <span className="eyebrow" style={{ color: 'rgba(255,255,255,.75)' }}>Catálogo</span>
+              <span className="eyebrow" style={{ color: 'rgba(255,255,255,.75)' }}>{kind === 'beauty' ? 'Servicios' : 'Catálogo'}</span>
               <span className="title-lg">Gestionar</span>
             </span>
           </Link>
@@ -90,7 +99,7 @@ export default function Overview() {
 
       <div className="widget" style={{ paddingBottom: 4 }}>
         <div className="row between">
-          <h2 className="title-lg">Últimos pedidos</h2>
+          <h2 className="title-lg">Últimas reservas</h2>
           <Link to="/panel/pedidos" className="small">Ver todos</Link>
         </div>
         {data.orders.slice(0, 6).map((o) => (
@@ -105,7 +114,7 @@ export default function Overview() {
             </span>
           </div>
         ))}
-        {data.orders.length === 0 && <p className="small muted" style={{ padding: '10px 0' }}>Cuando lleguen pedidos aparecerán aquí.</p>}
+        {data.orders.length === 0 && <p className="small muted" style={{ padding: '10px 0' }}>Cuando lleguen reservas aparecerán aquí.</p>}
       </div>
     </div>
   );

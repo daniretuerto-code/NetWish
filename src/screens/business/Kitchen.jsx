@@ -64,7 +64,7 @@ export default function Kitchen() {
                     <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em' }}>Mesa {s.table_number}</span>
                   </span>
                   <span className="pill" style={{ background: paid ? 'var(--accent)' : 'rgba(255,255,255,.14)', color: paid ? 'var(--ink)' : '#fff' }}>
-                    {paid ? 'Pagada' : `Pendiente ${money(s.remaining_amount)}`}
+                    {paid ? 'Cerrada' : money(s.remaining_amount)}
                   </span>
                 </div>
                 <div className="stack" style={{ gap: 6 }}>

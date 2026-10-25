@@ -1,13 +1,11 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx';
 import { CustomerShell, BusinessShell } from './components/Shell.jsx';
 import { Spinner } from './components/ui.jsx';
 import Home from './screens/customer/Home.jsx';
 import Explore from './screens/customer/Explore.jsx';
 import Business from './screens/customer/Business.jsx';
-import Checkout from './screens/customer/Checkout.jsx';
-import Pay from './screens/customer/Pay.jsx';
 import Table from './screens/customer/Table.jsx';
 import Orders from './screens/customer/Orders.jsx';
 import Account from './screens/customer/Account.jsx';
@@ -21,6 +19,8 @@ const BizCatalog = lazy(() => import('./screens/business/Catalog.jsx'));
 const BizTables = lazy(() => import('./screens/business/Tables.jsx'));
 const BizMessages = lazy(() => import('./screens/business/Messages.jsx'));
 const BizSettings = lazy(() => import('./screens/business/Settings.jsx'));
+const BizHours = lazy(() => import('./screens/business/Hours.jsx'));
+const BizPortal = lazy(() => import('./screens/business/Portal.jsx'));
 
 // Printed QR codes point to /?biz=NAME&table=N, so keep that entry point working.
 function LegacyLinks() {
@@ -39,17 +39,20 @@ function LegacyLinks() {
 function RequireBusiness({ children }) {
   const { ready, business } = useAuth();
   if (!ready) return <Spinner />;
-  if (!business) return <Navigate to="/cuenta" replace />;
+  if (!business) return <Navigate to="/negocios" replace />;
   return children;
 }
 
+// Old payment QR codes and links now land on the business page.
+function OldPayLink() {
+  const { name } = useParams();
+  return <Navigate to={`/negocio/${encodeURIComponent(name)}`} replace />;
+}
+
 export default function App() {
-  const { ready, mode } = useAuth();
-  const location = useLocation();
+  const { ready } = useAuth();
 
   if (!ready) return <Spinner />;
-
-  if (mode === 'business' && location.pathname === '/') return <Navigate to="/panel" replace />;
 
   return (
     <Suspense fallback={<Spinner />}>
@@ -58,15 +61,17 @@ export default function App() {
         <Route element={<CustomerShell />}>
           <Route index element={<Home />} />
           <Route path="explorar" element={<Explore />} />
-          <Route path="pedidos" element={<Orders />} />
+          <Route path="reservas" element={<Orders />} />
+          <Route path="pedidos" element={<Navigate to="/reservas" replace />} />
           <Route path="cuenta" element={<Account />} />
           <Route path="escanear" element={<Scan />} />
           <Route path="negocio/:name" element={<Business />} />
-          <Route path="negocio/:name/pedido" element={<Checkout />} />
-          <Route path="pagar/:name" element={<Pay />} />
+          <Route path="negocio/:name/pedido" element={<OldPayLink />} />
+          <Route path="pagar/:name" element={<OldPayLink />} />
           <Route path="mesa/:name/:table" element={<Table />} />
           <Route path="chat/:name" element={<Chat />} />
         </Route>
+        <Route path="negocios" element={<BizPortal />} />
         <Route path="panel" element={<RequireBusiness><BusinessShell /></RequireBusiness>}>
           <Route index element={<BizOverview />} />
           <Route path="pedidos" element={<BizOrders />} />
@@ -75,6 +80,7 @@ export default function App() {
           <Route path="mesas" element={<BizTables />} />
           <Route path="mensajes" element={<BizMessages />} />
           <Route path="ajustes" element={<BizSettings />} />
+          <Route path="horario" element={<BizHours />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

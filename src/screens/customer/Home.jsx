@@ -5,10 +5,10 @@ import { BusinessRow, CoverCard } from '../../components/BusinessCards.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { listBusinesses, myOrders, isReservation, STATUS } from '../../lib/data.js';
-import { CATEGORIES, kindOf } from '../../lib/categories.js';
+import { CATEGORIES, kindOf, taglineFor } from '../../lib/categories.js';
 import { initials, longDate, money } from '../../lib/format.js';
 
-const ACTIVE = [STATUS.KITCHEN, STATUS.PENDING, STATUS.PAID, STATUS.CONFIRMED, STATUS.READY];
+const ACTIVE = [STATUS.KITCHEN, STATUS.PENDING, STATUS.CONFIRMED, STATUS.READY];
 
 function ActiveOrderWidget({ user }) {
   const { data: orders } = useAsync(() => (user ? myOrders() : Promise.resolve([])), [user?.id]);
@@ -28,9 +28,9 @@ function ActiveOrderWidget({ user }) {
   }
 
   const progress = active.status === STATUS.KITCHEN ? 0.62 : active.status === STATUS.PENDING ? 0.3 : 0.9;
-  const label = active.status === STATUS.KITCHEN ? 'En cocina' : active.status === STATUS.PENDING ? 'Pendiente' : active.status === STATUS.CONFIRMED ? 'Confirmada' : 'Pagado';
+  const label = active.status === STATUS.KITCHEN ? 'En cocina' : active.status === STATUS.PENDING ? 'Pendiente' : active.status === STATUS.CONFIRMED ? 'Confirmada' : 'Listo';
   return (
-    <Link to="/pedidos" className="widget link" style={{ minHeight: 168, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+    <Link to="/reservas" className="widget link" style={{ minHeight: 168, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
       <Ring value={progress} label={`${label}`} />
       <span className="stack" style={{ gap: 0 }}>
         <span className="eyebrow" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{active.business_name}</span>
@@ -64,13 +64,13 @@ export default function Home() {
 
       <div className="two-col">
         <div className="stack">
-          {featured && <CoverCard featured biz={featured} eyebrow="Destacado hoy" subtitle={kindOf(featured) === 'restaurant' ? 'Reserva o pide desde tu mesa' : featured.category} />}
+          {featured && <CoverCard featured biz={featured} eyebrow="Destacado hoy" subtitle={taglineFor(featured)} />}
 
           <div className="bento">
             <Link to="/escanear" className="widget dark link" style={{ minHeight: 168, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <span className="mono lg" style={{ background: 'var(--accent)', color: 'var(--ink)', width: 56, height: 56 }}><Icon name="scan" size={28} /></span>
               <span className="stack" style={{ gap: 0 }}>
-                <span className="eyebrow">Pagar o pedir</span>
+                <span className="eyebrow">Mesa o comercio</span>
                 <span className="title-lg">Escanear QR</span>
               </span>
             </Link>
