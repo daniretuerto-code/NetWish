@@ -4,7 +4,8 @@ import { BackButton, Empty, Spinner, Stepper, useToast } from '../../components/
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useCart } from '../../context/CartContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
-import { addItemsToTable, findBusiness, listProducts, openTableSession, subscribe } from '../../lib/data.js';
+import { addItemsToTable, findBusiness, getRestaurantSettings, listProducts, openTableSession, subscribe } from '../../lib/data.js';
+import { modulesFor } from '../../lib/questionnaire.js';
 import { money, sameName } from '../../lib/format.js';
 
 export default function Table() {
@@ -20,8 +21,8 @@ export default function Table() {
   const { data, loading } = useAsync(async () => {
     const biz = await findBusiness(name);
     const bizName = biz?.name || name;
-    const [products, open] = await Promise.all([listProducts(bizName), openTableSession(bizName, table)]);
-    return { biz, bizName, products, open };
+    const [products, open, settings] = await Promise.all([listProducts(bizName), openTableSession(bizName, table), getRestaurantSettings(bizName)]);
+    return { biz, bizName, products, open, canOrder: modulesFor(settings.profile).pedidosQr };
   }, [name, table]);
 
   useEffect(() => {
@@ -54,7 +55,7 @@ export default function Table() {
   }, [session]);
 
   if (loading) return <Spinner />;
-  const { bizName, products } = data;
+  const { bizName, products, canOrder } = data;
 
   const send = async () => {
     setSending(true);
@@ -131,7 +132,8 @@ export default function Table() {
 
         <div className="stack" ref={cartaRef}>
           <div className="widget" style={{ paddingBottom: 4 }}>
-            <h2 className="title-lg">Pedir</h2>
+            <h2 className="title-lg">{canOrder ? 'Pedir' : 'Carta'}</h2>
+            {!canOrder && <p className="small muted" style={{ margin: '4px 0 0' }}>Pide al camarero cuando quieras.</p>}
             {products.length === 0 ? (
               <Empty icon="book" title="La carta aún no está disponible" />
             ) : products.map((p) => (
@@ -140,7 +142,7 @@ export default function Table() {
                   <span className="t">{p.name}</span>
                   <span className="s price">{money(p.price)}</span>
                 </span>
-                <Stepper qty={round.qtyOf(p.id)} onAdd={() => cart.add(roundKey, p)} onRemove={() => cart.remove(roundKey, p)} />
+                {canOrder ? <Stepper qty={round.qtyOf(p.id)} onAdd={() => cart.add(roundKey, p)} onRemove={() => cart.remove(roundKey, p)} /> : null}
               </div>
             ))}
           </div>

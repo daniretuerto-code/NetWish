@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate, useOutletContext } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
 import { PageHeader, Ring, Spinner } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -7,6 +7,7 @@ import useAsync from '../../hooks/useAsync.js';
 import { businessInbox, businessOrders, isReservation, kitchenSessions, STATUS, subscribe } from '../../lib/data.js';
 import { kindOf } from '../../lib/categories.js';
 import { greeting, longDate, money, todayISO } from '../../lib/format.js';
+import { profileProgress } from '../../lib/questionnaire.js';
 
 const ACTIVE = [STATUS.KITCHEN];
 
@@ -14,6 +15,7 @@ export default function Overview() {
   const { business } = useAuth();
   const kind = kindOf(business);
   const isRestaurant = kind === 'restaurant';
+  const { settings, modules } = useOutletContext();
   const { data, loading, reload } = useAsync(async () => {
     const [orders, inbox, sessions] = await Promise.all([
       businessOrders(business.name),
@@ -25,7 +27,10 @@ export default function Overview() {
 
   useEffect(() => subscribe('orders', () => reload()), [reload]);
 
+  // A restaurant that hasn't answered the questionnaire starts there.
+  if (isRestaurant && settings && !settings.profile?.onboarded) return <Navigate to="/panel/empezar" replace />;
   if (loading && !data) return <Spinner />;
+  const pct = isRestaurant && settings ? profileProgress(settings.profile || {}) : 100;
   const today = todayISO();
   const todays = data.orders.filter((o) => o.date === today && o.status !== STATUS.REJECTED);
   const todaysBookings = todays
@@ -52,7 +57,7 @@ export default function Overview() {
           </span>
         </div>
 
-        {isRestaurant && (
+        {isRestaurant && modules.pedidosQr && (
           <Link to="/panel/pedidos" className="widget link stack" style={{ justifyContent: 'space-between', minHeight: 150 }}>
             <Ring value={todays.length ? Math.min(1, done / todays.length) : 0} label="Comandas servidas hoy" />
             <span className="stack" style={{ gap: 0 }}>
@@ -62,6 +67,7 @@ export default function Overview() {
           </Link>
         )}
 
+{(!isRestaurant || modules.reservas) && (
         <Link to="/panel/pedidos" className="widget link stack" style={{ justifyContent: 'space-between', minHeight: 150, background: pendingRes.length ? 'var(--accent)' : undefined }}>
           <span className="mono" style={{ background: 'var(--ink)', color: 'var(--accent)' }}><Icon name="calendar" /></span>
           <span className="stack" style={{ gap: 0 }}>
@@ -69,6 +75,7 @@ export default function Overview() {
             <span className="title-lg">{pendingRes.length} por confirmar</span>
           </span>
         </Link>
+        )}
 
         <Link to="/panel/mensajes" className="widget link stack" style={{ justifyContent: 'space-between', minHeight: 150 }}>
           <span className="mono" style={{ background: 'var(--bg)', color: 'var(--ink)' }}><Icon name="chat" /></span>
@@ -78,7 +85,17 @@ export default function Overview() {
           </span>
         </Link>
 
-        {isRestaurant ? (
+        {pct < 100 && (
+          <Link to="/panel/personalizar" className="widget link stack" style={{ justifyContent: 'space-between', minHeight: 150, background: 'var(--accent)' }}>
+            <Ring value={pct / 100} color="var(--ink)" label={`Perfil completado al ${pct} %`} />
+            <span className="stack" style={{ gap: 0 }}>
+              <span className="eyebrow" style={{ color: 'inherit', opacity: 0.7 }}>Personaliza tu negocio</span>
+              <span className="title-lg">{pct} % completado</span>
+            </span>
+          </Link>
+        )}
+
+        {isRestaurant && modules.cocina ? (
           <Link to="/panel/cocina" className="widget link stack" style={{ justifyContent: 'space-between', minHeight: 150, background: 'var(--cover)', color: '#fff' }}>
             <span className="mono" style={{ background: 'rgba(255,255,255,.16)', color: '#fff' }}><Icon name="flame" /></span>
             <span className="stack" style={{ gap: 0 }}>
@@ -90,7 +107,7 @@ export default function Overview() {
           <Link to="/panel/carta" className="widget link stack" style={{ justifyContent: 'space-between', minHeight: 150, background: 'var(--cover)', color: '#fff' }}>
             <span className="mono" style={{ background: 'rgba(255,255,255,.16)', color: '#fff' }}><Icon name="book" /></span>
             <span className="stack" style={{ gap: 0 }}>
-              <span className="eyebrow" style={{ color: 'rgba(255,255,255,.75)' }}>{kind === 'beauty' ? 'Servicios' : 'Catálogo'}</span>
+              <span className="eyebrow" style={{ color: 'rgba(255,255,255,.75)' }}>{kind === 'beauty' ? 'Servicios' : isRestaurant ? 'Carta' : 'Catálogo'}</span>
               <span className="title-lg">Gestionar</span>
             </span>
           </Link>

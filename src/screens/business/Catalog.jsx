@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
 import { Empty, PageHeader, Sheet, Spinner, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -175,6 +176,7 @@ export default function Catalog() {
   const kind = kindOf(business);
   const music = kind === 'music';
   const beauty = kind === 'beauty';
+  const { modules } = useOutletContext() || {};
   const [tab, setTab] = useState('carta');
   const [adding, setAdding] = useState(false);
   const [confirmId, setConfirmId] = useState(null);
@@ -214,7 +216,7 @@ export default function Catalog() {
         right={tab === 'carta' && <button className="btn primary sm" onClick={() => setAdding(true)}><Icon name="plus" size={16} /> Añadir</button>}
       />
 
-      {kind === 'restaurant' && (
+      {kind === 'restaurant' && modules?.menuDia !== false && (
         <div className="segmented" role="tablist">
           <button role="tab" aria-selected={tab === 'carta'} onClick={() => setTab('carta')}>Carta</button>
           <button role="tab" aria-selected={tab === 'menu'} onClick={() => setTab('menu')}>Menú del día</button>

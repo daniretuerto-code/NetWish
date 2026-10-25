@@ -8,6 +8,7 @@ import useAsync from '../../hooks/useAsync.js';
 import { findBusiness, getRestaurantSettings, listProducts } from '../../lib/data.js';
 import { categoryOf, kindOf } from '../../lib/categories.js';
 import { initials, money, toneFor } from '../../lib/format.js';
+import { modulesFor, publicFacts } from '../../lib/questionnaire.js';
 
 function Hero({ biz }) {
   return (
@@ -156,10 +157,13 @@ export default function Business() {
   const { biz, kind, products, settings } = data;
   const isRestaurant = kind === 'restaurant';
   const isBeauty = kind === 'beauty';
+  const mods = modulesFor(isRestaurant ? settings?.profile : {});
+  const canBook = isRestaurant && mods.reservas;
+  const facts = isRestaurant ? publicFacts(settings?.profile) : { headline: '', badges: [] };
   const tile = { textDecoration: 'none', gap: 8, boxShadow: 'var(--shadow)' };
 
   const tiles = [
-    isRestaurant && (
+    canBook && (
       <button key="res" className="widget tight stack" style={{ ...tile, border: 0, textAlign: 'left' }} onClick={() => setReserveOpen(true)}>
         <span className="small muted">Mesa</span>
         <span style={{ fontSize: 16, fontWeight: 800 }}>Reservar</span>
@@ -189,16 +193,27 @@ export default function Business() {
   ].filter(Boolean);
 
   return (
-    <div className="page flush-top" style={{ paddingBottom: isRestaurant || isBeauty ? 120 : undefined }}>
+    <div className="page flush-top" style={{ paddingBottom: canBook || isBeauty ? 120 : undefined }}>
       <Hero biz={biz} />
 
       <div className="overlap stack">
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${tiles.length}, minmax(0, 1fr))`, gap: 10 }}>{tiles}</div>
 
+        {(facts.headline || facts.badges.length > 0) && (
+          <div className="widget stack" style={{ gap: 10 }}>
+            {facts.headline && <span style={{ fontSize: 17, fontWeight: 800 }}>{facts.headline}</span>}
+            {facts.badges.length > 0 && (
+              <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
+                {facts.badges.map((b) => <span key={b} className="pill" style={{ background: 'var(--bg)', height: 30, fontSize: 13 }}>{b}</span>)}
+              </div>
+            )}
+          </div>
+        )}
+
         {isRestaurant && (
           <div className="segmented" role="tablist" aria-label="Secciones">
             <button role="tab" aria-selected={tab === 'carta'} onClick={() => setTab('carta')}>Carta</button>
-            <button role="tab" aria-selected={tab === 'menu'} onClick={() => setTab('menu')}>Menú del día</button>
+            {mods.menuDia && <button role="tab" aria-selected={tab === 'menu'} onClick={() => setTab('menu')}>Menú del día</button>}
             <button role="tab" aria-selected={tab === 'info'} onClick={() => setTab('info')}>Horario</button>
           </div>
         )}
@@ -211,23 +226,27 @@ export default function Business() {
         ) : (
           (!isRestaurant || tab === 'carta') && <ProductList biz={biz} products={products} music={kind === 'music'} />
         )}
-        {isRestaurant && tab === 'menu' && <DailyMenu menu={settings?.daily_menu} />}
+        {isRestaurant && mods.menuDia && tab === 'menu' && <DailyMenu menu={settings?.daily_menu} />}
         {isRestaurant && tab === 'info' && (
           <div className="widget stack">
-            <div className="list-row"><span className="grow t">Comidas</span><span className="s">{settings.lunch_start} – {settings.lunch_end}</span></div>
-            <div className="list-row"><span className="grow t">Cenas</span><span className="s">{settings.dinner_start} – {settings.dinner_end}</span></div>
+            {settings.lunch_start && <div className="list-row"><span className="grow t">Comidas</span><span className="s">{settings.lunch_start} – {settings.lunch_end}</span></div>}
+            {settings.dinner_start && <div className="list-row"><span className="grow t">Cenas</span><span className="s">{settings.dinner_start} – {settings.dinner_end}</span></div>}
+            {(settings.closed_days || []).length > 0 && (
+              <div className="list-row"><span className="grow t">Cerrado</span><span className="s">{settings.closed_days.map((d) => ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][d]).join(', ')}</span></div>
+            )}
+            {settings.profile?.para_llevar && biz.telefono && <a className="btn soft block" href={`tel:${biz.telefono}`}>Llamar para pedir para llevar</a>}
           </div>
         )}
       </div>
 
-      {isRestaurant && (
+      {canBook && (
         <button className="cta-bar" onClick={() => setReserveOpen(true)}>
           <span style={{ fontSize: 16, fontWeight: 800 }}>Reserva tu mesa</span>
           <span className="go">Reservar</span>
         </button>
       )}
 
-      {isRestaurant && <ReserveSheet open={reserveOpen} onClose={() => setReserveOpen(false)} biz={biz} settings={settings} />}
+      {canBook && <ReserveSheet open={reserveOpen} onClose={() => setReserveOpen(false)} biz={biz} settings={settings} />}
     </div>
   );
 }

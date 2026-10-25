@@ -124,6 +124,11 @@ export default function Settings() {
       </form>
 
       <div className="widget" style={{ paddingBottom: 4 }}>
+        {kindOf(business) === 'restaurant' && (
+          <Link to="/panel/personalizar" className="list-row">
+            <Icon name="gear" /><span className="grow t">Personaliza tu negocio</span><Icon name="chevron" size={18} />
+          </Link>
+        )}
         {kindOf(business) === 'beauty' && (
           <Link to="/panel/horario" className="list-row">
             <Icon name="calendar" /><span className="grow t">Horario y equipo</span><Icon name="chevron" size={18} />

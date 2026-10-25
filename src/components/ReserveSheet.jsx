@@ -41,6 +41,14 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
   const tables = settings?.tables?.length ? settings.tables : DEFAULT_TABLES;
   const zones = [...new Set(tables.map((t) => t.zone || 'Sala Principal'))];
   const duration = settings?.turn_duration_min || 90;
+  const rules = settings?.profile || {};
+  const maxGuests = Number(rules.max_personas) || 20;
+  const notice = Number(rules.aviso_min) || 30;
+  const lastDay = (() => {
+    const d = new Date(`${todayISO()}T12:00:00`);
+    d.setDate(d.getDate() + (Number(rules.dias_vista) || 60));
+    return d.toISOString().slice(0, 10);
+  })();
 
   const [date, setDate] = useState(todayISO());
   const [guests, setGuests] = useState(2);
@@ -60,10 +68,11 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
     const now = new Date();
     const isToday = date === todayISO();
     const nowMin = now.getHours() * 60 + now.getMinutes();
-    if (isClosed(settings, date)) return [];
+    if (isClosed(settings, date) || date > lastDay) return [];
+    const startOf = (t) => new Date(`${date}T${t}:00`).getTime();
     return [...slots(settings.lunch_start, settings.lunch_end), ...slots(settings.dinner_start, settings.dinner_end)]
-      .filter((t) => !isToday || timeToMinutes(t) > nowMin + 30);
-  }, [settings, date]);
+      .filter((t) => (!isToday || timeToMinutes(t) > nowMin) && startOf(t) - now.getTime() >= notice * 60000);
+  }, [settings, date, notice, lastDay]);
 
   const tableFor = (slot) => {
     const busy = busyTables(bookings, slot, duration);
@@ -115,14 +124,14 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
           <div className="widget stack">
             <div className="field">
               <label htmlFor="resv-date">Día</label>
-              <input id="resv-date" className="input" type="date" min={todayISO()} value={date} onChange={(e) => { setDate(e.target.value); setTime(''); }} />
+              <input id="resv-date" className="input" type="date" min={todayISO()} max={lastDay} value={date} onChange={(e) => { setDate(e.target.value); setTime(''); }} />
             </div>
             <div className="row between">
               <span className="label" style={{ fontWeight: 600, color: 'var(--muted)', fontSize: 13 }}>Personas</span>
               <span className="row" style={{ gap: 8 }}>
                 <button className="icon-btn" style={{ background: 'var(--bg)' }} onClick={() => setGuests((g) => Math.max(1, g - 1))} aria-label="Menos personas"><Icon name="minus" /></button>
                 <span className="title-lg price" style={{ minWidth: 28, textAlign: 'center' }}>{guests}</span>
-                <button className="icon-btn" style={{ background: 'var(--bg)' }} onClick={() => setGuests((g) => Math.min(20, g + 1))} aria-label="Más personas"><Icon name="plus" /></button>
+                <button className="icon-btn" style={{ background: 'var(--bg)' }} onClick={() => setGuests((g) => Math.min(maxGuests, g + 1))} aria-label="Más personas"><Icon name="plus" /></button>
               </span>
             </div>
             {zones.length > 1 && (
@@ -149,6 +158,10 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
             {allSlots.length === 0 && <p className="small muted" style={{ marginTop: 8 }}>{isClosed(settings, date) ? 'Este día el restaurante cierra.' : 'No quedan horas libres para este día.'}</p>}
           </div>
 
+          {guests >= maxGuests && (
+            <p className="small muted" style={{ margin: 0 }}>¿Sois más de {maxGuests}? Llama a {biz.name}{biz.telefono ? ` al ${biz.telefono}` : ''} para reservar.</p>
+          )}
+          {rules.cancelacion && <p className="small muted" style={{ margin: 0 }}>{rules.cancelacion}</p>}
           <button className="btn primary block" disabled={!time || saving} onClick={submit}>
             {saving ? 'Enviando…' : time ? `Solicitar mesa a las ${time}` : 'Elige una hora'}
           </button>
