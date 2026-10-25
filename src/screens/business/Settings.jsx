@@ -1,27 +1,27 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import Icon from '../../components/Icon.jsx';
 import { Mono, PageHeader, Sheet, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { safeSlug, updateBusiness, uploadPublicFile } from '../../lib/data.js';
-import { CATEGORIES } from '../../lib/categories.js';
-import { payCode } from '../../lib/qr.js';
+import { CATEGORIES, kindOf } from '../../lib/categories.js';
+import { businessUrl } from '../../lib/qr.js';
 import { toneFor } from '../../lib/format.js';
 
 const MAX_IMAGE_MB = 8;
 
-function PayQrSheet({ open, onClose, business }) {
+function BusinessQrSheet({ open, onClose, business }) {
   const [src, setSrc] = useState('');
   useEffect(() => {
-    if (open) QRCode.toDataURL(payCode(business.name), { margin: 1, width: 440 }).then(setSrc);
+    if (open) QRCode.toDataURL(businessUrl(business.name), { margin: 1, width: 440 }).then(setSrc);
   }, [open, business.name]);
   return (
-    <Sheet open={open} onClose={onClose} title="QR de cobro">
+    <Sheet open={open} onClose={onClose} title="QR de tu negocio">
       <div className="stack printable" style={{ alignItems: 'center', textAlign: 'center' }}>
-        <div className="qr-box">{src ? <img src={src} alt="Código QR de cobro" /> : <div className="spinner" />}</div>
-        <strong style={{ fontSize: 22 }}>Paga en {business.name}</strong>
-        <span className="small muted">Escanea con NetWish para pagar desde el móvil</span>
+        <div className="qr-box">{src ? <img src={src} alt="Código QR de tu negocio" /> : <div className="spinner" />}</div>
+        <strong style={{ fontSize: 22 }}>Reserva en {business.name}</strong>
+        <span className="small muted">Escanea para ver {kindOf(business) === 'restaurant' ? 'la carta y reservar mesa' : 'nuestros servicios y reservar'}</span>
       </div>
       <button className="btn primary block" style={{ marginTop: 14 }} onClick={() => window.print()}><Icon name="printer" size={18} /> Imprimir</button>
     </Sheet>
@@ -29,7 +29,7 @@ function PayQrSheet({ open, onClose, business }) {
 }
 
 export default function Settings() {
-  const { business, refreshBusiness, setMode, signOut } = useAuth();
+  const { business, refreshBusiness, signOut } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const [form, setForm] = useState({
@@ -117,25 +117,30 @@ export default function Settings() {
         </div>
         <div className="field"><label htmlFor="s-tel">Teléfono</label><input id="s-tel" className="input" type="tel" value={form.telefono} onChange={set('telefono')} /></div>
         <div className="field">
-          <label htmlFor="s-mail">Correo para avisos de pedidos</label>
-          <input id="s-mail" className="input" type="email" value={form.notification_email} onChange={set('notification_email')} placeholder="pedidos@tunegocio.es" />
+          <label htmlFor="s-mail">Correo para avisos de reservas</label>
+          <input id="s-mail" className="input" type="email" value={form.notification_email} onChange={set('notification_email')} placeholder="reservas@tunegocio.es" />
         </div>
         <button className="btn primary block" disabled={busy}>{busy ? 'Guardando…' : 'Guardar'}</button>
       </form>
 
       <div className="widget" style={{ paddingBottom: 4 }}>
+        {kindOf(business) === 'beauty' && (
+          <Link to="/panel/horario" className="list-row">
+            <Icon name="calendar" /><span className="grow t">Horario y equipo</span><Icon name="chevron" size={18} />
+          </Link>
+        )}
         <button className="list-row" onClick={() => setPayOpen(true)}>
-          <Icon name="qr" /><span className="grow t">QR de cobro para el mostrador</span><Icon name="chevron" size={18} />
+          <Icon name="qr" /><span className="grow t">QR para el escaparate o el mostrador</span><Icon name="chevron" size={18} />
         </button>
-        <button className="list-row" onClick={() => { setMode('customer'); navigate('/'); }}>
-          <Icon name="person" /><span className="grow t">Usar NetWish como cliente</span><Icon name="chevron" size={18} />
-        </button>
-        <button className="list-row" onClick={() => signOut().then(() => navigate('/'))}>
+        <a className="list-row" href={businessUrl(business.name)} target="_blank" rel="noreferrer">
+          <Icon name="store" /><span className="grow t">Ver mi página como cliente</span><Icon name="chevron" size={18} />
+        </a>
+        <button className="list-row" onClick={() => signOut().then(() => navigate('/negocios'))}>
           <Icon name="logout" /><span className="grow t">Cerrar sesión</span>
         </button>
       </div>
 
-      <PayQrSheet open={payOpen} onClose={() => setPayOpen(false)} business={business} />
+      <BusinessQrSheet open={payOpen} onClose={() => setPayOpen(false)} business={business} />
     </div>
   );
 }

@@ -8,7 +8,6 @@ import { parseNetWishQR } from '../../lib/qr.js';
 const routeFor = (qr) => {
   const biz = encodeURIComponent(qr.business);
   if (qr.type === 'table') return `/mesa/${biz}/${qr.table}`;
-  if (qr.type === 'pay') return `/pagar/${biz}`;
   return `/negocio/${biz}`;
 };
 

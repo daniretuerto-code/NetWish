@@ -48,6 +48,12 @@ export const greeting = () => {
   return 'Buenas noches';
 };
 
+export const duration = (min) => {
+  const m = Math.round(Number(min) || 0);
+  if (m < 60) return `${m} min`;
+  return m % 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m / 60} h`;
+};
+
 export const timeToMinutes = (t) => {
   const [h, m] = String(t || '0:0').split(':').map(Number);
   return (h || 0) * 60 + (m || 0);

@@ -5,13 +5,16 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { createProduct, deleteProduct, getRestaurantSettings, listProducts, safeSlug, saveRestaurantSettings, uploadPublicFile } from '../../lib/data.js';
 import { kindOf } from '../../lib/categories.js';
-import { money } from '../../lib/format.js';
+import { duration, money } from '../../lib/format.js';
+
+const DURATIONS = [15, 20, 30, 45, 60, 75, 90, 105, 120, 150, 180, 210, 240];
+const EXTRA_LONG = [0, 15, 30, 45, 60];
 
 const MAX_AUDIO_MB = 25;
 
-function ProductSheet({ open, onClose, business, music, sections, onSaved }) {
+function ProductSheet({ open, onClose, business, music, beauty, sections, onSaved }) {
   const toast = useToast();
-  const empty = { name: '', description: '', price: '', section: sections[0] || '', finished: false };
+  const empty = { name: '', description: '', price: '', section: sections[0] || '', finished: false, duration: '30', extra: '0', from: false };
   const [form, setForm] = useState(empty);
   const [preview, setPreview] = useState(null);
   const [master, setMaster] = useState(null);
@@ -40,13 +43,18 @@ function ProductSheet({ open, onClose, business, music, sections, onSaved }) {
         price,
         section: form.section.trim().slice(0, 60) || null,
       };
+      if (beauty) {
+        product.duration_min = Number(form.duration) || 30;
+        product.extra_long_min = Number(form.extra) || 0;
+        product.price_from = form.from;
+      }
       if (music) {
         product.is_finished_beat = form.finished;
         if (preview) product.audio_url = await upload(preview, 'preview');
         if (master) product.full_audio_url = await upload(master, 'master');
       }
       await createProduct(product);
-      toast('Producto añadido');
+      toast(beauty ? 'Servicio añadido' : 'Producto añadido');
       setForm(empty);
       setPreview(null);
       setMaster(null);
@@ -60,17 +68,39 @@ function ProductSheet({ open, onClose, business, music, sections, onSaved }) {
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title={music ? 'Nuevo beat' : 'Nuevo producto'}>
+    <Sheet open={open} onClose={onClose} title={music ? 'Nuevo beat' : beauty ? 'Nuevo servicio' : 'Nuevo producto'}>
       <form className="stack" onSubmit={submit}>
         <div className="field"><label htmlFor="p-name">Nombre</label><input id="p-name" className="input" required value={form.name} onChange={set('name')} /></div>
         <div className="bento">
           <div className="field"><label htmlFor="p-price">Precio (€)</label><input id="p-price" className="input" inputMode="decimal" required value={form.price} onChange={set('price')} placeholder="0,00" /></div>
           <div className="field">
             <label htmlFor="p-section">Sección</label>
-            <input id="p-section" className="input" list="sections" value={form.section} onChange={set('section')} placeholder={music ? 'Trap, Drill…' : 'Entrantes, Bebidas…'} />
+            <input id="p-section" className="input" list="sections" value={form.section} onChange={set('section')} placeholder={music ? 'Trap, Drill…' : beauty ? 'Mujer, Hombre, Color…' : 'Entrantes, Bebidas…'} />
             <datalist id="sections">{sections.map((s) => <option key={s} value={s} />)}</datalist>
           </div>
         </div>
+        {beauty && (
+          <>
+            <div className="bento">
+              <div className="field">
+                <label htmlFor="p-dur">Duración</label>
+                <select id="p-dur" className="input" value={form.duration} onChange={set('duration')}>
+                  {DURATIONS.map((m) => <option key={m} value={m}>{duration(m)}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="p-extra">Más tiempo si el pelo es largo</label>
+                <select id="p-extra" className="input" value={form.extra} onChange={set('extra')}>
+                  {EXTRA_LONG.map((m) => <option key={m} value={m}>{m ? `+${duration(m)}` : 'No cambia'}</option>)}
+                </select>
+              </div>
+            </div>
+            <label className="row" style={{ gap: 10, fontWeight: 600 }}>
+              <input type="checkbox" checked={form.from} onChange={set('from')} style={{ width: 20, height: 20 }} />
+              El precio es "desde" (puede variar)
+            </label>
+          </>
+        )}
         <div className="field"><label htmlFor="p-desc">Descripción</label><textarea id="p-desc" className="input" value={form.description} onChange={set('description')} /></div>
         {music && (
           <>
@@ -144,6 +174,7 @@ export default function Catalog() {
   const toast = useToast();
   const kind = kindOf(business);
   const music = kind === 'music';
+  const beauty = kind === 'beauty';
   const [tab, setTab] = useState('carta');
   const [adding, setAdding] = useState(false);
   const [confirmId, setConfirmId] = useState(null);
@@ -179,7 +210,7 @@ export default function Catalog() {
     <div className="page">
       <PageHeader
         eyebrow={business.name}
-        title={kind === 'restaurant' ? 'Carta' : 'Catálogo'}
+        title={kind === 'restaurant' ? 'Carta' : beauty ? 'Servicios' : 'Catálogo'}
         right={tab === 'carta' && <button className="btn primary sm" onClick={() => setAdding(true)}><Icon name="plus" size={16} /> Añadir</button>}
       />
 
@@ -192,7 +223,8 @@ export default function Catalog() {
 
       {tab === 'menu' ? <DailyMenuEditor business={business} /> : products.length === 0 ? (
         <div className="widget">
-          <Empty icon="book" title="Tu catálogo está vacío">
+          <Empty icon={beauty ? 'scissors' : 'book'} title={beauty ? 'Añade tus servicios' : 'Tu catálogo está vacío'}>
+            {beauty && <span>Corte, tinte, mechas… con su duración, para que la agenda sepa cuánto ocupa cada cita.</span>}
             <button className="btn primary" style={{ marginTop: 8 }} onClick={() => setAdding(true)}>Añadir el primero</button>
           </Empty>
         </div>
@@ -206,7 +238,8 @@ export default function Catalog() {
                   <span className="grow stack" style={{ gap: 1, minWidth: 0 }}>
                     <span className="t">{p.name}</span>
                     <span className="s">
-                      <span className="price">{money(p.price)}</span>
+                      {beauty && `${duration(p.duration_min || 30)}${p.extra_long_min ? ` (+${p.extra_long_min} pelo largo)` : ''} · `}
+                      <span className="price">{beauty && p.price_from ? 'desde ' : ''}{money(p.price)}</span>
                       {music && (p.full_audio_url ? ' · con archivo' : ' · sin archivo')}
                     </span>
                   </span>
@@ -221,7 +254,7 @@ export default function Catalog() {
         </div>
       )}
 
-      <ProductSheet open={adding} onClose={() => setAdding(false)} business={business} music={music} sections={sections} onSaved={reload} />
+      <ProductSheet open={adding} onClose={() => setAdding(false)} business={business} music={music} beauty={beauty} sections={sections} onSaved={reload} />
     </div>
   );
 }

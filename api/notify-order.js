@@ -1,21 +1,6 @@
 import { emailLayout, escapeHtml, euro, sendEmail, SITE_URL, supabaseRest } from './_lib.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const escapeLike = (s) => String(s || '').replace(/[\\%_*]/g, (c) => `\\${c}`);
-
-// Beat masters bought in this order, looked up from the shop's own catalogue.
-async function downloadLinks(order) {
-  const products = await supabaseRest(
-    `products?select=name,full_audio_url&full_audio_url=not.is.null&business_id=ilike.${encodeURIComponent(escapeLike(order.business_name))}`,
-  ).catch(() => []);
-  const bought = String(order.items || '').toLowerCase();
-  return (products || [])
-    .filter((p) => p.full_audio_url && bought.includes(String(p.name).toLowerCase()))
-    .map((p) => ({
-      name: p.name,
-      url: `${SITE_URL}/api/download?url=${encodeURIComponent(p.full_audio_url)}&filename=${encodeURIComponent(`${p.name}.mp3`)}`,
-    }));
-}
 
 const row = (label, value) =>
   `<tr><td style="color:#6B6862;padding:6px 0">${escapeHtml(label)}</td><td style="text-align:right;font-weight:600;padding:6px 0">${escapeHtml(value)}</td></tr>`;
@@ -25,7 +10,7 @@ function summary(order) {
     ${row('Comercio', order.business_name)}
     ${row('Detalle', order.items)}
     ${row('Fecha', `${order.date} · ${order.time}`)}
-    ${Number(order.total) > 0 ? row('Total', euro(order.total)) : ''}
+    ${Number(order.total) > 0 ? row('Precio orientativo', euro(order.total)) : ''}
   </table>`;
 }
 
@@ -57,25 +42,23 @@ export default async function handler(req, res) {
       return res.status(200).json({ sent: true });
     }
 
-    const links = reservation ? [] : await downloadLinks(order);
-    const linksHtml = links.length
-      ? `<p style="margin-top:18px;font-weight:700">Tus descargas</p>${links.map((l) => `<p><a href="${escapeHtml(l.url)}" style="display:inline-block;background:#111;color:#D4F25C;padding:12px 18px;border-radius:20px;text-decoration:none;font-weight:700">Descargar ${escapeHtml(l.name)}</a></p>`).join('')}`
-      : '';
+    // Only reservations are emailed; table orders go straight to the kitchen screen.
+    if (!reservation) return res.status(200).json({ sent: false });
 
     await Promise.all([
       sendEmail({
         to: order.customer_email,
-        subject: reservation ? `Solicitud de reserva en ${order.business_name}` : `Tu pedido en ${order.business_name}`,
+        subject: `Solicitud de reserva en ${order.business_name}`,
         html: emailLayout(
-          reservation ? 'Hemos recibido tu solicitud' : 'Gracias por tu pedido',
-          `<p>${reservation ? 'El restaurante la confirmará en breve y te avisaremos por correo.' : 'Aquí tienes el resumen.'}</p>${summary(order)}${linksHtml}`,
+          'Hemos recibido tu solicitud',
+          `<p>${escapeHtml(order.business_name)} la confirmará en breve y te avisaremos por correo. El pago se hace en el local.</p>${summary(order)}`,
         ),
       }),
       sendEmail({
         to: order.business_email,
-        subject: reservation ? `Nueva reserva: ${order.customer}` : `Nuevo pedido: ${order.customer}`,
+        subject: `Nueva reserva: ${order.customer}`,
         html: emailLayout(
-          reservation ? 'Nueva solicitud de reserva' : 'Nuevo pedido',
+          'Nueva solicitud de reserva',
           `${summary(order)}${order.customer_email ? `<p>Cliente: ${escapeHtml(order.customer)} · ${escapeHtml(order.customer_email)}</p>` : ''}<p><a href="${SITE_URL}/panel/pedidos">Abrir el panel</a></p>`,
         ),
       }),

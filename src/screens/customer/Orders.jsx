@@ -56,9 +56,9 @@ export default function Orders() {
   if (!user) {
     return (
       <div className="page">
-        <PageHeader eyebrow="Tu actividad" title="Pedidos" />
+        <PageHeader eyebrow="Tu actividad" title="Reservas" />
         <div className="widget">
-          <Empty icon="bag" title="Inicia sesión para ver tus pedidos">
+          <Empty icon="calendar" title="Inicia sesión para ver tus reservas">
             <Link to="/cuenta" className="btn primary" style={{ marginTop: 8 }}>Entrar o crear cuenta</Link>
           </Empty>
         </div>
@@ -73,10 +73,10 @@ export default function Orders() {
 
   return (
     <div className="page">
-      <PageHeader eyebrow="Tu actividad" title="Pedidos" />
+      <PageHeader eyebrow="Tu actividad" title="Reservas" />
       {orders.length === 0 ? (
         <div className="widget">
-          <Empty icon="bag" title="Aún no tienes pedidos">
+          <Empty icon="calendar" title="Aún no tienes reservas">
             <Link to="/explorar">Descubre comercios de Palencia</Link>
           </Empty>
         </div>

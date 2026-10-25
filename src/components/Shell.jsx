@@ -8,15 +8,15 @@ const CUSTOMER_NAV = [
   { to: '/', label: 'Hoy', icon: 'today', end: true },
   { to: '/explorar', label: 'Explorar', icon: 'compass' },
   { to: '/escanear', label: 'Escanear', icon: 'scan' },
-  { to: '/pedidos', label: 'Pedidos', icon: 'bag' },
+  { to: '/reservas', label: 'Reservas', icon: 'calendar' },
   { to: '/cuenta', label: 'Cuenta', icon: 'person' },
 ];
 
-const DETAIL_ROUTES = ['/negocio/', '/pagar/', '/mesa/', '/chat/'];
+const DETAIL_ROUTES = ['/negocio/', '/mesa/', '/chat/'];
 
-function Brand() {
+export function Brand({ to = '/', label = 'NetWish' }) {
   return (
-    <NavLink to="/" className="brand">
+    <NavLink to={to} className="brand">
       <svg className="mono" viewBox="0 0 512 512" aria-hidden="true">
         <rect width="512" height="512" rx="116" fill="var(--accent)" />
         <g transform="translate(-7 23)" fill="var(--ink)" stroke="var(--ink)" strokeLinecap="round" strokeLinejoin="round">
@@ -24,7 +24,7 @@ function Brand() {
           <path d="M333 82Q341 132 395 140Q341 148 333 198Q325 148 271 140Q325 132 333 82Z" strokeWidth="8" />
         </g>
       </svg>
-      <span style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: '#fff' }}>NetWish</span>
+      <span style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: '#fff' }}>{label}</span>
     </NavLink>
   );
 }
@@ -62,16 +62,18 @@ function SideNav({ items, header, footer }) {
 
 export function CustomerShell() {
   const { pathname } = useLocation();
-  const { business, setMode } = useAuth();
+  const { business } = useAuth();
   const isDetail = DETAIL_ROUTES.some((r) => pathname.startsWith(r));
   return (
     <div className="shell">
       <SideNav
         items={CUSTOMER_NAV}
         header={<Brand />}
-        footer={business ? (
-          <NavLink to="/panel" onClick={() => setMode('business')} className="btn accent block">Ir a mi negocio</NavLink>
-        ) : null}
+        footer={(
+          <NavLink to={business ? '/panel' : '/negocios'} className="btn ghost block" style={{ color: '#fff' }}>
+            {business ? 'Ir a mi panel' : 'NetWish para negocios'}
+          </NavLink>
+        )}
       />
       <main className="shell-main">
         <Outlet />
@@ -83,13 +85,16 @@ export function CustomerShell() {
 
 export function BusinessShell() {
   const { business } = useAuth();
-  const isRestaurant = kindOf(business) === 'restaurant';
+  const kind = kindOf(business);
+  const isRestaurant = kind === 'restaurant';
+  const isBeauty = kind === 'beauty';
   const nav = [
     { to: '/panel', label: 'Resumen', icon: 'chart', end: true },
-    { to: '/panel/pedidos', label: 'Pedidos', icon: 'bag' },
+    { to: '/panel/pedidos', label: isRestaurant ? 'Reservas y mesas' : 'Reservas', icon: 'calendar' },
     ...(isRestaurant ? [{ to: '/panel/cocina', label: 'Cocina', icon: 'flame' }] : []),
-    { to: '/panel/carta', label: isRestaurant ? 'Carta y stock' : 'Catálogo', icon: 'book' },
+    { to: '/panel/carta', label: isRestaurant ? 'Carta' : isBeauty ? 'Servicios' : 'Catálogo', icon: isBeauty ? 'scissors' : 'book' },
     ...(isRestaurant ? [{ to: '/panel/mesas', label: 'Mesas y QR', icon: 'grid' }] : []),
+    ...(isBeauty ? [{ to: '/panel/horario', label: 'Horario y equipo', icon: 'calendar' }] : []),
     { to: '/panel/mensajes', label: 'Mensajes', icon: 'chat' },
     { to: '/panel/ajustes', label: 'Ajustes', icon: 'gear' },
   ];
@@ -103,7 +108,7 @@ export function BusinessShell() {
             <Mono name={business.name} image={business.image} />
             <span className="stack" style={{ gap: 0, minWidth: 0 }}>
               <span style={{ fontWeight: 800, fontSize: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{business.name}</span>
-              <span className="small" style={{ color: 'var(--accent)' }}>● Recibiendo pedidos</span>
+              <span className="small" style={{ color: 'var(--accent)' }}>● Recibiendo reservas</span>
             </span>
           </div>
         )}

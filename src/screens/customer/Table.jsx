@@ -1,72 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import Icon from '../../components/Icon.jsx';
-import { BackButton, Empty, Sheet, Spinner, Stepper, useToast } from '../../components/ui.jsx';
+import { BackButton, Empty, Spinner, Stepper, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useCart } from '../../context/CartContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
-import { addItemsToTable, findBusiness, listProducts, openTableSession, payTable, subscribe } from '../../lib/data.js';
+import { addItemsToTable, findBusiness, listProducts, openTableSession, subscribe } from '../../lib/data.js';
 import { money, sameName } from '../../lib/format.js';
-
-function PaySheet({ open, onClose, session, user, onPaid }) {
-  const toast = useToast();
-  const remaining = Number(session?.remaining_amount) || 0;
-  const [split, setSplit] = useState(1);
-  const [custom, setCustom] = useState('');
-  const [saving, setSaving] = useState(false);
-  const amount = custom ? Math.min(Number(custom.replace(',', '.')) || 0, remaining) : Math.round((remaining / split) * 100) / 100;
-
-  const pay = async () => {
-    setSaving(true);
-    try {
-      const updated = await payTable(session.id, amount, user);
-      onPaid(updated);
-      toast(updated.status === 'paid' ? 'Cuenta pagada. ¡Gracias!' : `Has pagado ${money(amount)}`);
-      onClose();
-    } catch (e) {
-      toast(e.message, 'error');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Sheet open={open} onClose={onClose} title="Pagar">
-      <div className="stack">
-        <div className="widget stack" style={{ alignItems: 'center' }}>
-          <span className="eyebrow">Pendiente en la mesa</span>
-          <span className="title-xl price">{money(remaining)}</span>
-        </div>
-        <div className="widget stack">
-          <span className="eyebrow">Dividir entre</span>
-          <div className="chips">
-            {[1, 2, 3, 4, 5, 6].map((n) => (
-              <button key={n} className={`chip ${!custom && split === n ? 'on' : ''}`} style={{ background: !custom && split === n ? undefined : 'var(--bg)' }} onClick={() => { setSplit(n); setCustom(''); }}>
-                {n === 1 ? 'Todo' : `${n} personas`}
-              </button>
-            ))}
-          </div>
-          <div className="field">
-            <label htmlFor="custom-amount">U otro importe</label>
-            <input id="custom-amount" className="input" inputMode="decimal" placeholder="0,00 €" value={custom} onChange={(e) => setCustom(e.target.value.replace(/[^\d.,]/g, ''))} />
-          </div>
-        </div>
-        <button className="btn primary block" disabled={saving || amount <= 0} onClick={pay}>
-          {saving ? 'Procesando…' : `Pagar ${money(amount)}`}
-        </button>
-      </div>
-    </Sheet>
-  );
-}
 
 export default function Table() {
   const { name, table: tableParam } = useParams();
   const table = parseInt(tableParam, 10) || 1;
-  const { user, displayName } = useAuth();
+  const { displayName } = useAuth();
   const cart = useCart();
   const toast = useToast();
   const [session, setSession] = useState(null);
-  const [payOpen, setPayOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const cartaRef = useRef(null);
 
@@ -126,7 +73,7 @@ export default function Table() {
   const total = Number(session?.total_amount) || 0;
   const paid = Number(session?.paid_amount) || 0;
   const remaining = Number(session?.remaining_amount) || 0;
-  const status = !session ? 'Mesa libre' : session.status === 'paid' ? 'Cuenta pagada' : 'En cocina';
+  const status = !session ? 'Mesa libre' : session.status === 'paid' ? 'Cuenta cerrada' : 'En cocina';
   const step = !session ? 0 : session.status === 'paid' ? 3 : 2;
 
   return (
@@ -155,7 +102,7 @@ export default function Table() {
             <div className="progress-steps small" style={{ color: 'rgba(255,255,255,.6)' }}>
               <span style={{ background: 'none', height: 'auto' }}>Pedido</span>
               <span style={{ background: 'none', height: 'auto', color: step === 2 ? '#fff' : undefined, fontWeight: step === 2 ? 700 : 400 }}>En cocina</span>
-              <span style={{ background: 'none', height: 'auto', color: step === 3 ? '#fff' : undefined, fontWeight: step === 3 ? 700 : 400 }}>Pagada</span>
+              <span style={{ background: 'none', height: 'auto', color: step === 3 ? '#fff' : undefined, fontWeight: step === 3 ? 700 : 400 }}>Cuenta</span>
             </div>
           </div>
 
@@ -206,13 +153,11 @@ export default function Table() {
           <span className="go">{sending ? 'Enviando…' : 'Enviar a cocina'}</span>
         </button>
       ) : remaining > 0 ? (
-        <button className="cta-bar" onClick={() => setPayOpen(true)}>
-          <span style={{ fontSize: 15, opacity: 0.7 }}>Pendiente</span>
-          <span className="go"><Icon name="lock" size={14} />&nbsp;Pagar {money(remaining)}</span>
-        </button>
+        <div className="cta-bar" role="status">
+          <span style={{ fontSize: 15, opacity: 0.7 }}>Total {money(remaining)}</span>
+          <span className="go">Pide la cuenta al camarero</span>
+        </div>
       ) : null}
-
-      {session && <PaySheet open={payOpen} onClose={() => setPayOpen(false)} session={session} user={user} onPaid={setSession} />}
     </div>
   );
 }

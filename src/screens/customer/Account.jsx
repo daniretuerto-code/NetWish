@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { claimBusiness, requestBusinessSignup } from '../../lib/data.js';
 import { CATEGORIES } from '../../lib/categories.js';
 
-function AuthForms() {
+export function AuthForms({ next = '/cuenta' }) {
   const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
   const toast = useToast();
   const [tab, setTab] = useState('in');
@@ -70,15 +70,15 @@ function AuthForms() {
       {tab === 'in' && <button className="btn ghost sm" onClick={() => setTab('reset')}>He olvidado mi contraseña</button>}
       {tab === 'reset' && <button className="btn ghost sm" onClick={() => setTab('in')}>Volver</button>}
       <div className="row" style={{ gap: 10, color: 'var(--muted)' }}><span className="grow" style={{ height: 1, background: 'var(--line)' }} /><span className="small">o</span><span className="grow" style={{ height: 1, background: 'var(--line)' }} /></div>
-      <button className="btn soft block" onClick={() => signInWithGoogle().catch((e) => toast(e.message, 'error'))}>
+      <button className="btn soft block" onClick={() => signInWithGoogle(next).catch((e) => toast(e.message, 'error'))}>
         <Icon name="google" size={18} /> Continuar con Google
       </button>
     </div>
   );
 }
 
-function ClaimSheet({ open, onClose }) {
-  const { refreshBusiness, setMode } = useAuth();
+export function ClaimSheet({ open, onClose }) {
+  const { refreshBusiness } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
@@ -91,7 +91,6 @@ function ClaimSheet({ open, onClose }) {
     try {
       await claimBusiness(username.trim(), password);
       await refreshBusiness();
-      setMode('business');
       toast('Negocio vinculado a tu cuenta');
       onClose();
       navigate('/panel');
@@ -114,7 +113,7 @@ function ClaimSheet({ open, onClose }) {
   );
 }
 
-function SignupSheet({ open, onClose, email }) {
+export function SignupSheet({ open, onClose, email }) {
   const toast = useToast();
   const [form, setForm] = useState({ name: '', city: 'Palencia', address: '', category: CATEGORIES[0].label, modality: 'Local físico', email: email || '', phone: '' });
   const [busy, setBusy] = useState(false);
@@ -172,10 +171,8 @@ function SignupSheet({ open, onClose, email }) {
 }
 
 export default function Account() {
-  const { user, business, displayName, avatar, setMode, signOut } = useAuth();
+  const { user, business, displayName, avatar, signOut } = useAuth();
   const navigate = useNavigate();
-  const [claimOpen, setClaimOpen] = useState(false);
-  const [signupOpen, setSignupOpen] = useState(false);
 
   return (
     <div className="page" style={{ maxWidth: 720 }}>
@@ -184,14 +181,14 @@ export default function Account() {
       {!user ? (
         <>
           <AuthForms />
-          <button className="widget link row" onClick={() => setSignupOpen(true)} style={{ border: 0, textAlign: 'left', width: '100%' }}>
+          <Link to="/negocios" className="widget link row" style={{ textDecoration: 'none' }}>
             <span className="mono" style={{ background: 'var(--ink)', color: 'var(--accent)' }}><Icon name="store" /></span>
             <span className="grow stack" style={{ gap: 0 }}>
               <strong>¿Tienes un negocio en Palencia?</strong>
-              <span className="small muted">Solicita el alta y empieza a recibir pedidos.</span>
+              <span className="small muted">Entra en NetWish para negocios.</span>
             </span>
             <Icon name="chevron" size={18} />
-          </button>
+          </Link>
         </>
       ) : (
         <>
@@ -204,9 +201,9 @@ export default function Account() {
           </div>
 
           <div className="bento">
-            <Link to="/pedidos" className="widget link stack" style={{ gap: 18 }}>
-              <Icon name="bag" size={24} />
-              <strong>Mis pedidos</strong>
+            <Link to="/reservas" className="widget link stack" style={{ gap: 18 }}>
+              <Icon name="calendar" size={24} />
+              <strong>Mis reservas</strong>
             </Link>
             <Link to="/escanear" className="widget link dark stack" style={{ gap: 18 }}>
               <Icon name="scan" size={24} />
@@ -214,33 +211,20 @@ export default function Account() {
             </Link>
           </div>
 
-          <div className="widget dark stack">
-            <span className="eyebrow">Para comercios</span>
-            {business ? (
-              <>
-                <span className="row" style={{ gap: 12 }}>
-                  <Mono name={business.name} image={business.image} />
-                  <span className="title-lg">{business.name}</span>
-                </span>
-                <button className="btn accent block" onClick={() => { setMode('business'); navigate('/panel'); }}>Ir a mi panel</button>
-              </>
-            ) : (
-              <>
-                <p style={{ opacity: 0.75, margin: 0 }}>Si ya tenías un negocio en NetWish, vincúlalo a esta cuenta una sola vez.</p>
-                <button className="btn accent block" onClick={() => setClaimOpen(true)}>Vincular mi negocio</button>
-                <button className="btn ghost block" style={{ color: '#fff' }} onClick={() => setSignupOpen(true)}>Dar de alta un negocio nuevo</button>
-              </>
-            )}
-          </div>
+          <Link to={business ? '/panel' : '/negocios'} className="widget dark link row" style={{ textDecoration: 'none' }}>
+            <span className="mono" style={{ background: 'var(--accent)', color: 'var(--ink)' }}><Icon name="store" /></span>
+            <span className="grow stack" style={{ gap: 0 }}>
+              <span className="eyebrow">Para negocios</span>
+              <strong>{business ? `Ir al panel de ${business.name}` : 'NetWish para negocios'}</strong>
+            </span>
+            <Icon name="chevron" size={18} />
+          </Link>
 
           <button className="btn soft block" onClick={() => signOut().then(() => navigate('/'))}>
             <Icon name="logout" size={18} /> Cerrar sesión
           </button>
         </>
       )}
-
-      <ClaimSheet open={claimOpen} onClose={() => setClaimOpen(false)} />
-      <SignupSheet open={signupOpen} onClose={() => setSignupOpen(false)} email={user?.email} />
     </div>
   );
 }

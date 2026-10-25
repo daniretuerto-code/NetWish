@@ -5,7 +5,7 @@ import { Empty, Spinner } from '../../components/ui.jsx';
 import { CoverCard } from '../../components/BusinessCards.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { listBusinesses } from '../../lib/data.js';
-import { CATEGORIES, categoryOf, kindOf } from '../../lib/categories.js';
+import { CATEGORIES, categoryOf, taglineFor } from '../../lib/categories.js';
 import { normalize } from '../../lib/format.js';
 
 export default function Explore() {
@@ -55,7 +55,7 @@ export default function Explore() {
               minHeight={220}
               title={b.name}
               eyebrow={categoryOf(b).label}
-              subtitle={kindOf(b) === 'restaurant' ? 'Carta, reservas y pedidos en mesa' : kindOf(b) === 'music' ? 'Escucha y compra al momento' : 'Pide y paga desde el móvil'}
+              subtitle={taglineFor(b)}
             />
           ))}
         </div>
