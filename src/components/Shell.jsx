@@ -17,7 +17,13 @@ const DETAIL_ROUTES = ['/negocio/', '/pagar/', '/mesa/', '/chat/'];
 function Brand() {
   return (
     <NavLink to="/" className="brand">
-      <span className="mono" style={{ background: 'var(--accent)', color: 'var(--ink)' }}>N</span>
+      <svg className="mono" viewBox="0 0 512 512" aria-hidden="true">
+        <rect width="512" height="512" rx="116" fill="var(--accent)" />
+        <g transform="translate(-7 23)" fill="var(--ink)" stroke="var(--ink)" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M149 352V160L333 352V264" fill="none" strokeWidth="64" />
+          <path d="M333 82Q341 132 395 140Q341 148 333 198Q325 148 271 140Q325 132 333 82Z" strokeWidth="8" />
+        </g>
+      </svg>
       <span style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: '#fff' }}>NetWish</span>
     </NavLink>
   );
