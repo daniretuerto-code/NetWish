@@ -111,7 +111,7 @@ export default function Tables() {
       </div>
 
       {view === 'plano' && (
-        <FloorEditor tables={tables} zones={floorZones} items={items} onQr={setQrTable}
+        <FloorEditor tables={tables} zones={floorZones} items={items} onQr={setQrTable} dirty={dirty} onSave={save} busy={busy}
           onChange={(next) => change({ tables: next.tables, floor: { zones: next.zones, items: next.items } })} />
       )}
 
