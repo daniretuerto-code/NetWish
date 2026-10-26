@@ -4,7 +4,7 @@ import { Empty, Ring, Spinner } from '../../components/ui.jsx';
 import { BusinessRow, CoverCard } from '../../components/BusinessCards.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
-import { listBusinesses, myOrders, isReservation, STATUS } from '../../lib/data.js';
+import { listBusinesses, myOrders, isReservation, restaurantsToday, STATUS } from '../../lib/data.js';
 import { CATEGORIES, kindOf, taglineFor } from '../../lib/categories.js';
 import { initials, longDate, money } from '../../lib/format.js';
 
@@ -37,6 +37,44 @@ function ActiveOrderWidget({ user }) {
         <span className="title-lg">{label}</span>
       </span>
     </Link>
+  );
+}
+
+// Restaurants open today: their daily menu and a straight way to book a table.
+function TodayInPalencia() {
+  const { data } = useAsync(() => restaurantsToday(), []);
+  const list = data || [];
+  if (!list.length) return null;
+  const withMenu = list.filter(({ settings }) => settings.daily_menu && settings.daily_menu.active !== false && settings.daily_menu.first_courses?.length);
+  const tonight = list.filter(({ settings }) => settings.dinner_start);
+  return (
+    <section className="widget stack" style={{ gap: 10 }}>
+      <span className="stack" style={{ gap: 0 }}>
+        <span className="eyebrow">Hoy en Palencia</span>
+        <h2 className="title-lg">¿Dónde comemos?</h2>
+      </span>
+      {withMenu.map(({ biz, settings }) => (
+        <Link key={biz.name} to={`/negocio/${encodeURIComponent(biz.name)}`} className="order-card" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <span className="row between" style={{ gap: 8 }}>
+            <strong>{biz.name}</strong>
+            {Number(settings.daily_menu.price) > 0 && <span className="price">{money(settings.daily_menu.price)}</span>}
+          </span>
+          <span className="small muted">Menú del día: {settings.daily_menu.first_courses.slice(0, 3).join(' · ')}</span>
+        </Link>
+      ))}
+      {tonight.length > 0 && (
+        <>
+          <span className="eyebrow" style={{ marginTop: 4 }}>Reserva para esta noche</span>
+          <div className="chips">
+            {tonight.map(({ biz }) => (
+              <Link key={biz.name} to={`/negocio/${encodeURIComponent(biz.name)}?reservar=1`} className="chip" style={{ background: 'var(--bg)', display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: 'var(--ink)' }}>
+                <Icon name="utensils" size={16} /> {biz.name}
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+    </section>
   );
 }
 
@@ -79,6 +117,7 @@ export default function Home() {
         </div>
 
         <div className="stack">
+          <TodayInPalencia />
           <div className="widget">
             <div className="row between" style={{ marginBottom: 8 }}>
               <h2 className="title-lg">Categorías</h2>

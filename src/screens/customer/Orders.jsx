@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
-import { Empty, Mono, PageHeader, Spinner } from '../../components/ui.jsx';
+import { Empty, Mono, PageHeader, Spinner, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
-import { isReservation, myOrders, STATUS, subscribe } from '../../lib/data.js';
+import { cancelMyBooking, isReservation, myOrders, STATUS, subscribe } from '../../lib/data.js';
 import { money, todayISO } from '../../lib/format.js';
 
 const LABELS = {
@@ -15,6 +15,9 @@ const LABELS = {
   [STATUS.READY]: { text: 'Listo', tone: 'var(--accent)' },
   [STATUS.DONE]: { text: 'Completado', tone: 'var(--bg)' },
   [STATUS.REJECTED]: { text: 'Rechazado', tone: '#F3C9C9' },
+  [STATUS.CANCELLED]: { text: 'Cancelada', tone: 'var(--bg)' },
+  [STATUS.SEATED]: { text: 'En la mesa', tone: 'var(--accent)' },
+  [STATUS.NOSHOW]: { text: 'No asististe', tone: '#F3C9C9' },
 };
 
 const dateLabel = (iso) => {
@@ -46,7 +49,20 @@ function OrderRow({ order }) {
 
 export default function Orders() {
   const { user } = useAuth();
+  const toast = useToast();
+  const [confirming, setConfirming] = useState(null);
   const { data, loading, reload } = useAsync(() => (user ? myOrders() : Promise.resolve([])), [user?.id]);
+
+  const cancel = async (o) => {
+    try {
+      await cancelMyBooking(o.id);
+      toast('Reserva cancelada. Gracias por avisar.');
+      setConfirming(null);
+      reload();
+    } catch (e) {
+      toast(e.message, 'error');
+    }
+  };
 
   useEffect(() => {
     if (!user) return undefined;
@@ -68,7 +84,7 @@ export default function Orders() {
 
   if (loading && !data) return <Spinner />;
   const orders = data || [];
-  const reservations = orders.filter((o) => isReservation(o) && o.status !== STATUS.DONE && o.status !== STATUS.REJECTED && (o.date || '') >= todayISO());
+  const reservations = orders.filter((o) => isReservation(o) && [STATUS.PENDING, STATUS.CONFIRMED].includes(o.status) && (o.date || '') >= todayISO());
   const rest = orders.filter((o) => !reservations.includes(o));
 
   return (
@@ -87,7 +103,8 @@ export default function Orders() {
               <div className="widget dark stack">
                 <span className="eyebrow row" style={{ gap: 6 }}><Icon name="calendar" size={14} /> Próximas reservas</span>
                 {reservations.map((o) => (
-                  <div key={o.id} className="row between" style={{ gap: 10 }}>
+                  <div key={o.id} className="stack" style={{ gap: 8, paddingBottom: 10, borderBottom: '1px solid rgba(255,255,255,.1)' }}>
+                  <div className="row between" style={{ gap: 10 }}>
                     <span className="stack" style={{ gap: 0, minWidth: 0 }}>
                       <strong>{o.business_name}</strong>
                       <span className="small" style={{ opacity: 0.7 }}>{dateLabel(o.date)} · {o.time}</span>
@@ -96,6 +113,15 @@ export default function Orders() {
                     <span className="pill" style={{ background: o.status === STATUS.CONFIRMED ? 'var(--accent)' : 'rgba(255,255,255,.14)', color: o.status === STATUS.CONFIRMED ? 'var(--ink)' : '#fff' }}>
                       {o.status === STATUS.CONFIRMED ? 'Confirmada' : 'Pendiente'}
                     </span>
+                  </div>
+                  {confirming === o.id ? (
+                    <div className="row" style={{ gap: 8 }}>
+                      <button className="btn accent sm" style={{ flex: 1 }} onClick={() => cancel(o)}>Sí, cancelar</button>
+                      <button className="btn soft sm" style={{ flex: 1 }} onClick={() => setConfirming(null)}>No</button>
+                    </div>
+                  ) : (
+                    <button className="btn ghost sm" style={{ color: '#fff', alignSelf: 'flex-start' }} onClick={() => setConfirming(o.id)}>Cancelar reserva</button>
+                  )}
                   </div>
                 ))}
               </div>

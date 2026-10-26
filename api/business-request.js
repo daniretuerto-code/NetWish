@@ -8,6 +8,7 @@ const TITLES = {
   alta: 'Un negocio quiere entrar en NetWish',
   otro: 'Negocio que no encaja en los tipos de NetWish',
   contacto: 'Un negocio quiere más de NetWish',
+  listo: 'Un negocio ha completado su página y quiere publicarse',
 };
 
 // Sends a heads-up to the NetWish team's Telegram. The data itself is already
@@ -31,7 +32,7 @@ export default async function handler(req, res) {
     data.email && `Correo: ${data.email}`,
     data.phone && `Teléfono: ${data.phone}`,
     data.description && `\n${kind === 'contacto' ? 'Mensaje' : 'Qué hace'}: ${data.description}`,
-    kind === 'nuevo' && `\nApruébalo en ${SITE_URL}/admin`,
+    ['nuevo', 'listo'].includes(kind) && `\nApruébalo en ${SITE_URL}/admin`,
   ].filter(Boolean).join('\n');
 
   try {

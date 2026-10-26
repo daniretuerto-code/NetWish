@@ -12,13 +12,9 @@ export const RESTAURANT_SECTIONS = [
   {
     key: 'basico',
     title: 'Lo básico',
-    intro: 'Con esto dejamos tu panel montado. Son unos 2 minutos.',
+    intro: 'Tu horario y tus mesas. Con esto tu panel queda montado en 2 minutos.',
     onboarding: true,
     questions: [
-      { id: 'tipo', type: 'choice', label: '¿Qué tipo de local tienes?', options: [
-        { value: 'restaurante', label: 'Restaurante' }, { value: 'bar', label: 'Bar de tapas' },
-        { value: 'cafeteria', label: 'Cafetería' }, { value: 'bar_restaurante', label: 'Bar restaurante' },
-      ] },
       { id: 'servicios', type: 'multi', label: '¿Qué servicios das?', help: 'Las reservas solo se ofrecerán en estos turnos.', options: [
         { value: 'comidas', label: 'Comidas' }, { value: 'cenas', label: 'Cenas' },
       ] },
@@ -35,9 +31,6 @@ export const RESTAURANT_SECTIONS = [
       { id: 'turno', type: 'choice', label: '¿Cuánto suele durar una comida en tu local?', help: 'Así sabemos cuándo vuelve a quedar libre una mesa.', when: (a) => yes(a.reservas), options: [
         { value: 45, label: '45 min' }, { value: 60, label: '1 hora' }, { value: 90, label: '1 h 30 min' }, { value: 120, label: '2 horas' },
       ] },
-      { id: 'menu_dia', type: 'yesno', label: '¿Haces menú del día?', help: 'Te añadimos una sección para publicarlo cada día.' },
-      { id: 'pedidos_qr', type: 'yesno', label: '¿Quieres que tus clientes pidan desde la mesa con un QR?', help: 'Escanean, ven la carta y la comanda te llega al momento.' },
-      { id: 'cocina_pantalla', type: 'yesno', label: '¿Tendrás una pantalla o tablet en la cocina?', help: 'Las comandas aparecen ahí en directo.', when: (a) => yes(a.pedidos_qr) },
     ],
   },
   {
@@ -79,10 +72,24 @@ export const RESTAURANT_SECTIONS = [
     ],
   },
   {
+    key: 'extras',
+    title: 'Menú del día y pedidos',
+    intro: 'Secciones extra para tu panel, solo si las vas a usar.',
+    questions: [
+      { id: 'menu_dia', type: 'yesno', label: '¿Haces menú del día?', help: 'Te añadimos una sección para publicarlo cada día.' },
+      { id: 'pedidos_qr', type: 'yesno', label: '¿Quieres que tus clientes pidan desde la mesa con un QR?', help: 'Escanean, ven la carta y la comanda te llega al momento.' },
+      { id: 'cocina_pantalla', type: 'yesno', label: '¿Tendrás una pantalla o tablet en la cocina?', help: 'Las comandas aparecen ahí en directo.', when: (a) => yes(a.pedidos_qr) },
+    ],
+  },
+  {
     key: 'local',
     title: 'Tu local',
     intro: 'Lo que hace que la gente elija tu sitio.',
     questions: [
+      { id: 'tipo', type: 'choice', label: '¿Qué tipo de local tienes?', options: [
+        { value: 'restaurante', label: 'Restaurante' }, { value: 'bar', label: 'Bar de tapas' },
+        { value: 'cafeteria', label: 'Cafetería' }, { value: 'bar_restaurante', label: 'Bar restaurante' },
+      ] },
       { id: 'comodidades', type: 'multi', label: '¿Qué ofreces en el local?', options: [
         { value: 'wifi', label: 'Wifi' }, { value: 'accesible', label: 'Acceso en silla de ruedas' }, { value: 'mascotas', label: 'Se admiten perros' },
         { value: 'parking', label: 'Aparcamiento cerca' }, { value: 'tarjeta', label: 'Pago con tarjeta' }, { value: 'tronas', label: 'Tronas para bebés' },
@@ -137,14 +144,15 @@ export function profileProgress(answers) {
   return total ? Math.round((done / total) * 100) : 0;
 }
 
-// What the panel and the public page switch on. Before the questionnaire everything stays on.
+// What the panel and the public page switch on. Bookings and the daily menu are on until the
+// owner says no; table ordering and the kitchen screen only when they ask for them.
 export function modulesFor(profile = {}) {
   const on = (v) => v !== false;
   return {
     reservas: on(profile.reservas),
     menuDia: on(profile.menu_dia),
-    pedidosQr: on(profile.pedidos_qr),
-    cocina: on(profile.pedidos_qr) && on(profile.cocina_pantalla),
+    pedidosQr: yes(profile.pedidos_qr),
+    cocina: yes(profile.pedidos_qr) && yes(profile.cocina_pantalla),
   };
 }
 

@@ -8,7 +8,7 @@ import { claimBusiness } from '../../lib/data.js';
 // At least 8 characters with letters and numbers; Supabase stores only a hash.
 const weakPassword = (p) => p.length < 8 || !/[a-zA-Z]/.test(p) || !/\d/.test(p);
 
-export function AuthForms({ next = '/cuenta', initialTab = 'in' }) {
+export function AuthForms({ next = '/cuenta', initialTab = 'in', simple = false }) {
   const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
   const toast = useToast();
   const [tab, setTab] = useState(initialTab);
@@ -55,7 +55,10 @@ export function AuthForms({ next = '/cuenta', initialTab = 'in' }) {
         <button role="tab" aria-selected={tab === 'up'} onClick={() => setTab('up')}>Crear cuenta</button>
       </div>
       <form className="stack" onSubmit={submit}>
-        {tab === 'up' && (
+        {tab === 'up' && simple && (
+          <div className="field"><label htmlFor="su-name">Tu nombre</label><input id="su-name" className="input" required value={form.name} onChange={set('name')} autoComplete="name" /></div>
+        )}
+        {tab === 'up' && !simple && (
           <div className="bento">
             <div className="field"><label htmlFor="su-name">Nombre</label><input id="su-name" className="input" required value={form.name} onChange={set('name')} autoComplete="given-name" /></div>
             <div className="field"><label htmlFor="su-surname">Apellidos</label><input id="su-surname" className="input" value={form.surname} onChange={set('surname')} autoComplete="family-name" /></div>

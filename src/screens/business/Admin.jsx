@@ -6,7 +6,7 @@ import useAsync from '../../hooks/useAsync.js';
 import { adminOverview, isAdmin, setBusinessStatus } from '../../lib/data.js';
 import { timeAgo } from '../../lib/format.js';
 
-const KIND_LABEL = { alta: 'Quiere entrar', otro: 'No encaja en los tipos', contacto: 'Quiere más', nuevo: 'Alta' };
+const KIND_LABEL = { alta: 'Quiere entrar', otro: 'No encaja en los tipos', contacto: 'Quiere más', nuevo: 'Alta', listo: 'Listo para publicar' };
 
 // netwish.es/admin: only NetWish's own team. The database refuses everyone else.
 export default function Admin() {
