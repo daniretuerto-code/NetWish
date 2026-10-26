@@ -64,7 +64,7 @@ function GeneralOverview() {
         </div>
 
         {isRestaurant && modules.pedidosQr && (
-          <Link to="/panel/pedidos" className="widget link stack" style={{ justifyContent: 'space-between', minHeight: 150 }}>
+          <Link to="/panel/reservas" className="widget link stack" style={{ justifyContent: 'space-between', minHeight: 150 }}>
             <Ring value={todays.length ? Math.min(1, done / todays.length) : 0} label="Comandas servidas hoy" />
             <span className="stack" style={{ gap: 0 }}>
               <span className="eyebrow">Comandas en curso</span>
@@ -74,7 +74,7 @@ function GeneralOverview() {
         )}
 
 {(!isRestaurant || modules.reservas) && (
-        <Link to="/panel/pedidos" className="widget link stack" style={{ justifyContent: 'space-between', minHeight: 150, background: pendingRes.length ? 'var(--accent)' : undefined }}>
+        <Link to="/panel/reservas" className="widget link stack" style={{ justifyContent: 'space-between', minHeight: 150, background: pendingRes.length ? 'var(--accent)' : undefined }}>
           <span className="mono" style={{ background: 'var(--ink)', color: 'var(--accent-on-ink)' }}><Icon name="calendar" /></span>
           <span className="stack" style={{ gap: 0 }}>
             <span className="eyebrow" style={{ color: 'inherit', opacity: 0.7 }}>Reservas</span>
@@ -92,7 +92,7 @@ function GeneralOverview() {
         </Link>
 
         {pct < 100 && (
-          <Link to="/panel/personalizar" className="widget link stack" style={{ justifyContent: 'space-between', minHeight: 150, background: 'var(--accent)' }}>
+          <Link to="/panel/ajustes" className="widget link stack" style={{ justifyContent: 'space-between', minHeight: 150, background: 'var(--accent)' }}>
             <Ring value={pct / 100} color="var(--ink)" label={`Perfil completado al ${pct} %`} />
             <span className="stack" style={{ gap: 0 }}>
               <span className="eyebrow" style={{ color: 'inherit', opacity: 0.7 }}>Personaliza tu negocio</span>
@@ -123,7 +123,7 @@ function GeneralOverview() {
       <div className="widget" style={{ paddingBottom: 4 }}>
         <div className="row between">
           <h2 className="title-lg">Últimas reservas</h2>
-          <Link to="/panel/pedidos" className="small">Ver todos</Link>
+          <Link to="/panel/reservas" className="small">Ver todos</Link>
         </div>
         {data.orders.slice(0, 6).map((o) => (
           <div key={o.id} className="list-row">

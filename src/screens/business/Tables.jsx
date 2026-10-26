@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import Icon from '../../components/Icon.jsx';
-import { PageHeader, Sheet, Skeleton, Spinner, useToast } from '../../components/ui.jsx';
+import { BackButton, PageHeader, Sheet, Skeleton, Spinner, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { getRestaurantSettings, saveRestaurantSettings } from '../../lib/data.js';
@@ -103,7 +103,7 @@ export default function Tables() {
 
   return (
     <div className="page" style={{ paddingBottom: dirty ? 200 : undefined }}>
-      <PageHeader eyebrow={business.name} title="Tu sala" right={view === 'lista' ? <button className="btn primary sm" onClick={addTable}><Icon name="plus" size={16} /> Mesa</button> : null} />
+      <PageHeader eyebrow="Ajustes" title="Tu sala" back={<BackButton to="/panel/ajustes" label="Volver a Ajustes" />} right={view === 'lista' ? <button className="btn primary sm" onClick={addTable}><Icon name="plus" size={16} /> Mesa</button> : null} />
 
       <div className="segmented" role="tablist" aria-label="Vista">
         <button role="tab" aria-selected={view === 'plano'} onClick={() => setView('plano')}>Plano</button>

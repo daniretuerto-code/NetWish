@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
 import BookingCard, { StatusChip, useBookingActions } from '../../components/BookingCard.jsx';
 import OwnerBookingSheet from '../../components/OwnerBookingSheet.jsx';
 import { busyTables, DEFAULT_TABLES } from '../../components/ReserveSheet.jsx';
 import { Empty, PageHeader, Sheet, Skeleton, Spinner, useToast } from '../../components/ui.jsx';
+import SectionTabs from '../../components/SectionTabs.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { businessOrders, businessWaitlist, customerNotes, reservationsOn, setWaitlistStatus, saveCustomerNote, saveRestaurantSettings, setOrderItems, STATUS, subscribe } from '../../lib/data.js';
@@ -14,7 +15,6 @@ import { tableLabel, blockFor, ACTIVE_BOOKING, bookingsOf, byTime, customerKey, 
 import { nextDays } from '../../lib/booking.js';
 import { CUSTOMER_TAGS, isAllergyTag } from '../../lib/tags.js';
 import { minutesToTime, normalize, timeToMinutes, todayISO } from '../../lib/format.js';
-import Orders from './Orders.jsx';
 import { netwishNumbers } from '../../lib/insights.js';
 import { money } from '../../lib/format.js';
 
@@ -240,9 +240,8 @@ function BookingSearch({ bookings, card }) {
   );
 }
 
-function Agenda({ bookings, history, actions, settings, business, onAdd, onChangeTable, reloadSettings, profiles }) {
+function Agenda({ day, bookings, history, actions, settings, business, onAdd, onChangeTable, reloadSettings, profiles }) {
   const today = todayISO();
-  const [day, setDay] = useState(today);
   const [showOld, setShowOld] = useState(false);
   const [closing, setClosing] = useState(false);
   const pending = bookings.filter((o) => o.status === STATUS.PENDING && o.date >= today).sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
@@ -267,28 +266,12 @@ function Agenda({ bookings, history, actions, settings, business, onAdd, onChang
         </section>
       )}
 
-      <div className="chips" role="tablist" aria-label="Día">
-        {nextDays(21).map((d) => {
-          const n = guestsOf(bookings.filter((o) => o.date === d.iso && ACTIVE_BOOKING.includes(o.status)));
-          const on = day === d.iso;
-          return (
-            <button key={d.iso} role="tab" aria-selected={on} onClick={() => setDay(d.iso)} className="stack"
-              style={{ gap: 0, alignItems: 'center', justifyContent: 'center', minWidth: 58, height: 70, borderRadius: 20, border: 0, background: on ? 'var(--ink)' : 'var(--surface)', color: on ? 'var(--on-ink)' : 'var(--ink)', flex: '0 0 auto' }}>
-              <span className="small" style={{ fontWeight: 700, opacity: 0.7 }}>{d.weekday}</span>
-              <span style={{ fontSize: 20, fontWeight: 800 }}>{d.day}</span>
-              <span style={{ fontSize: 11, fontWeight: 800, color: on ? 'var(--accent)' : n ? 'var(--ink)' : 'var(--muted)' }}>{n ? `${n} p.` : '·'}</span>
-            </button>
-          );
-        })}
-      </div>
-
       <section className="widget stack" style={{ gap: 10 }}>
         <div className="row between" style={{ alignItems: 'flex-start' }}>
           <span className="stack" style={{ gap: 0 }}>
             <h2 className="title-lg">{dayLabel(day, today)}</h2>
             <span className="small muted">{active.length} {active.length === 1 ? 'reserva' : 'reservas'} · {guestsOf(active)} personas</span>
           </span>
-          <button className="btn primary sm" onClick={() => onAdd({ date: day })}><Icon name="plus" size={16} /> Reserva</button>
         </div>
         <DayOnline day={day} settings={settings} business={business} reloadSettings={reloadSettings} />
         <button className="btn ghost sm" style={{ alignSelf: 'flex-start', height: 'auto', padding: 0, textDecoration: 'underline' }} onClick={() => setClosing(true)}>Cerrar varios días (vacaciones, festivos)</button>
@@ -310,13 +293,32 @@ function Agenda({ bookings, history, actions, settings, business, onAdd, onChang
   );
 }
 
+// The day every view shows, picked once at the top: list, timeline and floor plan stay in step.
+function DayStrip({ day, onDay, bookings }) {
+  return (
+    <div className="chips" role="tablist" aria-label="Día">
+      {nextDays(21).map((d) => {
+        const n = guestsOf(bookings.filter((o) => o.date === d.iso && ACTIVE_BOOKING.includes(o.status)));
+        const on = day === d.iso;
+        return (
+          <button key={d.iso} role="tab" aria-selected={on} onClick={() => onDay(d.iso)} className="stack"
+            style={{ gap: 0, alignItems: 'center', justifyContent: 'center', minWidth: 58, height: 70, borderRadius: 20, border: 0, background: on ? 'var(--ink)' : 'var(--surface)', color: on ? 'var(--on-ink)' : 'var(--ink)', flex: '0 0 auto' }}>
+            <span className="small" style={{ fontWeight: 700, opacity: 0.7 }}>{d.weekday}</span>
+            <span style={{ fontSize: 20, fontWeight: 800 }}>{d.day}</span>
+            <span style={{ fontSize: 11, fontWeight: 800, color: on ? 'var(--accent)' : n ? 'var(--ink)' : 'var(--muted)' }}>{n ? `${n} p.` : '·'}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 const PX_MIN = 2.2;
 
 // The day as a timeline: tables down the side, hours across. Drag a booking up or down to change its table.
-function Timeline({ bookings, settings, actions, history, business, onAdd, onChangeTable, profiles, onItems }) {
+function Timeline({ day, bookings, settings, actions, history, business, onAdd, onChangeTable, profiles, onItems }) {
   const toast = useToast();
   const today = todayISO();
-  const [day, setDay] = useState(today);
   const shifts = [['comida', 'Comidas', settings.lunch_start, settings.lunch_end], ['cena', 'Cenas', settings.dinner_start, settings.dinner_end]].filter((x) => x[2]);
   const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
   const [shift, setShift] = useState(() => (shifts.length > 1 && nowMin >= timeToMinutes(shifts[1][2]) - 90 ? shifts[1][0] : shifts[0]?.[0]));
@@ -376,9 +378,6 @@ function Timeline({ bookings, settings, actions, history, business, onAdd, onCha
 
   return (
     <>
-      <div className="chips">
-        {nextDays(14).map((d) => <button key={d.iso} className={`chip ${day === d.iso ? 'on' : ''}`} onClick={() => setDay(d.iso)}>{d.iso === today ? 'Hoy' : `${d.weekday} ${d.day}`}</button>)}
-      </div>
       {shifts.length > 1 && (
         <div className="segmented" role="tablist" aria-label="Turno">
           {shifts.map(([k, l]) => <button key={k} role="tab" aria-selected={cur[0] === k} onClick={() => setShift(k)}>{l} · {guestsOf(bookings.filter((o) => o.date === day && ACTIVE_BOOKING.includes(o.status) && shiftOf(o, settings) === k))} p.</button>)}
@@ -434,8 +433,7 @@ function Timeline({ bookings, settings, actions, history, business, onAdd, onCha
   );
 }
 
-function Hall({ bookings, settings, actions, history, business, onAdd, onChangeTable, profiles }) {
-  const today = todayISO();
+function Hall({ day, bookings, settings, actions, history, business, onAdd, onChangeTable, profiles }) {
   const zones = zonesOf({ ...settings, tables: settings?.tables?.length ? settings.tables : DEFAULT_TABLES });
   const items = settings?.floor?.items || [];
   const tables = placeTables(settings?.tables?.length ? settings.tables : DEFAULT_TABLES, zones, items);
@@ -448,7 +446,7 @@ function Hall({ bookings, settings, actions, history, business, onAdd, onChangeT
   const [zoneName, setZoneName] = useState(null);
   const [zoom, setZoom] = useState(1);
   const zone = zones.find((z) => z.name === zoneName) || zones[0];
-  const todays = bookings.filter((o) => o.date === today && ACTIVE_BOOKING.includes(o.status));
+  const todays = bookings.filter((o) => o.date === day && ACTIVE_BOOKING.includes(o.status));
 
   const stateOf = (t) => {
     const m = timeToMinutes(at);
@@ -510,7 +508,7 @@ function Hall({ bookings, settings, actions, history, business, onAdd, onChangeT
         <FloorPlan zoom={zoom} zone={zone} height={zoneHeight(zone, tables, items)} tables={tables} items={items} look={look}
           onTableClick={(t) => { const o = stateOf(t); return o ? setOpen(o.id) : onAdd({ walkIn: true, table: t.table_number }); }} />
       </section>
-      <p className="small muted" style={{ margin: '0 4px' }}>Toca una mesa libre para sentar a alguien que llega sin reserva. El plano se cambia en <Link to="/panel/mesas">Tu sala</Link>.</p>
+      <p className="small muted" style={{ margin: '0 4px' }}>Toca una mesa libre para sentar a alguien que llega sin reserva. El plano se dibuja en <Link to="/panel/mesas">Ajustes › Tu sala</Link>.</p>
       <Sheet open={!!current} onClose={() => setOpen(null)} title={current ? tableLabel(parseTableBooking(current).tables) : ''}>
         {current && <BookingCard order={current} history={history.get(customerKey(current))} profile={profiles?.[customerKey(current)]} busy={actions.busy === current.id} onMove={(o, s) => { actions.move(o, s); setOpen(null); }} onChangeTable={(o) => { setOpen(null); onChangeTable(o); }} businessName={business.name} />}
       </Sheet>
@@ -551,7 +549,7 @@ function Delta({ now, before, invert }) {
 }
 
 // Numbers for a period, compared with the one before: diners, no-shows, occupancy and busy hours.
-function Stats({ bookings, settings }) {
+export function Stats({ bookings, settings }) {
   const [days, setDays] = useState(30);
   const today = todayISO();
   const from = shiftISO(today, -days);
@@ -605,7 +603,7 @@ function Stats({ bookings, settings }) {
                 <span className="small" style={{ fontWeight: 600 }}>
                   {[`${n.night} con el local cerrado`, `${n.confirmed} confirmaron desde el recordatorio`, `${n.newCustomers} clientes nuevos`, n.rating && `nota media ${n.rating} / 5 (${n.ratings})`].filter(Boolean).join(' · ')}
                 </span>
-                <span className="small" style={{ opacity: 0.7 }}>Comensales que reservaron por NetWish y vinieron × {money(n.ticket)} de gasto medio (lo cambias en Personalizar → Tu cocina).</span>
+                <span className="small" style={{ opacity: 0.7 }}>Comensales que reservaron por NetWish y vinieron × {money(n.ticket)} de gasto medio (lo cambias en Ajustes › Tu cocina).</span>
               </section>
             );
           })()}
@@ -711,7 +709,7 @@ function CustomerFacts({ customer }) {
   );
 }
 
-function Customers({ orders, business, profiles: notes, setProfiles: setNotes }) {
+export function Customers({ orders, business, profiles: notes, setProfiles: setNotes }) {
   const toast = useToast();
   const [q, setQ] = useState('');
   const [tagFilter, setTagFilter] = useState('');
@@ -848,9 +846,10 @@ function Customers({ orders, business, profiles: notes, setProfiles: setNotes })
 // The restaurant's bookings: the agenda by day, the hall right now and its customers.
 export default function Reservations() {
   const { business } = useAuth();
-  const { settings, modules, reloadSettings } = useOutletContext();
+  const { settings, reloadSettings } = useOutletContext();
   const [params, setParams] = useSearchParams();
   const [moving, setMoving] = useState(null);
+  const [day, setDay] = useState(todayISO());
   const tab = params.get('ver') || 'agenda';
   const [adding, setAdding] = useState(null);
   const { data, loading, reload, setData } = useAsync(() => businessOrders(business.name), [business.name]);
@@ -859,25 +858,32 @@ export default function Reservations() {
 
   useEffect(() => subscribe('orders', () => reload()), [reload]);
 
-  const { data: profiles, setData: setProfiles } = useAsync(() => customerNotes(business.name), [business.name]);
+  const { data: profiles } = useAsync(() => customerNotes(business.name), [business.name]);
   const bookings = bookingsOf(orders);
   const history = useMemo(() => new Map(customersFrom(orders).map((c) => [c.key, c])), [orders]);
+  // Customers, figures and QR orders have their own pages now; old links land there.
+  const moved = { clientes: '/panel/clientes', datos: '/panel/numeros', comandas: '/panel/comandas' }[tab];
+  if (moved) return <Navigate to={moved} replace />;
   if ((loading && !data) || !settings) return <Skeleton rows={4} />;
 
   // A new table text makes the stored columns stale until the next load, so the card reads the text.
   const onItems = (o, items) => setData((list) => list.map((x) => (x.id === o.id ? { ...x, items, guests: null } : x)));
-  const tabs = [
-    ['agenda', 'Agenda'], ['linea', 'Línea'], ['sala', 'Sala'], ['clientes', 'Clientes'], ['datos', 'Datos'],
-    ...(modules.pedidosQr ? [['comandas', 'Comandas']] : []),
-  ];
-  const props = { bookings, history, actions, settings, business, onAdd: setAdding, onChangeTable: setMoving, reloadSettings, profiles, onItems };
+  const tabs = [['agenda', 'Lista'], ['linea', 'Línea'], ['sala', 'Plano']];
+  const props = { day, bookings, history, actions, settings, business, onAdd: setAdding, onChangeTable: setMoving, reloadSettings, profiles, onItems };
   const auto = settings.profile?.auto_confirm !== false;
 
   return (
     <div className="page">
       <PageHeader eyebrow={business.name} title="Reservas"
-        right={<button className="btn soft sm" onClick={() => setAdding({ walkIn: true })}>Sin reserva</button>} />
-      <div className="segmented" role="tablist">
+        right={(
+          <span className="row" style={{ gap: 8 }}>
+            <button className="btn soft sm" onClick={() => setAdding({ walkIn: true })} aria-label="Llega sin reserva"><Icon name="users" size={16} /><span className="wide-only">Sin reserva</span></button>
+            <button className="btn primary sm" onClick={() => setAdding({ date: day })} aria-label="Apuntar reserva"><Icon name="plus" size={16} /><span className="wide-only">Reserva</span></button>
+          </span>
+        )} />
+      <SectionTabs />
+      <DayStrip day={day} onDay={setDay} bookings={bookings} />
+      <div className="segmented" role="tablist" aria-label="Vista">
         {tabs.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setParams(k === 'agenda' ? {} : { ver: k }, { replace: true })}>{l}</button>)}
       </div>
       {tab === 'agenda' && (
@@ -888,9 +894,6 @@ export default function Reservations() {
       {tab === 'agenda' && <Agenda {...props} />}
       {tab === 'linea' && <Timeline {...props} />}
       {tab === 'sala' && <Hall {...props} />}
-      {tab === 'clientes' && <Customers orders={orders} business={business} profiles={profiles} setProfiles={setProfiles} />}
-      {tab === 'datos' && <Stats bookings={bookings} settings={settings} />}
-      {tab === 'comandas' && <Orders comandasOnly />}
       {moving && <ChangeTableSheet order={moving} settings={settings} business={business} onClose={() => setMoving(null)} onDone={onItems} />}
       <OwnerBookingSheet open={!!adding} initial={adding} onClose={() => setAdding(null)} business={business} settings={settings} onSaved={reload} />
     </div>

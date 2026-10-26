@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
 import { Empty, PageHeader, Sheet, Skeleton, Spinner, useToast } from '../../components/ui.jsx';
+import SectionTabs from '../../components/SectionTabs.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { createProduct, deleteProduct, getRestaurantSettings, listProducts, safeSlug, saveRestaurantSettings, uploadPublicFile } from '../../lib/data.js';
@@ -215,6 +216,7 @@ export default function Catalog() {
         title={kind === 'restaurant' ? 'Carta' : beauty ? 'Servicios' : 'Catálogo'}
         right={tab === 'carta' && <button className="btn primary sm" onClick={() => setAdding(true)}><Icon name="plus" size={16} /> Añadir</button>}
       />
+      <SectionTabs />
 
       {kind === 'restaurant' && modules?.menuDia !== false && (
         <div className="segmented" role="tablist">

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from '../../components/Icon.jsx';
 import { BackButton, Empty, Mono, PageHeader, Skeleton, Spinner, useToast } from '../../components/ui.jsx';
+import SectionTabs from '../../components/SectionTabs.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { businessInbox, markThreadRead, sendMessage, subscribe } from '../../lib/data.js';
@@ -82,6 +83,7 @@ export default function Messages() {
   return (
     <div className="page">
       <PageHeader eyebrow={business.name} title="Mensajes" />
+      <SectionTabs />
       {threads.length === 0 ? (
         <div className="widget"><Empty icon="chat" title="Sin mensajes todavía">Cuando un cliente te escriba desde tu ficha, lo verás aquí.</Empty></div>
       ) : (

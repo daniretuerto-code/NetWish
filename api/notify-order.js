@@ -65,7 +65,7 @@ export default async function handler(req, res) {
           subject: `Reserva cambiada: ${order.customer}`,
           html: emailLayout(
             ok ? 'Un cliente ha cambiado su reserva' : 'Cambio de reserva por confirmar',
-            `${summary(order)}<p>Cliente: ${escapeHtml(order.customer)}${order.customer_email ? ` · ${escapeHtml(order.customer_email)}` : ''}${order.phone ? ` · ${escapeHtml(order.phone)}` : ''}</p><p><a href="${SITE_URL}/panel/pedidos">Abrir el panel</a></p>`,
+            `${summary(order)}<p>Cliente: ${escapeHtml(order.customer)}${order.customer_email ? ` · ${escapeHtml(order.customer_email)}` : ''}${order.phone ? ` · ${escapeHtml(order.phone)}` : ''}</p><p><a href="${SITE_URL}/panel/reservas">Abrir el panel</a></p>`,
           ),
         }),
       ]);
@@ -93,7 +93,7 @@ export default async function handler(req, res) {
         subject: instant ? `Reserva nueva confirmada: ${order.customer}` : `Nueva reserva por confirmar: ${order.customer}`,
         html: emailLayout(
           instant ? 'Reserva nueva (ya confirmada)' : 'Nueva solicitud de reserva',
-          `${summary(order)}${order.customer_email ? `<p>Cliente: ${escapeHtml(order.customer)} · ${escapeHtml(order.customer_email)}${order.phone ? ` · ${escapeHtml(order.phone)}` : ''}</p>` : ''}<p><a href="${SITE_URL}/panel/pedidos">Abrir el panel</a></p>`,
+          `${summary(order)}${order.customer_email ? `<p>Cliente: ${escapeHtml(order.customer)} · ${escapeHtml(order.customer_email)}${order.phone ? ` · ${escapeHtml(order.phone)}` : ''}</p>` : ''}<p><a href="${SITE_URL}/panel/reservas">Abrir el panel</a></p>`,
         ),
       }),
     ]);

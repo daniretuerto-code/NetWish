@@ -378,3 +378,18 @@ textarea.input { height: auto; min-height: 96px; padding: 12px 16px; resize: ver
 
 /* The booking button on a restaurant's own website opens NetWish in a frame: no menus around it. */
 .shell.embed { padding: 0; display: block; }
+
+/* Pages of a panel section (Clientes · Mensajes · Campañas…), under the title */
+.subnav { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 4px; margin-top: -4px; }
+.subnav::-webkit-scrollbar { display: none; }
+.subnav a { position: relative; flex: none; display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 16px; border-radius: 19px; font-size: 15px; font-weight: 700; line-height: 1; color: var(--muted); text-decoration: none; box-shadow: inset 0 0 0 1.5px var(--line); }
+.subnav a.active { background: var(--ink); color: var(--on-ink); box-shadow: none; }
+.subnav a:not(.active):hover { color: var(--ink); }
+/* "New": a lime dot the first time a section or tab shows up */
+.new-dot { flex: none; width: 9px; height: 9px; border-radius: 5px; background: var(--accent); box-shadow: 0 0 0 1.5px var(--ink); }
+.sidebar .new-dot { margin-left: auto; box-shadow: none; }
+.tab-dot.new { background: var(--accent); }
+.shell.panel[data-theme="dark"] .subnav a.active { background: #F5F5F7; color: #111; }
+.shell.panel[data-theme="dark"] .subnav a { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.16); }
+@media (max-width: 520px) { .wide-only { display: none; } }
+@media (max-width: 420px) { .subnav { gap: 4px; } .subnav a { padding: 0 11px; font-size: 14px; height: 36px; } }

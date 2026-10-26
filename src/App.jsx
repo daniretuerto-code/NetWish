@@ -29,8 +29,10 @@ const BizCampaigns = lazy(() => import('./screens/business/Campaigns.jsx'));
 const BizEvents = lazy(() => import('./screens/business/Events.jsx'));
 const BizPortal = lazy(() => import('./screens/business/Portal.jsx'));
 const Admin = lazy(() => import('./screens/business/Admin.jsx'));
-const BizPersonalize = lazy(() => import('./screens/business/Setup.jsx'));
 const BizOnboarding = lazy(() => import('./screens/business/Setup.jsx').then((m) => ({ default: m.Onboarding })));
+const BizClients = lazy(() => import('./screens/business/Clients.jsx'));
+const BizNumbers = lazy(() => import('./screens/business/Clients.jsx').then((m) => ({ default: m.Numbers })));
+const BizShare = lazy(() => import('./screens/business/Share.jsx'));
 const BizSection = lazy(() => import('./screens/business/Setup.jsx').then((m) => ({ default: m.SectionWizard })));
 
 // Printed QR codes point to /?biz=NAME&table=N, so keep that entry point working.
@@ -58,6 +60,17 @@ function RequireBusiness({ children }) {
 function BizBookings() {
   const { business } = useAuth();
   return kindOf(business) === 'restaurant' ? <BizReservations /> : <BizOrders />;
+}
+
+// QR table orders, on their own page inside the service section.
+function BizComandas() {
+  return <BizOrders comandasOnly page />;
+}
+
+// Old links (e-mails, bookmarks) to /panel/pedidos keep working, with their ?ver=.
+function LegacyPanelLink({ to }) {
+  const { search } = useLocation();
+  return <Navigate to={`${to}${search}`} replace />;
 }
 
 // netwish.es/r/casa-lucio: the short booking link restaurants paste on Google and Instagram.
@@ -106,7 +119,12 @@ export default function App() {
         <Route path="admin" element={<Admin />} />
         <Route path="panel" element={<RequireBusiness><BusinessShell /></RequireBusiness>}>
           <Route index element={<BizOverview />} />
-          <Route path="pedidos" element={<BizBookings />} />
+          <Route path="reservas" element={<BizBookings />} />
+          <Route path="pedidos" element={<LegacyPanelLink to="/panel/reservas" />} />
+          <Route path="comandas" element={<BizComandas />} />
+          <Route path="clientes" element={<BizClients />} />
+          <Route path="numeros" element={<BizNumbers />} />
+          <Route path="compartir" element={<BizShare />} />
           <Route path="cocina" element={<BizKitchen />} />
           <Route path="carta" element={<BizCatalog />} />
           <Route path="mesas" element={<BizTables />} />
@@ -116,7 +134,7 @@ export default function App() {
           <Route path="campanas" element={<BizCampaigns />} />
           <Route path="eventos" element={<BizEvents />} />
           <Route path="empezar" element={<BizOnboarding />} />
-          <Route path="personalizar" element={<BizPersonalize />} />
+          <Route path="personalizar" element={<Navigate to="/panel/ajustes" replace />} />
           <Route path="personalizar/:key" element={<BizSection />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

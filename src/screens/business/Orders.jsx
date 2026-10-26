@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Empty, PageHeader, Skeleton, Spinner, useToast } from '../../components/ui.jsx';
+import SectionTabs from '../../components/SectionTabs.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { businessOrders, isReservation, notifyOrder, setOrderStatus, STATUS, subscribe } from '../../lib/data.js';
@@ -47,7 +48,7 @@ function Column({ title, count, accent, children }) {
   );
 }
 
-export default function Orders({ comandasOnly = false }) {
+export default function Orders({ comandasOnly = false, page = false }) {
   const { business } = useAuth();
   const isRestaurant = kindOf(business) === 'restaurant';
   const toast = useToast();
@@ -85,7 +86,7 @@ export default function Orders({ comandasOnly = false }) {
   const history = orders.filter((o) => [STATUS.DONE, STATUS.REJECTED].includes(o.status) || (isReservation(o) && o.status === STATUS.CONFIRMED && o.date < todayISO()));
 
   if (comandasOnly) {
-    return (
+    const board = (
       <div className="kanban" style={{ gridTemplateColumns: undefined }}>
         <Column title="En preparación" count={preparing.length} accent>
           {preparing.map((o) => (
@@ -97,6 +98,16 @@ export default function Orders({ comandasOnly = false }) {
             <OrderCard key={o.id} order={o} busy={busy === o.id} actions={[{ label: 'Entregado', kind: 'accent', run: () => move(o, STATUS.DONE) }]} />
           ))}
         </Column>
+      </div>
+    );
+    if (!page) return board;
+    return (
+      <div className="page">
+        <PageHeader eyebrow={business.name} title="Comandas" />
+        <SectionTabs />
+        {preparing.length + ready.length === 0
+          ? <div className="widget"><Empty icon="qr" title="No hay comandas ahora">Cuando una mesa pida desde su QR, el pedido aparece aquí y en Cocina.</Empty></div>
+          : board}
       </div>
     );
   }

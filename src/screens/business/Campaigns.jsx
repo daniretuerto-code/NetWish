@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
 import { Empty, PageHeader, Skeleton, useToast } from '../../components/ui.jsx';
+import SectionTabs from '../../components/SectionTabs.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { businessOrders, campaignsOf, customerNotes, sendCampaign, STATUS } from '../../lib/data.js';
@@ -131,6 +132,7 @@ export default function Campaigns() {
   return (
     <div className="page">
       <PageHeader eyebrow={business.name} title="Campañas" />
+      <SectionTabs />
       <p className="muted" style={{ margin: '0 4px' }}>Escribe a tus clientes para llenar los días flojos. Les llega un correo con tu mensaje y un botón para reservar.</p>
 
       {customers.length === 0 ? (

@@ -16,7 +16,6 @@ import { greeting, longDate, minutesToTime, money, timeToMinutes, todayISO } fro
 import { profileProgress } from '../../lib/questionnaire.js';
 import { netwishNumbers } from '../../lib/insights.js';
 import { upcomingEvents } from '../../lib/events.js';
-import QRCode from 'qrcode';
 
 const tomorrowISO = () => {
   const d = new Date(`${todayISO()}T12:00:00`);
@@ -26,8 +25,6 @@ const tomorrowISO = () => {
 
 // .widget.link stacks its children; these cards read as one line.
 const ROW = { display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14 };
-
-export const bookingLink = (business) => `${window.location.origin}/r/${business.username}`;
 
 // What a new restaurant still needs before its page goes public.
 function PublishChecklist({ business, settings, products }) {
@@ -70,85 +67,6 @@ function PublishChecklist({ business, settings, products }) {
 }
 
 // Everything a restaurant needs to put its booking button everywhere: QR, web code, Google, Instagram.
-function ShareSheet({ open, onClose, business }) {
-  const toast = useToast();
-  const url = bookingLink(business);
-  const [qr, setQr] = useState('');
-  useEffect(() => {
-    if (open) QRCode.toDataURL(url, { margin: 1, width: 720 }).then(setQr);
-  }, [open, url]);
-  const code = `<script src="${window.location.origin}/reservar.js" data-negocio="${business.username}" async></script>`;
-  const copy = (text, what) => navigator.clipboard?.writeText(text).then(() => toast(`${what} copiado`));
-  const step = (n, title, body) => (
-    <div className="row" style={{ gap: 12, alignItems: 'flex-start' }}>
-      <span className="mono" style={{ width: 30, height: 30, background: 'var(--accent)', color: 'var(--ink)', fontWeight: 800, flex: 'none' }}>{n}</span>
-      <span className="stack" style={{ gap: 2 }}><strong>{title}</strong><span className="small muted">{body}</span></span>
-    </div>
-  );
-  return (
-    <Sheet open={open} onClose={onClose} title="Pon tu botón de reservar en todas partes">
-      <div className="stack" style={{ gap: 14 }}>
-        <p className="small muted" style={{ margin: 0 }}>Cuantas más reservas entren por tu enlace, menos llamadas y menos mesas vacías. Y todas quedan en tu panel con sus recordatorios.</p>
-        <section className="widget stack" style={{ gap: 10, background: 'var(--bg)' }}>
-          <h3 className="title-md">Google Maps</h3>
-          {step(1, 'Abre tu Perfil de Empresa', 'Busca tu restaurante en Google, entra en "Editar perfil".')}
-          {step(2, 'Enlaces de reservas', 'En "Reservas" o "Enlaces de pedidos y reservas", pega tu enlace.')}
-          <button className="btn soft sm" onClick={() => copy(url, 'Enlace')}><Icon name="link" size={16} /> Copiar enlace</button>
-        </section>
-        <section className="widget stack" style={{ gap: 10, background: 'var(--bg)' }}>
-          <h3 className="title-md">Instagram</h3>
-          {step(1, 'Editar perfil → Enlaces', 'Añade un enlace externo con tu enlace de reservas y ponle de título "Reservar mesa".')}
-          {step(2, 'En tus historias', 'Usa el sticker "Enlace" con el mismo enlace cuando publiques un plato o un evento.')}
-          <button className="btn soft sm" onClick={() => copy(url, 'Enlace')}><Icon name="link" size={16} /> Copiar enlace</button>
-        </section>
-        <section className="widget stack" style={{ gap: 10, background: 'var(--bg)' }}>
-          <h3 className="title-md">Tu página web</h3>
-          <span className="small muted">Pega esta línea antes de &lt;/body&gt; (o en "Código personalizado" si usas Wix, WordPress o Squarespace). Sale un botón "Reservar mesa" abajo a la derecha que abre la reserva sin salir de tu web.</span>
-          <code style={{ display: 'block', background: 'var(--surface)', borderRadius: 12, padding: 10, fontSize: 12, wordBreak: 'break-all' }}>{code}</code>
-          <button className="btn soft sm" onClick={() => copy(code, 'Código')}><Icon name="link" size={16} /> Copiar código</button>
-        </section>
-        <section className="widget stack printable" style={{ gap: 8, alignItems: 'center', textAlign: 'center', background: 'var(--bg)' }}>
-          <h3 className="title-md">QR para mesas, carta y escaparate</h3>
-          <div className="qr-box">{qr ? <img src={qr} alt="QR para reservar" /> : <div className="spinner" />}</div>
-          <strong>Reserva en {business.name}</strong>
-          <div className="row" style={{ gap: 8, width: '100%' }}>
-            {qr && <a className="btn soft sm" style={{ flex: 1 }} href={qr} download={`qr-reservas-${business.username}.png`}><Icon name="download" size={16} /> Descargar</a>}
-            <button className="btn soft sm" style={{ flex: 1 }} onClick={() => window.print()}><Icon name="printer" size={16} /> Imprimir</button>
-          </div>
-        </section>
-      </div>
-    </Sheet>
-  );
-}
-
-function LinkCard({ business }) {
-  const toast = useToast();
-  const [sharing, setSharing] = useState(false);
-  const url = bookingLink(business);
-  const share = async () => {
-    try {
-      if (navigator.share) await navigator.share({ title: business.name, text: `Reserva mesa en ${business.name}`, url });
-      else { await navigator.clipboard.writeText(url); toast('Enlace copiado'); }
-    } catch { /* cancelled */ }
-  };
-  // The sheet sits outside the dark card so it doesn't inherit its white text.
-  return (
-    <>
-    <section className="widget dark stack" style={{ gap: 8 }}>
-      <span className="eyebrow" style={{ color: 'var(--accent)' }}>Tu enlace de reservas</span>
-      <strong style={{ fontSize: 18, wordBreak: 'break-all' }}>{url.replace(/^https?:\/\//, '')}</strong>
-      <span className="small" style={{ opacity: 0.7 }}>Pégalo en tu perfil de Google, en la bio de Instagram y en tu estado de WhatsApp. Quien lo abra reserva directo, sin comisiones.</span>
-      <div className="row" style={{ gap: 8 }}>
-        <button className="btn accent sm" style={{ flex: 1 }} onClick={() => navigator.clipboard?.writeText(url).then(() => toast('Enlace copiado'))}><Icon name="link" size={16} /> Copiar</button>
-        <button className="btn soft sm" style={{ flex: 1 }} onClick={share}><Icon name="share" size={16} /> Compartir</button>
-      </div>
-      <button className="btn ghost sm" style={{ color: '#fff' }} onClick={() => setSharing(true)}><Icon name="qr" size={16} /> Botón para tu web, Google, Instagram y QR</button>
-    </section>
-    <ShareSheet open={sharing} onClose={() => setSharing(false)} business={business} />
-    </>
-  );
-}
-
 // What NetWish brought this month, so far. The full month arrives by e-mail on the 1st.
 function MonthCard({ orders, settings }) {
   const today = todayISO();
@@ -162,7 +80,7 @@ function MonthCard({ orders, settings }) {
     n.rating && `Nota media ${n.rating} / 5`,
   ].filter(Boolean);
   return (
-    <Link to="/panel/pedidos?ver=datos" className="widget link stack" style={{ gap: 6, background: 'var(--accent)', color: '#111' }}>
+    <Link to="/panel/numeros" className="widget link stack" style={{ gap: 6, background: 'var(--accent)', color: '#111' }}>
       <span className="eyebrow" style={{ color: '#111' }}>En {month}, NetWish te ha traído</span>
       <span className="row" style={{ alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 40, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1 }}>{n.diners}</span>
@@ -175,46 +93,21 @@ function MonthCard({ orders, settings }) {
 }
 
 // Low scores from the survey: the customer told us instead of Google, so there is time to call.
-function RatingsCard({ orders }) {
+const lowRatings = (orders) => {
   const since = new Date(Date.now() - 14 * 86400000).toISOString();
-  const low = orders.filter((o) => o.rating && o.rating <= 3 && o.rated_at > since).sort((a, b) => String(b.rated_at).localeCompare(String(a.rated_at)));
-  if (!low.length) return null;
-  return (
-    <section className="widget stack" style={{ gap: 8, background: 'var(--danger-soft)' }}>
-      <h2 className="title-md">Clientes que no quedaron contentos</h2>
-      <span className="small muted">Te lo contaron a ti y no a Google. Una llamada a tiempo los recupera.</span>
-      {low.slice(0, 4).map((o) => (
-        <div key={o.id} className="list-row" style={{ alignItems: 'flex-start' }}>
-          <span style={{ fontWeight: 800, minWidth: 40 }}>{o.rating}/5</span>
-          <span className="grow stack" style={{ gap: 2 }}>
-            <strong>{o.customer} · {new Date(`${o.date}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</strong>
-            {o.rating_comment && <span className="small">«{o.rating_comment}»</span>}
-          </span>
-          {o.phone && <a className="btn soft sm" href={`tel:${o.phone}`}><Icon name="phone" size={15} /></a>}
-        </div>
-      ))}
-    </section>
-  );
-}
+  return orders.filter((o) => o.rating && o.rating <= 3 && o.rated_at > since).sort((a, b) => String(b.rated_at).localeCompare(String(a.rated_at)));
+};
 
 // The blocks of the home screen. Each restaurant can reorder or hide them ("Editar").
 const WIDGETS = [
   { id: 'resumen', label: 'Hoy vienen y ocupación', col: 0 },
-  { id: 'opiniones', label: 'Clientes descontentos', col: 0 },
   { id: 'acciones', label: 'Apuntar reserva / Sin reserva', col: 0 },
-  { id: 'atencion', label: 'Alergias y VIP de hoy', col: 0 },
-  { id: 'pendientes', label: 'Por confirmar', col: 0 },
+  { id: 'necesita', label: 'Te necesita: por confirmar, alergias, mensajes…', col: 0 },
   { id: 'hoy', label: 'Reservas de hoy', col: 0 },
-  { id: 'espera', label: 'Lista de espera', col: 1 },
   { id: 'manana', label: 'Mañana', col: 1 },
-  { id: 'avisos', label: 'Avisos de reservas nuevas', col: 1 },
+  { id: 'espera', label: 'Lista de espera', col: 1 },
   { id: 'mes', label: 'Lo que NetWish te ha traído', col: 1 },
-  { id: 'enlace', label: 'Tu enlace de reservas', col: 1 },
-  { id: 'eventos', label: 'Eventos y novedades', col: 1 },
-  { id: 'campanas', label: 'Campañas', col: 1 },
-  { id: 'mensajes', label: 'Mensajes sin leer', col: 1 },
-  { id: 'menu', label: 'Menú del día', col: 1 },
-  { id: 'perfil', label: 'Personaliza tu restaurante', col: 1 },
+  { id: 'idea', label: 'Una idea para hoy', col: 1 },
 ];
 
 function layoutOf(settings) {
@@ -273,20 +166,18 @@ function EditHome({ open, onClose, settings, business, reloadSettings }) {
 }
 
 // Sound and system notifications for new bookings, until they are switched on.
-function AlertsCard() {
+function AlertsRow() {
   const [perm, setPerm] = useState(notifyPermission());
   if (perm !== 'default') return null;
   return (
-    <section className="widget stack" style={{ gap: 8 }}>
-      <span className="row" style={{ gap: 12 }}>
-        <span className="mono" style={{ background: 'var(--accent)', color: 'var(--ink)' }}><Icon name="bell" /></span>
-        <span className="grow stack" style={{ gap: 0 }}>
-          <strong>Entérate al momento</strong>
-          <span className="small muted">Suena y te avisa cuando entra una reserva, aunque estés en otra pestaña.</span>
-        </span>
+    <div className="list-row">
+      <span className="mono" style={{ background: 'var(--accent)', color: 'var(--ink)' }}><Icon name="bell" /></span>
+      <span className="grow stack" style={{ gap: 0 }}>
+        <span className="t">Entérate al momento</span>
+        <span className="s">Suena y te avisa cuando entra una reserva.</span>
       </span>
-      <button className="btn primary sm" onClick={async () => { unlockSound(); chime(); setPerm(await askNotifyPermission()); }}>Activar avisos</button>
-    </section>
+      <button className="btn primary sm" onClick={async () => { unlockSound(); chime(); setPerm(await askNotifyPermission()); }}>Activar</button>
+    </div>
   );
 }
 
@@ -337,6 +228,20 @@ export default function Today() {
     .some(([a, b]) => a && b && timeToMinutes(now) >= timeToMinutes(a) - 30 && timeToMinutes(now) <= timeToMinutes(b));
   const share = (list) => (seats ? Math.min(100, Math.round((guestsOf(list) / seats) * 100)) : 0);
   const watch = todays.filter((o) => (profiles[customerKey(o)]?.tags || []).length);
+  const low = lowRatings(data.orders);
+  const alertsOff = notifyPermission() === 'default';
+  const needs = pending.length + watch.length + low.length + (unread > 0 ? 1 : 0);
+
+  // One suggestion at a time, a different one each day, instead of a wall of cards.
+  const menuLive = settings.daily_menu?.active !== false && settings.daily_menu?.first_courses?.length;
+  const ideas = [
+    pct < 100 && { to: '/panel/ajustes', ring: true, title: 'Personaliza tu restaurante', text: `${pct} % completado. Tus clientes ven más detalles.` },
+    modules.menuDia && !menuLive && { to: '/panel/carta', icon: 'book', title: 'Publica el menú del día', text: 'Sale arriba del todo en "Hoy en Palencia".' },
+    !upcomingEvents(settings.profile?.eventos).length && { to: '/panel/eventos', icon: 'music', title: '¿Algo especial esta semana?', text: 'Publica un evento y sal en "Hoy en Palencia".' },
+    modules.reservas && { to: '/panel/campanas', icon: 'mail', title: '¿Un día flojo?', text: 'Escribe a tus clientes y llena mesas con una campaña.' },
+    business.username && { to: '/panel/compartir', icon: 'link', title: 'Pon tu botón de reservar en todas partes', text: 'Google, Instagram, tu web y un QR. Sin comisiones.' },
+  ].filter(Boolean);
+  const idea = ideas.length ? ideas[Math.floor(Date.now() / 86400000) % ideas.length] : null;
 
   const shiftBox = (label, list) => (
     <div className="stack" style={{ gap: 4, background: 'rgba(255,255,255,.08)', borderRadius: 16, padding: '10px 12px' }}>
@@ -381,40 +286,71 @@ export default function Today() {
         </button>
       </div>
     ),
-    atencion: watch.length > 0 && (
-      <section className="widget stack" style={{ gap: 8 }}>
-        <h2 className="title-md">Ojo hoy</h2>
-        {watch.map((o) => {
-          const tags = profiles[customerKey(o)].tags;
-          return (
-            <div key={o.id} className="list-row" style={{ alignItems: 'flex-start' }}>
-              <span style={{ fontWeight: 800, minWidth: 48 }}>{parseTableBooking(o).start}</span>
-              <span className="grow stack" style={{ gap: 4 }}>
-                <strong>{o.customer} · {parseTableBooking(o).guests} pers.</strong>
-                <span className="row" style={{ gap: 4, flexWrap: 'wrap' }}>
-                  {tags.map((t) => <span key={t} className={`tag${isAllergyTag(t) ? ' alert' : t === 'VIP' ? ' vip' : ''}`} style={{ background: isAllergyTag(t) || t === 'VIP' ? undefined : 'var(--bg)' }}>{t}</span>)}
-                </span>
-              </span>
-            </div>
-          );
-        })}
-      </section>
-    ),
-    pendientes: pending.length > 0 && (
-      <section className="widget stack" style={{ gap: 10, boxShadow: '0 0 0 3px var(--accent)' }}>
+    necesita: (
+      <section className="widget stack" style={{ gap: 10, boxShadow: pending.length ? '0 0 0 3px var(--accent)' : undefined }}>
         <div className="row between">
-          <h2 className="title-md">Por confirmar</h2>
-          <span className="count-badge accent">{pending.length}</span>
+          <h2 className="title-md">Te necesita</h2>
+          {needs > 0 && <span className="count-badge accent">{needs}</span>}
         </div>
-        {pending.slice(0, 4).map((o) => card(o, o.date === today ? 'Hoy' : new Date(`${o.date}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })))}
-        {pending.length > 4 && <Link to="/panel/pedidos" className="btn soft sm">Ver las {pending.length}</Link>}
+        {needs === 0 && !alertsOff && (
+          <span className="row small muted" style={{ gap: 6, fontWeight: 600 }}><Icon name="check" size={16} stroke={3} /> Todo al día. No hay nada pendiente.</span>
+        )}
+        {pending.length > 0 && (
+          <>
+            <span className="eyebrow">Por confirmar · {pending.length}</span>
+            {pending.slice(0, 3).map((o) => card(o, o.date === today ? 'Hoy' : new Date(`${o.date}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })))}
+            {pending.length > 3 && <Link to="/panel/reservas" className="btn soft sm">Ver las {pending.length}</Link>}
+          </>
+        )}
+        {watch.length > 0 && (
+          <div className="stack" style={{ gap: 0 }}>
+            <span className="eyebrow">Ojo hoy</span>
+            {watch.map((o) => {
+              const tags = profiles[customerKey(o)].tags;
+              return (
+                <div key={o.id} className="list-row" style={{ alignItems: 'flex-start' }}>
+                  <span style={{ fontWeight: 800, minWidth: 48 }}>{parseTableBooking(o).start}</span>
+                  <span className="grow stack" style={{ gap: 4 }}>
+                    <strong>{o.customer} · {parseTableBooking(o).guests} pers.</strong>
+                    <span className="row" style={{ gap: 4, flexWrap: 'wrap' }}>
+                      {tags.map((t) => <span key={t} className={`tag${isAllergyTag(t) ? ' alert' : t === 'VIP' ? ' vip' : ''}`} style={{ background: isAllergyTag(t) || t === 'VIP' ? undefined : 'var(--bg)' }}>{t}</span>)}
+                    </span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {low.length > 0 && (
+          <div className="stack" style={{ gap: 0 }}>
+            <span className="eyebrow">No quedaron contentos · llámales a tiempo</span>
+            {low.slice(0, 3).map((o) => (
+              <div key={o.id} className="list-row" style={{ alignItems: 'flex-start' }}>
+                <span style={{ fontWeight: 800, minWidth: 40, color: 'var(--danger)' }}>{o.rating}/5</span>
+                <span className="grow stack" style={{ gap: 2 }}>
+                  <strong>{o.customer} · {new Date(`${o.date}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</strong>
+                  {o.rating_comment && <span className="small">«{o.rating_comment}»</span>}
+                </span>
+                {o.phone && <a className="btn soft sm" href={`tel:${o.phone}`} aria-label={`Llamar a ${o.customer}`}><Icon name="phone" size={15} /></a>}
+              </div>
+            ))}
+          </div>
+        )}
+        {unread > 0 && (
+          <Link to="/panel/mensajes" className="list-row">
+            <span className="mono" style={{ background: 'var(--accent)', color: 'var(--ink)' }}><Icon name="chat" /></span>
+            <span className="grow t">{unread} {unread === 1 ? 'mensaje sin leer' : 'mensajes sin leer'}</span>
+            <Icon name="chevron" size={18} />
+          </Link>
+        )}
+        <AlertsRow />
       </section>
     ),
     hoy: (
       <section className="widget stack" style={{ gap: 10 }}>
         <div className="row between">
           <h2 className="title-md">Reservas de hoy</h2>
-          <Link to="/panel/pedidos?ver=linea" className="small" style={{ fontWeight: 700 }}>Ver línea del día</Link>
+          <Link to="/panel/reservas?ver=linea" className="small" style={{ fontWeight: 700 }}>Ver línea del día</Link>
         </div>
         {todays.filter((o) => o.status !== STATUS.PENDING).length === 0
           ? <p className="small muted" style={{ margin: '0 0 6px' }}>Nada confirmado para hoy todavía.</p>
@@ -423,7 +359,7 @@ export default function Today() {
     ),
     espera: <WaitlistToday business={business} />,
     manana: (
-      <Link to="/panel/pedidos" className="widget link row" style={ROW}>
+      <Link to="/panel/reservas" className="widget link row" style={ROW}>
         <span className="mono" style={{ background: 'var(--bg)', color: 'var(--ink)' }}><Icon name="calendar" /></span>
         <span className="grow stack" style={{ gap: 0 }}>
           <span className="eyebrow">Mañana</span>
@@ -432,53 +368,15 @@ export default function Today() {
         </span>
       </Link>
     ),
-    avisos: <AlertsCard />,
-    opiniones: <RatingsCard orders={data.orders} />,
     mes: <MonthCard orders={data.orders} settings={settings} />,
-    eventos: (
-      <Link to="/panel/eventos" className="widget link row" style={ROW}>
-        <span className="mono" style={{ background: 'var(--bg)', color: 'var(--ink)' }}><Icon name="music" /></span>
+    idea: idea && (
+      <Link to={idea.to} className="widget link row" style={ROW}>
+        {idea.ring ? <Ring value={pct / 100} color="var(--ink)" size={44} label={`Perfil al ${pct} %`} />
+          : <span className="mono" style={{ background: 'var(--bg)', color: 'var(--ink)' }}><Icon name={idea.icon} /></span>}
         <span className="grow stack" style={{ gap: 0 }}>
-          <strong>Eventos y novedades</strong>
-          <span className="small muted">{upcomingEvents(settings.profile?.eventos).length ? `${upcomingEvents(settings.profile.eventos).length === 1 ? '1 publicado. Sale' : `${upcomingEvents(settings.profile.eventos).length} publicados. Salen`} en "Hoy en Palencia".` : 'Publica un evento y sal en "Hoy en Palencia".'}</span>
-        </span>
-        <Icon name="chevron" size={18} />
-      </Link>
-    ),
-    campanas: modules.reservas && (
-      <Link to="/panel/campanas" className="widget link row" style={ROW}>
-        <span className="mono" style={{ background: 'var(--bg)', color: 'var(--ink)' }}><Icon name="mail" /></span>
-        <span className="grow stack" style={{ gap: 0 }}>
-          <strong>¿Un día flojo?</strong>
-          <span className="small muted">Escribe a tus clientes y llena mesas con una campaña.</span>
-        </span>
-        <Icon name="chevron" size={18} />
-      </Link>
-    ),
-    enlace: business.username && <LinkCard business={business} />,
-    mensajes: unread > 0 && (
-      <Link to="/panel/mensajes" className="widget link row" style={ROW}>
-        <span className="mono" style={{ background: 'var(--accent)', color: 'var(--ink)' }}><Icon name="chat" /></span>
-        <strong className="grow">{unread} {unread === 1 ? 'mensaje sin leer' : 'mensajes sin leer'}</strong>
-        <Icon name="chevron" size={18} />
-      </Link>
-    ),
-    menu: modules.menuDia && (
-      <Link to="/panel/carta" className="widget link row" style={ROW}>
-        <span className="mono" style={{ background: 'var(--bg)', color: 'var(--ink)' }}><Icon name="book" /></span>
-        <span className="grow stack" style={{ gap: 0 }}>
-          <strong>Menú del día</strong>
-          <span className="small muted">{settings.daily_menu?.active !== false && settings.daily_menu?.first_courses?.length ? 'Publicado. Sale en "Hoy en Palencia".' : 'Publícalo y sal en "Hoy en Palencia".'}</span>
-        </span>
-        <Icon name="chevron" size={18} />
-      </Link>
-    ),
-    perfil: pct < 100 && (
-      <Link to="/panel/personalizar" className="widget link row" style={ROW}>
-        <Ring value={pct / 100} color="var(--ink)" size={44} label={`Perfil al ${pct} %`} />
-        <span className="grow stack" style={{ gap: 0 }}>
-          <strong>Personaliza tu restaurante</strong>
-          <span className="small muted">{pct} % completado. Tus clientes ven más detalles.</span>
+          <span className="eyebrow">Una idea</span>
+          <strong>{idea.title}</strong>
+          <span className="small muted">{idea.text}</span>
         </span>
         <Icon name="chevron" size={18} />
       </Link>

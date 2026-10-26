@@ -129,7 +129,7 @@ export default function OwnerBookingSheet({ open, onClose, business, settings, i
                 <button type="button" key={t} className="pill" onClick={() => setTime(t)} style={{ minWidth: 0, height: 40, background: time === t ? 'var(--ink)' : 'var(--bg)', color: time === t ? 'var(--on-ink)' : 'var(--ink)' }}>{t}</button>
               ))}
             </div>
-            {daySlots.length === 0 && <p className="small muted" style={{ margin: 0 }}>No hay turnos este día. Revisa tu horario en Personalizar.</p>}
+            {daySlots.length === 0 && <p className="small muted" style={{ margin: 0 }}>No hay turnos este día. Revisa tu horario en Ajustes › Lo básico.</p>}
           </div>
         )}
 
