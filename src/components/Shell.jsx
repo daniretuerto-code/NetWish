@@ -99,7 +99,7 @@ export function BusinessShell() {
     ...(!isRestaurant || mods.reservas || mods.pedidosQr ? [{ to: '/panel/pedidos', label: isRestaurant && !mods.reservas ? 'Comandas' : 'Reservas', icon: 'calendar' }] : []),
     ...(isRestaurant && mods.cocina ? [{ to: '/panel/cocina', label: 'Cocina', icon: 'flame' }] : []),
     { to: '/panel/carta', label: isRestaurant ? 'Carta' : isBeauty ? 'Servicios' : 'Catálogo', icon: isBeauty ? 'scissors' : 'book' },
-    ...(isRestaurant && (mods.reservas || mods.pedidosQr) ? [{ to: '/panel/mesas', label: 'Mesas y QR', icon: 'grid' }] : []),
+    ...(isRestaurant && (mods.reservas || mods.pedidosQr) ? [{ to: '/panel/mesas', label: 'Tu sala', icon: 'grid' }] : []),
     ...(isRestaurant ? [{ to: '/panel/personalizar', label: 'Personalizar', icon: 'gear' }] : []),
     ...(isBeauty ? [{ to: '/panel/horario', label: 'Horario y equipo', icon: 'calendar' }] : []),
     { to: '/panel/mensajes', label: 'Mensajes', icon: 'chat' },

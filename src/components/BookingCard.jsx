@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Icon from './Icon.jsx';
 import { useToast } from './ui.jsx';
 import { notifyOrder, setOrderStatus, STATUS } from '../lib/data.js';
-import { parseTableBooking, STATUS_LOOK, telLink, whatsappLink } from '../lib/agenda.js';
+import { parseTableBooking, STATUS_LOOK, tableLabel, telLink, whatsappLink } from '../lib/agenda.js';
 
 // Changing a booking's status from the panel, with the customer e-mail on confirmation.
 export function useBookingActions(onChange) {
@@ -64,7 +64,7 @@ export default function BookingCard({ order, history, busy, onMove, onChangeTabl
           </span>
           <span style={{ fontSize: 15 }}>
             <strong>{b.guests || '?'} pers.</strong>
-            {b.table ? ` · Mesa ${b.table}${b.zone ? ` (${b.zone})` : ''}` : ''}
+            {b.table ? ` · ${tableLabel(b.tables, b.zone)}` : ''}
             {order.source === 'telefono' ? ' · Por teléfono' : order.source === 'local' ? ' · Sin reserva' : ''}
           </span>
           {b.note && <span className="small" style={{ background: 'var(--surface)', borderRadius: 10, padding: '4px 8px' }}>{b.note}</span>}
@@ -78,7 +78,7 @@ export default function BookingCard({ order, history, busy, onMove, onChangeTabl
       {(order.phone || order.customer_email || onChangeTable) && (
         <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
           {onChangeTable && [STATUS.PENDING, STATUS.CONFIRMED, STATUS.SEATED].includes(order.status) && (
-            <button className="btn soft sm" onClick={() => onChangeTable(order)}><Icon name="grid" size={15} /> {/Mesa \d+/.test(order.items) ? 'Cambiar mesa' : 'Asignar mesa'}</button>
+            <button className="btn soft sm" onClick={() => onChangeTable(order)}><Icon name="grid" size={15} /> {b.table ? 'Cambiar mesa' : 'Asignar mesa'}</button>
           )}
           {order.phone && <a className="btn soft sm" href={telLink(order.phone)}><Icon name="phone" size={15} /> {order.phone}</a>}
           {order.phone && <a className="btn soft sm" href={whatsappLink(order.phone, contactText)} target="_blank" rel="noreferrer"><Icon name="chat" size={15} /> WhatsApp</a>}

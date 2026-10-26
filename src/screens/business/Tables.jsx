@@ -7,6 +7,8 @@ import useAsync from '../../hooks/useAsync.js';
 import { getRestaurantSettings, saveRestaurantSettings } from '../../lib/data.js';
 import { tableUrl } from '../../lib/qr.js';
 import { tableMin } from '../../lib/agenda.js';
+import { placeTables, zonesOf } from '../../lib/floor.js';
+import FloorEditor from './FloorEditor.jsx';
 
 function QrImage({ text, size = 440 }) {
   const [src, setSrc] = useState('');
@@ -42,17 +44,20 @@ export default function Tables() {
   const [qrTable, setQrTable] = useState(null);
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [view, setView] = useState('plano');
   const { data, loading, setData } = useAsync(() => getRestaurantSettings(business.name), [business.name]);
 
   if (loading && !data) return <Spinner />;
-  const tables = data.tables || [];
-  const zones = [...new Set(['Sala Principal', 'Terraza', ...tables.map((t) => t.zone).filter(Boolean)])];
+  const floorZones = zonesOf(data);
+  const items = data.floor?.items || [];
+  const tables = placeTables(data.tables || [], floorZones, items);
+  const zones = [...new Set([...floorZones.map((z) => z.name), 'Terraza'])];
 
   const change = (patch) => { setData({ ...data, ...patch }); setDirty(true); };
   const setTable = (i, patch) => change({ tables: tables.map((t, j) => (j === i ? { ...t, ...patch } : t)) });
   const addTable = () => {
     const next = tables.reduce((m, t) => Math.max(m, Number(t.table_number) || 0), 0) + 1;
-    change({ tables: [...tables, { id: next, table_number: next, capacity: 4, zone: 'Sala Principal' }] });
+    change({ tables: [...tables, { id: next, table_number: next, capacity: 4, zone: floorZones[0].name }] });
   };
   const removeTable = (i) => change({ tables: tables.filter((_, j) => j !== i) });
 
@@ -70,8 +75,15 @@ export default function Tables() {
         turn_duration_min: Number(turn_duration_min) || 90,
         tables: tables.map((t) => {
           const capacity = Number(t.capacity) || 2;
-          return { ...t, table_number: Number(t.table_number), capacity, min: Math.min(capacity, Math.max(1, Number(t.min) || tableMin({ capacity }))) };
+          return {
+            ...t,
+            table_number: Number(t.table_number),
+            capacity,
+            min: Math.min(capacity, Math.max(1, Number(t.min) || tableMin({ capacity }))),
+            join: (t.join || []).map(Number).filter((n) => numbers.includes(n)),
+          };
         }),
+        floor: { zones: zonesOf({ ...data, tables }), items },
       });
       setDirty(false);
       toast('Sala guardada');
@@ -91,8 +103,19 @@ export default function Tables() {
 
   return (
     <div className="page" style={{ paddingBottom: dirty ? 200 : undefined }}>
-      <PageHeader eyebrow={business.name} title="Mesas y QR" right={<button className="btn primary sm" onClick={addTable}><Icon name="plus" size={16} /> Mesa</button>} />
+      <PageHeader eyebrow={business.name} title="Tu sala" right={view === 'lista' ? <button className="btn primary sm" onClick={addTable}><Icon name="plus" size={16} /> Mesa</button> : null} />
 
+      <div className="segmented" role="tablist" aria-label="Vista">
+        <button role="tab" aria-selected={view === 'plano'} onClick={() => setView('plano')}>Plano</button>
+        <button role="tab" aria-selected={view === 'lista'} onClick={() => setView('lista')}>Lista, QR y horario</button>
+      </div>
+
+      {view === 'plano' && (
+        <FloorEditor tables={tables} zones={floorZones} items={items} onQr={setQrTable}
+          onChange={(next) => change({ tables: next.tables, floor: { zones: next.zones, items: next.items } })} />
+      )}
+
+      {view === 'lista' && (<>
       <p className="small muted" style={{ margin: '0 4px' }}>Cada mesa se ofrece solo a grupos de su tamaño: así una pareja no ocupa la mesa de 6. Desmarca "online" en las mesas que guardas para quien llega sin reservar.</p>
       <div className="table-grid">
         {tables.map((t, i) => (
@@ -131,6 +154,7 @@ export default function Tables() {
           <input id="turn" className="input" type="number" min={30} max={240} step={15} value={data.turn_duration_min} onChange={(e) => change({ turn_duration_min: e.target.value })} />
         </div>
       </div>
+      </>)}
 
       {dirty && (
         <button className="cta-bar above-tabs" onClick={save} disabled={busy}>

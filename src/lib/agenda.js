@@ -2,13 +2,20 @@ import { isReservation, STATUS } from './data.js';
 import { normalize, timeToMinutes } from './format.js';
 
 // Restaurant bookings are stored as "Reserva 4 pax — Mesa 3 (Terraza) · Nota: …" with time "21:00 - 22:30".
+// A group on two tables pushed together reads "Mesas 2+3 (Sala Principal)".
+export const TABLES_RE = /Mesas? (\d+(?:\+\d+)*)/;
+export const tablesIn = (items) => (TABLES_RE.exec(String(items || '').split(' · Nota:')[0])?.[1] || '').split('+').filter(Boolean).map(Number);
+export const tableLabel = (list, zone) => `${list.length > 1 ? 'Mesas' : 'Mesa'} ${list.join('+')}${zone ? ` (${zone})` : ''}`;
+
 export function parseTableBooking(o) {
   const items = String(o.items || '');
   const range = /(\d{1,2}:\d{2})\s*(?:-\s*(\d{1,2}:\d{2}))?/.exec(o.time || '') || [];
+  const tables = tablesIn(items);
   return {
     guests: Number(/(\d+)\s*pax/i.exec(items)?.[1]) || 0,
-    table: Number(/Mesa (\d+)/.exec(items)?.[1]) || null,
-    zone: /Mesa \d+ \(([^)]+)\)/.exec(items)?.[1] || '',
+    table: tables[0] || null,
+    tables,
+    zone: /Mesas? [\d+]+ \(([^)]+)\)/.exec(items)?.[1] || '',
     note: items.split(' · Nota:')[1]?.trim() || '',
     start: range[1] || '',
     end: range[2] || '',
