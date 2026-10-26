@@ -168,9 +168,11 @@ export async function restaurantsToday() {
   ]);
   const byName = new Map((data || []).map((r) => [normalize(r.business_name), r]));
   const today = new Date().getDay();
+  // `open`: takes bookings and is not closed today. Closed ones still show their events.
   return businesses
     .map((b) => ({ biz: b, settings: byName.get(normalize(b.name)) }))
-    .filter(({ settings }) => settings && !(settings.closed_days || []).includes(today) && settings.profile?.reservas !== false);
+    .filter(({ settings }) => settings)
+    .map((r) => ({ ...r, open: !(r.settings.closed_days || []).includes(today) && r.settings.profile?.reservas !== false }));
 }
 
 export async function saveRestaurantSettings(businessName, patch) {
@@ -323,21 +325,54 @@ export async function sendReminders() {
   }
 }
 
-// What the restaurant keeps about each customer: { [customerKey]: { note, tags } }.
+// What the restaurant keeps about each customer: { [customerKey]: { note, tags, birthday } }.
 export async function customerNotes(businessName) {
   const { data } = await supabase.from('customer_notes').select('*').ilike('business_name', escapeLike(businessName));
-  return Object.fromEntries((data || []).map((n) => [n.customer_key, { note: n.note || '', tags: n.tags || [] }]));
+  return Object.fromEntries((data || []).map((n) => [n.customer_key, { note: n.note || '', tags: n.tags || [], birthday: n.birthday || '' }]));
 }
 
-export async function saveCustomerNote(businessName, key, { note, tags }) {
-  const row = { business_name: businessName, customer_key: key, note, tags, updated_at: new Date().toISOString() };
+export async function saveCustomerNote(businessName, key, { note, tags, birthday }) {
+  const row = { business_name: businessName, customer_key: key, note, tags, birthday: birthday || null, updated_at: new Date().toISOString() };
   let { error } = await supabase.from('customer_notes').upsert([row]);
-  // Until the tags column exists the note still saves.
-  if (error && /tags/.test(error.message || '')) {
-    delete row.tags;
+  // Until the newer columns exist the note still saves.
+  if (error && /birthday|tags/.test(error.message || '')) {
+    delete row.birthday;
     ({ error } = await supabase.from('customer_notes').upsert([row]));
   }
   fail(error);
+}
+
+// ---------- Customers coming back ----------
+// The survey link in the e-mail: reads the visit, or saves a 1–5 score and an optional comment.
+export async function rateVisit(token, rating = null, comment = null) {
+  const { data, error } = await supabase.rpc('rate_visit', { p_token: token, p_rating: rating, p_comment: comment });
+  fail(error);
+  return data;
+}
+
+export async function marketingUnsubscribe(business, email, sig) {
+  const { error } = await supabase.rpc('marketing_unsubscribe', { p_business: business, p_email: email, p_sig: sig });
+  fail(error);
+}
+
+export async function campaignsOf(businessName) {
+  const [{ data }, { data: out }] = await Promise.all([
+    supabase.from('campaigns').select('*').ilike('business_name', escapeLike(businessName)).order('created_at', { ascending: false }).limit(30),
+    supabase.from('marketing_optouts').select('email').ilike('business_name', escapeLike(businessName)),
+  ]);
+  return { campaigns: data || [], optouts: new Set((out || []).map((o) => o.email)) };
+}
+
+export async function sendCampaign({ segment, subject, body, offer }) {
+  const { data } = await supabase.auth.getSession();
+  const res = await fetch('/api/campaign', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session?.access_token || ''}` },
+    body: JSON.stringify({ segment, subject, body, offer }),
+  });
+  const out = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(out.error || 'No se pudo enviar la campaña');
+  return out;
 }
 
 export function notifyOrder(orderId, kind = 'created') {

@@ -102,6 +102,10 @@ export default function ReserveSheet({ open, onClose, biz, settings, initial, ch
   const [waiting, setWaiting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(null);
+  // An event on the restaurant's page reopens the sheet on its day.
+  useEffect(() => {
+    if (open && !change && /^\d{4}-\d{2}-\d{2}$/.test(initial?.date || '') && initial.date >= todayISO() && initial.date <= lastDay) setDate(initial.date);
+  }, [open, initial?.date]);
 
   // A group bigger than the restaurant's limit for instant bookings, or than any table, goes in as a request.
   const isGroup = guests > biggest || (groupFrom > 0 && guests >= groupFrom);

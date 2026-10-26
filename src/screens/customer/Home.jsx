@@ -7,6 +7,7 @@ import useAsync from '../../hooks/useAsync.js';
 import { listBusinesses, myOrders, isReservation, restaurantsToday, STATUS } from '../../lib/data.js';
 import { CATEGORIES, kindOf, taglineFor } from '../../lib/categories.js';
 import { initials, longDate, money } from '../../lib/format.js';
+import { eventDay, eventsWithin } from '../../lib/events.js';
 
 const ACTIVE = [STATUS.KITCHEN, STATUS.PENDING, STATUS.CONFIRMED, STATUS.READY];
 
@@ -43,8 +44,11 @@ function ActiveOrderWidget({ user }) {
 // Restaurants open today: their daily menu and a straight way to book a table.
 function TodayInPalencia() {
   const { data } = useAsync(() => restaurantsToday(), []);
-  const list = data || [];
-  if (!list.length) return null;
+  const all = data || [];
+  const list = all.filter((r) => r.open);
+  const events = all.flatMap(({ biz, settings }) => eventsWithin(settings.profile?.eventos).map((ev) => ({ ev, biz })))
+    .sort((a, b) => a.ev.date.localeCompare(b.ev.date)).slice(0, 6);
+  if (!list.length && !events.length) return null;
   const withMenu = list.filter(({ settings }) => settings.daily_menu && settings.daily_menu.active !== false && settings.daily_menu.first_courses?.length);
   const tonight = list.filter(({ settings }) => settings.dinner_start);
   return (
@@ -62,6 +66,20 @@ function TodayInPalencia() {
           <span className="small muted">Menú del día: {settings.daily_menu.first_courses.slice(0, 3).join(' · ')}</span>
         </Link>
       ))}
+      {events.length > 0 && (
+        <>
+          <span className="eyebrow" style={{ marginTop: 4 }}>Esta semana</span>
+          {events.map(({ ev, biz }) => (
+            <Link key={`${biz.name}-${ev.id}`} to={`/negocio/${encodeURIComponent(biz.name)}?reservar=1&dia=${ev.date}`} className="order-card" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <span className="row between" style={{ gap: 8 }}>
+                <strong>{ev.title}</strong>
+                <span className="small" style={{ fontWeight: 800 }}>{eventDay(ev.date)}</span>
+              </span>
+              <span className="small muted">{biz.name}{ev.price ? ` · ${money(ev.price)}` : ''}{ev.text ? ` · ${ev.text}` : ''}</span>
+            </Link>
+          ))}
+        </>
+      )}
       {tonight.length > 0 && (
         <>
           <span className="eyebrow" style={{ marginTop: 4 }}>Reserva para esta noche</span>

@@ -1,5 +1,5 @@
 import { supabaseRest } from './_lib.js';
-import { sendReminder, sendReviewRequest, sendWaitlistNotice } from './_emails.js';
+import { sendBadRating, sendBirthday, sendMonthly, sendReleased, sendReminder, sendReviewRequest, sendWaitlistNotice } from './_emails.js';
 
 // Called every hour by Supabase (pg_cron) and right away when a booking is cancelled.
 // The key comes from the database and goes straight back to it, which checks it.
@@ -14,8 +14,13 @@ export default async function handler(req, res) {
     const out = {
       expired: jobs.expired || 0,
       reminders: await count(jobs.reminders, sendReminder),
-      reviews: await count(jobs.reviews, (o) => sendReviewRequest(o, o.review_url)),
+      second: await count(jobs.second, sendReminder),
+      released: await count(jobs.released, sendReleased),
+      reviews: await count(jobs.reviews, sendReviewRequest),
+      bad: await count(jobs.bad, sendBadRating),
       waitlist: await count(jobs.waitlist, sendWaitlistNotice),
+      birthdays: await count(jobs.birthdays, sendBirthday),
+      monthly: await count(jobs.monthly, sendMonthly),
     };
     return res.status(200).json(out);
   } catch (error) {

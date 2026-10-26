@@ -11,6 +11,8 @@ import Orders from './screens/customer/Orders.jsx';
 import Account from './screens/customer/Account.jsx';
 import Chat from './screens/customer/Chat.jsx';
 import BookingResponse from './screens/customer/BookingResponse.jsx';
+import Opinion from './screens/customer/Opinion.jsx';
+import Unsubscribe from './screens/customer/Unsubscribe.jsx';
 import { kindOf } from './lib/categories.js';
 
 const Scan = lazy(() => import('./screens/customer/Scan.jsx'));
@@ -23,6 +25,8 @@ const BizTables = lazy(() => import('./screens/business/Tables.jsx'));
 const BizMessages = lazy(() => import('./screens/business/Messages.jsx'));
 const BizSettings = lazy(() => import('./screens/business/Settings.jsx'));
 const BizHours = lazy(() => import('./screens/business/Hours.jsx'));
+const BizCampaigns = lazy(() => import('./screens/business/Campaigns.jsx'));
+const BizEvents = lazy(() => import('./screens/business/Events.jsx'));
 const BizPortal = lazy(() => import('./screens/business/Portal.jsx'));
 const Admin = lazy(() => import('./screens/business/Admin.jsx'));
 const BizPersonalize = lazy(() => import('./screens/business/Setup.jsx'));
@@ -59,7 +63,11 @@ function BizBookings() {
 // netwish.es/r/casa-lucio: the short booking link restaurants paste on Google and Instagram.
 function ShortLink() {
   const { slug } = useParams();
-  return <Navigate to={`/negocio/${encodeURIComponent(slug)}?reservar=1`} replace />;
+  const { search } = useLocation();
+  // Keeps ?embed=1 from the "Reservar" button restaurants put on their own website.
+  const extra = new URLSearchParams(search);
+  extra.set('reservar', '1');
+  return <Navigate to={`/negocio/${encodeURIComponent(slug)}?${extra}`} replace />;
 }
 
 // Old payment QR codes and links now land on the business page.
@@ -91,6 +99,8 @@ export default function App() {
           <Route path="chat/:name" element={<Chat />} />
           <Route path="reserva/:token" element={<BookingResponse />} />
           <Route path="r/:slug" element={<ShortLink />} />
+          <Route path="opinion/:token" element={<Opinion />} />
+          <Route path="baja" element={<Unsubscribe />} />
         </Route>
         <Route path="negocios" element={<BizPortal />} />
         <Route path="admin" element={<Admin />} />
@@ -103,6 +113,8 @@ export default function App() {
           <Route path="mensajes" element={<BizMessages />} />
           <Route path="ajustes" element={<BizSettings />} />
           <Route path="horario" element={<BizHours />} />
+          <Route path="campanas" element={<BizCampaigns />} />
+          <Route path="eventos" element={<BizEvents />} />
           <Route path="empezar" element={<BizOnboarding />} />
           <Route path="personalizar" element={<BizPersonalize />} />
           <Route path="personalizar/:key" element={<BizSection />} />

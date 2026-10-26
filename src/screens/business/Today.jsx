@@ -12,8 +12,11 @@ import { businessInbox, businessOrders, customerNotes, expirePending, listProduc
 import { askNotifyPermission, chime, notifyPermission, unlockSound } from '../../lib/alerts.js';
 import { isAllergyTag } from '../../lib/tags.js';
 import { ACTIVE_BOOKING, bookingsOf, byTime, customerKey, customersFrom, guestsOf, parseTableBooking, shiftOf } from '../../lib/agenda.js';
-import { greeting, longDate, minutesToTime, timeToMinutes, todayISO } from '../../lib/format.js';
+import { greeting, longDate, minutesToTime, money, timeToMinutes, todayISO } from '../../lib/format.js';
 import { profileProgress } from '../../lib/questionnaire.js';
+import { netwishNumbers } from '../../lib/insights.js';
+import { upcomingEvents } from '../../lib/events.js';
+import QRCode from 'qrcode';
 
 const tomorrowISO = () => {
   const d = new Date(`${todayISO()}T12:00:00`);
@@ -66,8 +69,61 @@ function PublishChecklist({ business, settings, products }) {
   );
 }
 
+// Everything a restaurant needs to put its booking button everywhere: QR, web code, Google, Instagram.
+function ShareSheet({ open, onClose, business }) {
+  const toast = useToast();
+  const url = bookingLink(business);
+  const [qr, setQr] = useState('');
+  useEffect(() => {
+    if (open) QRCode.toDataURL(url, { margin: 1, width: 720 }).then(setQr);
+  }, [open, url]);
+  const code = `<script src="${window.location.origin}/reservar.js" data-negocio="${business.username}" async></script>`;
+  const copy = (text, what) => navigator.clipboard?.writeText(text).then(() => toast(`${what} copiado`));
+  const step = (n, title, body) => (
+    <div className="row" style={{ gap: 12, alignItems: 'flex-start' }}>
+      <span className="mono" style={{ width: 30, height: 30, background: 'var(--accent)', color: 'var(--ink)', fontWeight: 800, flex: 'none' }}>{n}</span>
+      <span className="stack" style={{ gap: 2 }}><strong>{title}</strong><span className="small muted">{body}</span></span>
+    </div>
+  );
+  return (
+    <Sheet open={open} onClose={onClose} title="Pon tu botón de reservar en todas partes">
+      <div className="stack" style={{ gap: 14 }}>
+        <p className="small muted" style={{ margin: 0 }}>Cuantas más reservas entren por tu enlace, menos llamadas y menos mesas vacías. Y todas quedan en tu panel con sus recordatorios.</p>
+        <section className="widget stack" style={{ gap: 10, background: 'var(--bg)' }}>
+          <h3 className="title-md">Google Maps</h3>
+          {step(1, 'Abre tu Perfil de Empresa', 'Busca tu restaurante en Google, entra en "Editar perfil".')}
+          {step(2, 'Enlaces de reservas', 'En "Reservas" o "Enlaces de pedidos y reservas", pega tu enlace.')}
+          <button className="btn soft sm" onClick={() => copy(url, 'Enlace')}><Icon name="link" size={16} /> Copiar enlace</button>
+        </section>
+        <section className="widget stack" style={{ gap: 10, background: 'var(--bg)' }}>
+          <h3 className="title-md">Instagram</h3>
+          {step(1, 'Editar perfil → Enlaces', 'Añade un enlace externo con tu enlace de reservas y ponle de título "Reservar mesa".')}
+          {step(2, 'En tus historias', 'Usa el sticker "Enlace" con el mismo enlace cuando publiques un plato o un evento.')}
+          <button className="btn soft sm" onClick={() => copy(url, 'Enlace')}><Icon name="link" size={16} /> Copiar enlace</button>
+        </section>
+        <section className="widget stack" style={{ gap: 10, background: 'var(--bg)' }}>
+          <h3 className="title-md">Tu página web</h3>
+          <span className="small muted">Pega esta línea antes de &lt;/body&gt; (o en "Código personalizado" si usas Wix, WordPress o Squarespace). Sale un botón "Reservar mesa" abajo a la derecha que abre la reserva sin salir de tu web.</span>
+          <code style={{ display: 'block', background: 'var(--surface)', borderRadius: 12, padding: 10, fontSize: 12, wordBreak: 'break-all' }}>{code}</code>
+          <button className="btn soft sm" onClick={() => copy(code, 'Código')}><Icon name="link" size={16} /> Copiar código</button>
+        </section>
+        <section className="widget stack printable" style={{ gap: 8, alignItems: 'center', textAlign: 'center', background: 'var(--bg)' }}>
+          <h3 className="title-md">QR para mesas, carta y escaparate</h3>
+          <div className="qr-box">{qr ? <img src={qr} alt="QR para reservar" /> : <div className="spinner" />}</div>
+          <strong>Reserva en {business.name}</strong>
+          <div className="row" style={{ gap: 8, width: '100%' }}>
+            {qr && <a className="btn soft sm" style={{ flex: 1 }} href={qr} download={`qr-reservas-${business.username}.png`}><Icon name="download" size={16} /> Descargar</a>}
+            <button className="btn soft sm" style={{ flex: 1 }} onClick={() => window.print()}><Icon name="printer" size={16} /> Imprimir</button>
+          </div>
+        </section>
+      </div>
+    </Sheet>
+  );
+}
+
 function LinkCard({ business }) {
   const toast = useToast();
+  const [sharing, setSharing] = useState(false);
   const url = bookingLink(business);
   const share = async () => {
     try {
@@ -75,7 +131,9 @@ function LinkCard({ business }) {
       else { await navigator.clipboard.writeText(url); toast('Enlace copiado'); }
     } catch { /* cancelled */ }
   };
+  // The sheet sits outside the dark card so it doesn't inherit its white text.
   return (
+    <>
     <section className="widget dark stack" style={{ gap: 8 }}>
       <span className="eyebrow" style={{ color: 'var(--accent)' }}>Tu enlace de reservas</span>
       <strong style={{ fontSize: 18, wordBreak: 'break-all' }}>{url.replace(/^https?:\/\//, '')}</strong>
@@ -84,6 +142,57 @@ function LinkCard({ business }) {
         <button className="btn accent sm" style={{ flex: 1 }} onClick={() => navigator.clipboard?.writeText(url).then(() => toast('Enlace copiado'))}><Icon name="link" size={16} /> Copiar</button>
         <button className="btn soft sm" style={{ flex: 1 }} onClick={share}><Icon name="share" size={16} /> Compartir</button>
       </div>
+      <button className="btn ghost sm" style={{ color: '#fff' }} onClick={() => setSharing(true)}><Icon name="qr" size={16} /> Botón para tu web, Google, Instagram y QR</button>
+    </section>
+    <ShareSheet open={sharing} onClose={() => setSharing(false)} business={business} />
+    </>
+  );
+}
+
+// What NetWish brought this month, so far. The full month arrives by e-mail on the 1st.
+function MonthCard({ orders, settings }) {
+  const today = todayISO();
+  const from = `${today.slice(0, 8)}01`;
+  const n = netwishNumbers(orders, from, today, settings.profile);
+  const month = new Date().toLocaleDateString('es-ES', { month: 'long' });
+  const facts = [
+    n.night && `${n.night} ${n.night === 1 ? 'reserva llegó' : 'reservas llegaron'} con el local cerrado`,
+    n.confirmed && `${n.confirmed} ${n.confirmed === 1 ? 'confirmó' : 'confirmaron'} desde el recordatorio`,
+    n.newCustomers && `${n.newCustomers} ${n.newCustomers === 1 ? 'cliente nuevo' : 'clientes nuevos'}`,
+    n.rating && `Nota media ${n.rating} / 5`,
+  ].filter(Boolean);
+  return (
+    <Link to="/panel/pedidos?ver=datos" className="widget link stack" style={{ gap: 6, background: 'var(--accent)', color: '#111' }}>
+      <span className="eyebrow" style={{ color: '#111' }}>En {month}, NetWish te ha traído</span>
+      <span className="row" style={{ alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 40, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1 }}>{n.diners}</span>
+        <span style={{ fontWeight: 700 }}>comensales · ≈ {money(n.money)}</span>
+      </span>
+      {facts.length > 0 ? <span className="small" style={{ fontWeight: 600 }}>{facts.join(' · ')}</span>
+        : <span className="small" style={{ fontWeight: 600 }}>Cuantas más reservas entren por tu enlace, más crece este número.</span>}
+    </Link>
+  );
+}
+
+// Low scores from the survey: the customer told us instead of Google, so there is time to call.
+function RatingsCard({ orders }) {
+  const since = new Date(Date.now() - 14 * 86400000).toISOString();
+  const low = orders.filter((o) => o.rating && o.rating <= 3 && o.rated_at > since).sort((a, b) => String(b.rated_at).localeCompare(String(a.rated_at)));
+  if (!low.length) return null;
+  return (
+    <section className="widget stack" style={{ gap: 8, background: 'var(--danger-soft)' }}>
+      <h2 className="title-md">Clientes que no quedaron contentos</h2>
+      <span className="small muted">Te lo contaron a ti y no a Google. Una llamada a tiempo los recupera.</span>
+      {low.slice(0, 4).map((o) => (
+        <div key={o.id} className="list-row" style={{ alignItems: 'flex-start' }}>
+          <span style={{ fontWeight: 800, minWidth: 40 }}>{o.rating}/5</span>
+          <span className="grow stack" style={{ gap: 2 }}>
+            <strong>{o.customer} · {new Date(`${o.date}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</strong>
+            {o.rating_comment && <span className="small">«{o.rating_comment}»</span>}
+          </span>
+          {o.phone && <a className="btn soft sm" href={`tel:${o.phone}`}><Icon name="phone" size={15} /></a>}
+        </div>
+      ))}
     </section>
   );
 }
@@ -91,6 +200,7 @@ function LinkCard({ business }) {
 // The blocks of the home screen. Each restaurant can reorder or hide them ("Editar").
 const WIDGETS = [
   { id: 'resumen', label: 'Hoy vienen y ocupación', col: 0 },
+  { id: 'opiniones', label: 'Clientes descontentos', col: 0 },
   { id: 'acciones', label: 'Apuntar reserva / Sin reserva', col: 0 },
   { id: 'atencion', label: 'Alergias y VIP de hoy', col: 0 },
   { id: 'pendientes', label: 'Por confirmar', col: 0 },
@@ -98,7 +208,10 @@ const WIDGETS = [
   { id: 'espera', label: 'Lista de espera', col: 1 },
   { id: 'manana', label: 'Mañana', col: 1 },
   { id: 'avisos', label: 'Avisos de reservas nuevas', col: 1 },
+  { id: 'mes', label: 'Lo que NetWish te ha traído', col: 1 },
   { id: 'enlace', label: 'Tu enlace de reservas', col: 1 },
+  { id: 'eventos', label: 'Eventos y novedades', col: 1 },
+  { id: 'campanas', label: 'Campañas', col: 1 },
   { id: 'mensajes', label: 'Mensajes sin leer', col: 1 },
   { id: 'menu', label: 'Menú del día', col: 1 },
   { id: 'perfil', label: 'Personaliza tu restaurante', col: 1 },
@@ -320,6 +433,28 @@ export default function Today() {
       </Link>
     ),
     avisos: <AlertsCard />,
+    opiniones: <RatingsCard orders={data.orders} />,
+    mes: <MonthCard orders={data.orders} settings={settings} />,
+    eventos: (
+      <Link to="/panel/eventos" className="widget link row" style={ROW}>
+        <span className="mono" style={{ background: 'var(--bg)', color: 'var(--ink)' }}><Icon name="music" /></span>
+        <span className="grow stack" style={{ gap: 0 }}>
+          <strong>Eventos y novedades</strong>
+          <span className="small muted">{upcomingEvents(settings.profile?.eventos).length ? `${upcomingEvents(settings.profile.eventos).length === 1 ? '1 publicado. Sale' : `${upcomingEvents(settings.profile.eventos).length} publicados. Salen`} en "Hoy en Palencia".` : 'Publica un evento y sal en "Hoy en Palencia".'}</span>
+        </span>
+        <Icon name="chevron" size={18} />
+      </Link>
+    ),
+    campanas: modules.reservas && (
+      <Link to="/panel/campanas" className="widget link row" style={ROW}>
+        <span className="mono" style={{ background: 'var(--bg)', color: 'var(--ink)' }}><Icon name="mail" /></span>
+        <span className="grow stack" style={{ gap: 0 }}>
+          <strong>¿Un día flojo?</strong>
+          <span className="small muted">Escribe a tus clientes y llena mesas con una campaña.</span>
+        </span>
+        <Icon name="chevron" size={18} />
+      </Link>
+    ),
     enlace: business.username && <LinkCard business={business} />,
     mensajes: unread > 0 && (
       <Link to="/panel/mensajes" className="widget link row" style={ROW}>

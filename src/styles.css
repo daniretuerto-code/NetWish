@@ -360,3 +360,6 @@ textarea.input { height: auto; min-height: 96px; padding: 12px 16px; resize: ver
 .shell.panel[data-theme="dark"] [style*="background: var(--accent)"] { color: #111 !important; }
 .shell.panel[data-theme="dark"] [style*="background: var(--accent)"] :not(.mono, .mono *) { color: #111; }
 @media (max-width: 420px) { .segmented button { font-size: 12.5px; padding: 0 2px; } }
+
+/* The booking button on a restaurant's own website opens NetWish in a frame: no menus around it. */
+.shell.embed { padding: 0; display: block; }

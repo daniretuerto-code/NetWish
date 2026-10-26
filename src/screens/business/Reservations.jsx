@@ -15,6 +15,8 @@ import { nextDays } from '../../lib/booking.js';
 import { CUSTOMER_TAGS, isAllergyTag } from '../../lib/tags.js';
 import { minutesToTime, normalize, timeToMinutes, todayISO } from '../../lib/format.js';
 import Orders from './Orders.jsx';
+import { netwishNumbers } from '../../lib/insights.js';
+import { money } from '../../lib/format.js';
 
 const nowHHMM = () => {
   const d = new Date();
@@ -591,6 +593,22 @@ function Stats({ bookings, settings }) {
       </div>
       {!cur.past.length ? <div className="widget"><Empty icon="chart" title="Aún no hay datos">En cuanto tengas reservas verás aquí tus números.</Empty></div> : (
         <>
+          {(() => {
+            const n = netwishNumbers(bookings, from, today, settings.profile);
+            return (
+              <section className="widget stack" style={{ gap: 6, background: 'var(--accent)', color: '#111' }}>
+                <span className="eyebrow" style={{ color: '#111' }}>Lo que NetWish te ha traído</span>
+                <span className="row" style={{ alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 40, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1 }}>{n.diners} comensales</span>
+                  <span style={{ fontWeight: 700 }}>≈ {money(n.money)} · {n.online} {n.online === 1 ? 'reserva' : 'reservas'}</span>
+                </span>
+                <span className="small" style={{ fontWeight: 600 }}>
+                  {[`${n.night} con el local cerrado`, `${n.confirmed} confirmaron desde el recordatorio`, `${n.newCustomers} clientes nuevos`, n.rating && `nota media ${n.rating} / 5 (${n.ratings})`].filter(Boolean).join(' · ')}
+                </span>
+                <span className="small" style={{ opacity: 0.7 }}>Comensales que reservaron por NetWish y vinieron × {money(n.ticket)} de gasto medio (lo cambias en Personalizar → Tu cocina).</span>
+              </section>
+            );
+          })()}
           <p className="small muted" style={{ margin: '0 4px' }}>Comparado con los {days === 365 ? '12 meses' : `${days} días`} anteriores</p>
           <div className="bento wide">
             {tile('Comensales', cur.diners, `${cur.came.length} ${cur.came.length === 1 ? 'reserva' : 'reservas'}`, <Delta now={cur.diners} before={prev.diners} />)}
@@ -650,6 +668,49 @@ function Stats({ bookings, settings }) {
   );
 }
 
+const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const birthdayLabel = (b) => (/^\d{2}-\d{2}$/.test(b || '') ? `${Number(b.slice(3))} de ${MONTHS[Number(b.slice(0, 2)) - 1]}` : '');
+
+// Day and month only (stored "MM-DD"): the year is nobody's business.
+function BirthdayInput({ id, value, onChange }) {
+  const [m, d] = /^\d{2}-\d{2}$/.test(value || '') ? value.split('-').map(Number) : [0, 0];
+  const set = (mm, dd) => onChange(mm && dd ? `${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}` : '');
+  return (
+    <div className="row" style={{ gap: 8 }}>
+      <select id={id} className="input" style={{ width: 90 }} value={d || ''} onChange={(e) => set(m || 1, Number(e.target.value))} aria-label="Día">
+        <option value="">Día</option>
+        {Array.from({ length: 31 }, (_, i) => <option key={i} value={i + 1}>{i + 1}</option>)}
+      </select>
+      <select className="input grow" value={m || ''} onChange={(e) => set(Number(e.target.value), d || 1)} aria-label="Mes">
+        <option value="">Mes</option>
+        {MONTHS.map((x, i) => <option key={x} value={i + 1}>{x}</option>)}
+      </select>
+      {value && <button type="button" className="btn ghost sm" onClick={() => onChange('')}>Quitar</button>}
+    </div>
+  );
+}
+
+// The customer at a glance: since when, how many people, which day, what they thought.
+function CustomerFacts({ customer }) {
+  const came = customer.bookings.filter((o) => [STATUS.DONE, STATUS.SEATED].includes(o.status));
+  if (!came.length) return null;
+  const first = came.map((o) => o.date).sort()[0];
+  const avg = (came.reduce((n, o) => n + parseTableBooking(o).guests, 0) / came.length).toFixed(1).replace('.0', '');
+  const days = [0, 0, 0, 0, 0, 0, 0];
+  came.forEach((o) => { days[new Date(`${o.date}T12:00:00`).getDay()] += 1; });
+  const fav = days.indexOf(Math.max(...days));
+  const rated = customer.bookings.filter((o) => o.rating).sort((a, b) => String(b.rated_at).localeCompare(String(a.rated_at)));
+  const fact = (label, value) => <div className="list-row" style={{ minHeight: 0, padding: '6px 0' }}><span className="grow s">{label}</span><strong className="small">{value}</strong></div>;
+  return (
+    <div className="stack" style={{ gap: 0 }}>
+      {fact('Cliente desde', new Date(`${first}T12:00:00`).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }))}
+      {fact('Suele venir', `${avg} personas · ${came.length > 1 ? `los ${WEEKDAYS_LONG[fav].toLowerCase()}` : WEEKDAYS_LONG[fav].toLowerCase()}`)}
+      {customer.cancelled > 0 && fact('Canceló con aviso', `${customer.cancelled} ${customer.cancelled === 1 ? 'vez' : 'veces'}`)}
+      {rated[0] && fact('Su última nota', `${rated[0].rating} / 5${rated[0].rating_comment ? ` · «${rated[0].rating_comment}»` : ''}`)}
+    </div>
+  );
+}
+
 function Customers({ orders, business, profiles: notes, setProfiles: setNotes }) {
   const toast = useToast();
   const [q, setQ] = useState('');
@@ -658,6 +719,7 @@ function Customers({ orders, business, profiles: notes, setProfiles: setNotes })
   const [note, setNote] = useState('');
   const [tags, setTags] = useState([]);
   const [custom, setCustom] = useState('');
+  const [birthday, setBirthday] = useState('');
   const list = useMemo(() => customersFrom(orders)
     .map((c) => ({ ...c, latest: c.bookings.map((o) => o.date).sort().pop() }))
     .sort((a, b) => String(b.latest).localeCompare(String(a.latest))), [orders]);
@@ -668,7 +730,8 @@ function Customers({ orders, business, profiles: notes, setProfiles: setNotes })
   const current = open && list.find((c) => c.key === open);
 
   const exportCsv = () => {
-    const rows = [['Nombre', 'Teléfono', 'Correo', 'Visitas', 'No vino', 'Última visita', 'Etiquetas', 'Nota'], ...list.map((c) => [c.name, c.phone || '', c.email || '', c.visits, c.noShows, c.last, (notes?.[c.key]?.tags || []).join(', '), notes?.[c.key]?.note || ''])];
+    const rated = (c) => c.bookings.filter((o) => o.rating).map((o) => o.rating);
+    const rows = [['Nombre', 'Teléfono', 'Correo', 'Visitas', 'No vino', 'Cancelaciones', 'Última visita', 'Cumpleaños (día-mes)', 'Nota media', 'Etiquetas', 'Nota'], ...list.map((c) => [c.name, c.phone || '', c.email || '', c.visits, c.noShows, c.cancelled, c.last, birthdayLabel(notes?.[c.key]?.birthday), rated(c).length ? (rated(c).reduce((a, b) => a + b, 0) / rated(c).length).toFixed(1) : '', (notes?.[c.key]?.tags || []).join(', '), notes?.[c.key]?.note || ''])];
     const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\n');
     const url = URL.createObjectURL(new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a');
@@ -680,7 +743,7 @@ function Customers({ orders, business, profiles: notes, setProfiles: setNotes })
 
   const saveNote = async () => {
     try {
-      const value = { note: note.trim().slice(0, 500), tags };
+      const value = { note: note.trim().slice(0, 500), tags, birthday: /^\d{2}-\d{2}$/.test(birthday) ? birthday : '' };
       await saveCustomerNote(business.name, current.key, value);
       setNotes({ ...(notes || {}), [current.key]: value });
       toast('Guardado');
@@ -695,7 +758,7 @@ function Customers({ orders, business, profiles: notes, setProfiles: setNotes })
     <>
       <div className="row" style={{ gap: 8 }}>
         <input className="input grow" type="search" placeholder="Buscar por nombre o teléfono" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Buscar cliente" />
-        <button className="btn soft sm" onClick={exportCsv}><Icon name="download" size={16} /> Descargar</button>
+        <button className="btn soft sm" onClick={exportCsv}><Icon name="download" size={16} /> Excel</button>
       </div>
       {usedTags.length > 0 && (
         <div className="chips">
@@ -706,7 +769,7 @@ function Customers({ orders, business, profiles: notes, setProfiles: setNotes })
       <div className="widget" style={{ paddingBottom: 4 }}>
         <p className="small muted" style={{ margin: '0 0 4px' }}>{list.length} clientes. Son tuyos: puedes descargarlos cuando quieras.</p>
         {shown.map((c) => (
-          <button key={c.key} className="list-row" onClick={() => { setOpen(c.key); setNote(notes?.[c.key]?.note || ''); setTags(notes?.[c.key]?.tags || []); setCustom(''); }}>
+          <button key={c.key} className="list-row" onClick={() => { setOpen(c.key); setNote(notes?.[c.key]?.note || ''); setTags(notes?.[c.key]?.tags || []); setBirthday(notes?.[c.key]?.birthday || ''); setCustom(''); }}>
             <span className="grow stack" style={{ gap: 3, minWidth: 0 }}>
               <span className="t">{c.name}</span>
               <span className="s">{[c.phone, c.email].filter(Boolean).join(' · ') || 'Sin contacto'}{notes?.[c.key]?.note ? ` · ${notes[c.key].note}` : ''}</span>
@@ -735,6 +798,12 @@ function Customers({ orders, business, profiles: notes, setProfiles: setNotes })
               <div className="widget tight stack" style={{ gap: 0, background: 'var(--bg)' }}><span className="eyebrow">Visitas</span><span className="title-lg">{current.visits}</span></div>
               <div className="widget tight stack" style={{ gap: 0, background: current.noShows ? 'var(--danger-soft)' : 'var(--bg)' }}><span className="eyebrow">No vino</span><span className="title-lg">{current.noShows}</span></div>
             </div>
+            <CustomerFacts customer={current} />
+            <div className="field">
+              <label htmlFor="cn-bday">Cumpleaños</label>
+              <BirthdayInput id="cn-bday" value={birthday} onChange={setBirthday} />
+              <span className="small muted">Si activas las felicitaciones en Campañas, le escribimos una semana antes para que lo celebre aquí.</span>
+            </div>
             <div className="stack" style={{ gap: 6 }}>
               <span className="eyebrow">Etiquetas</span>
               <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
@@ -752,7 +821,7 @@ function Customers({ orders, business, profiles: notes, setProfiles: setNotes })
                 <input className="input grow" style={{ height: 40 }} value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="Otra etiqueta (ej.: alergia a frutos secos)" aria-label="Nueva etiqueta" />
                 <button className="btn soft sm" disabled={!custom.trim()}>Añadir</button>
               </form>
-              <span className="small muted">Las alergias e intolerancias salen en rojo en cada reserva de este cliente y en el plano.</span>
+              <span className="small muted">Las alergias e intolerancias salen en rojo en cada reserva de este cliente y en el plano. Con "No admitir", sus reservas nunca se confirman solas.</span>
             </div>
             <div className="field">
               <label htmlFor="cn-note">Nota privada (solo la ves tú)</label>
