@@ -279,6 +279,7 @@ function Hall({ bookings, settings, actions, history, business, onAdd, onChangeT
   const [at, setAt] = useState(nowHHMM());
   const [open, setOpen] = useState(null);
   const [zoneName, setZoneName] = useState(null);
+  const [zoom, setZoom] = useState(1);
   const zone = zones.find((z) => z.name === zoneName) || zones[0];
   const todays = bookings.filter((o) => o.date === today && ACTIVE_BOOKING.includes(o.status));
 
@@ -296,9 +297,10 @@ function Hall({ bookings, settings, actions, history, business, onAdd, onChangeT
   const current = open && todays.find((o) => o.id === open);
   const look = (t) => {
     const o = stateOf(t);
-    if (!o) return { fill: '#fff', label: `${t.capacity} pl.` };
+    if (!o) return { badge: `${t.capacity} pl.`, badgeBg: 'rgba(255,255,255,0.92)', badgeFg: '#111' };
     const seated = o.status === STATUS.SEATED;
-    return { fill: seated ? '#2F5D46' : 'var(--ink)', fg: '#fff', stroke: seated ? '#2F5D46' : '#111', chair: seated ? '#8FB59F' : '#6B6862', label: o.customer.split(' ')[0] };
+    const color = seated ? '#2F8F5B' : o.status === STATUS.PENDING ? '#C9A400' : '#111111';
+    return { ring: color, badge: `${parseTableBooking(o).start} ${o.customer.split(' ')[0]}`, badgeBg: color, badgeFg: '#fff' };
   };
   const zoneCount = (z) => tables.filter((t) => zoneOf(t) === z.name && stateOf(t)).length;
 
@@ -318,12 +320,16 @@ function Hall({ bookings, settings, actions, history, business, onAdd, onChangeT
         </div>
       )}
       <div className="row" style={{ gap: 14, flexWrap: 'wrap', padding: '0 4px' }}>
-        {[['var(--surface)', 'Libre'], ['var(--ink)', 'Reservada'], ['#2F5D46', 'Ocupada']].map(([c, l]) => (
+        {[['var(--surface)', 'Libre'], ['#C9A400', 'Por confirmar'], ['var(--ink)', 'Reservada'], ['#2F8F5B', 'Sentados']].map(([c, l]) => (
           <span key={l} className="row small" style={{ gap: 6, fontWeight: 600 }}><span style={{ width: 14, height: 14, borderRadius: 4, background: c, boxShadow: 'inset 0 0 0 1px var(--line)' }} />{l}</span>
         ))}
       </div>
+      <div className="row" style={{ gap: 6, justifyContent: 'flex-end' }}>
+        <button className="icon-btn" style={{ width: 36, height: 36 }} disabled={zoom <= 1} onClick={() => setZoom((z) => Math.max(1, z - 0.5))} aria-label="Alejar"><Icon name="minus" size={16} /></button>
+        <button className="icon-btn" style={{ width: 36, height: 36 }} disabled={zoom >= 3} onClick={() => setZoom((z) => Math.min(3, z + 0.5))} aria-label="Acercar"><Icon name="plus" size={16} /></button>
+      </div>
       <section className="widget" style={{ padding: 10 }}>
-        <FloorPlan zone={zone} height={zoneHeight(zone, tables, items)} tables={tables} items={items} look={look}
+        <FloorPlan zoom={zoom} zone={zone} height={zoneHeight(zone, tables, items)} tables={tables} items={items} look={look}
           onTableClick={(t) => { const o = stateOf(t); return o ? setOpen(o.id) : onAdd({ walkIn: true, table: t.table_number }); }} />
       </section>
       <p className="small muted" style={{ margin: '0 4px' }}>Toca una mesa libre para sentar a alguien que llega sin reserva. El plano se cambia en <Link to="/panel/mesas">Tu sala</Link>.</p>

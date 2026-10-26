@@ -1,39 +1,109 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Icon from '../../components/Icon.jsx';
-import FloorPlan from '../../components/FloorPlan.jsx';
+import FloorPlan, { DecorPreview, Defs, TablePreview } from '../../components/FloorPlan.jsx';
 import { Sheet } from '../../components/ui.jsx';
 import { tableMin } from '../../lib/agenda.js';
-import { DECOR, MAIN_ZONE, SHAPES, TABLE_PRESETS, TEMPLATES, tableSize, zoneHeight, zoneOf } from '../../lib/floor.js';
+import {
+  CHAIR_COLORS, CHAIR_STYLES, DECOR, DECOR_COLORS, FLOORS, itemBox, MAIN_ZONE, SHAPES, TABLE_MATERIALS, TABLE_PRESETS, tableBox, tableSize, TEMPLATES, zoneHeight, zoneOf,
+} from '../../lib/floor.js';
 
 const newId = () => `i${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const ROW = { display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' };
 const small = { height: 40, width: 58, padding: '0 4px', textAlign: 'center', fontWeight: 800 };
+const label = { fontWeight: 600, fontSize: 13, color: 'var(--muted)' };
 
-function Stepper({ label, value, onChange, min = 0.3, max = 40, step = 1 }) {
+function Stepper({ name, value, onChange, min = 0.3, max = 40, step = 0.5 }) {
+  const v = Math.round(value * 10) / 10;
   return (
     <span style={ROW}>
-      <span className="small muted" style={{ fontWeight: 600 }}>{label}</span>
-      <button type="button" className="icon-btn" style={{ width: 36, height: 36, background: 'var(--bg)' }} onClick={() => onChange(Math.max(min, Math.round((value - step) * 10) / 10))} aria-label={`Menos ${label}`}><Icon name="minus" size={16} /></button>
-      <strong style={{ minWidth: 26, textAlign: 'center' }}>{value}</strong>
-      <button type="button" className="icon-btn" style={{ width: 36, height: 36, background: 'var(--bg)' }} onClick={() => onChange(Math.min(max, Math.round((value + step) * 10) / 10))} aria-label={`Más ${label}`}><Icon name="plus" size={16} /></button>
+      <span style={label}>{name}</span>
+      <button type="button" className="icon-btn" style={{ width: 34, height: 34, background: 'var(--bg)' }} onClick={() => onChange(Math.max(min, Math.round((v - step) * 10) / 10))} aria-label={`Menos ${name}`}><Icon name="minus" size={15} /></button>
+      <strong style={{ minWidth: 30, textAlign: 'center' }}>{v}</strong>
+      <button type="button" className="icon-btn" style={{ width: 34, height: 34, background: 'var(--bg)' }} onClick={() => onChange(Math.min(max, Math.round((v + step) * 10) / 10))} aria-label={`Más ${name}`}><Icon name="plus" size={15} /></button>
     </span>
   );
 }
 
-// The owner draws the room: zones (Sala, Terraza…), tables dragged into place, and walls, bar, doors…
-// `tables` come already placed; changes go up through onChange({ tables, zones, items }).
-export default function FloorEditor({ tables, zones, items, onChange, onQr }) {
+function Swatches({ options, value, onChange, size = 30 }) {
+  return (
+    <div style={{ ...ROW, gap: 6 }}>
+      {options.map((o) => {
+        const id = o.id ?? o;
+        const on = value === id;
+        return (
+          <button key={id} type="button" onClick={() => onChange(id)} aria-label={o.label || id} aria-pressed={on} title={o.label || ''}
+            style={{ width: size, height: size, borderRadius: size / 2, border: 0, padding: 0, background: o.swatch || id, boxShadow: on ? '0 0 0 2px var(--surface), 0 0 0 4px var(--ink)' : 'inset 0 0 0 1px rgba(0,0,0,0.15)' }} />
+        );
+      })}
+    </div>
+  );
+}
+
+function Turn({ value, onChange }) {
+  const v = ((Math.round(Number(value) || 0) % 360) + 360) % 360;
+  return (
+    <div style={ROW}>
+      <span style={label}>Giro</span>
+      <button type="button" className="btn soft sm" onClick={() => onChange((v + 345) % 360)} aria-label="Girar a la izquierda">↺</button>
+      <input type="range" min={0} max={345} step={15} value={v} onChange={(e) => onChange(Number(e.target.value))} aria-label="Ángulo" style={{ flex: 1, minWidth: 100, accentColor: 'var(--ink)' }} />
+      <button type="button" className="btn soft sm" onClick={() => onChange((v + 15) % 360)} aria-label="Girar a la derecha">↻</button>
+      <strong style={{ minWidth: 36 }}>{v}°</strong>
+    </div>
+  );
+}
+
+const Section = ({ title, children }) => (
+  <div className="stack" style={{ gap: 6 }}>
+    <span style={label}>{title}</span>
+    {children}
+  </div>
+);
+
+// The owner draws the room: zones (Sala, Terraza…) with their floor and walls, tables with their
+// material, chairs and size, and everything around them. `tables` come already placed; changes go up
+// through onChange({ tables, zones, items }).
+export default function FloorEditor({ tables, zones, items, onChange, onQr, dirty, onSave, busy }) {
   const [zoneName, setZoneName] = useState(zones[0]?.name || MAIN_ZONE);
   const [selected, setSelected] = useState(null);
   const [zoom, setZoom] = useState(() => (typeof window !== 'undefined' && window.innerWidth < 600 ? 1.5 : 1));
   const [templates, setTemplates] = useState(false);
   const [adding, setAdding] = useState(null); // 'table' | 'decor' | null
   const [draft, setDraft] = useState(null);
+  const [full, setFull] = useState(false);
+  const [magnet, setMagnet] = useState(true);
+  const [zoneOpen, setZoneOpen] = useState(false);
+  const past = useRef([]);
+  const future = useRef([]);
+  const [, setTick] = useState(0);
   const zone = zones.find((z) => z.name === zoneName) || zones[0];
   const height = zoneHeight(zone, tables, items);
   const zoneTables = tables.filter((t) => zoneOf(t) === zone.name);
 
-  const set = (patch) => onChange({ tables, zones, items, ...patch });
+  const snapshot = () => ({ tables, zones, items });
+  const remember = () => {
+    past.current = [...past.current.slice(-60), snapshot()];
+    future.current = [];
+    setTick((n) => n + 1);
+  };
+  const commit = (patch) => onChange({ tables, zones, items, ...patch });
+  const set = (patch) => { remember(); commit(patch); };
+  const undo = () => {
+    const prev = past.current.pop();
+    if (!prev) return;
+    future.current.push(snapshot());
+    onChange(prev);
+    setSelected(null);
+    setTick((n) => n + 1);
+  };
+  const redo = () => {
+    const next = future.current.pop();
+    if (!next) return;
+    past.current.push(snapshot());
+    onChange(next);
+    setSelected(null);
+    setTick((n) => n + 1);
+  };
+
   const setZone = (patch) => {
     if (patch.name !== undefined && patch.name !== zone.name) {
       const name = patch.name;
@@ -48,15 +118,15 @@ export default function FloorEditor({ tables, zones, items, onChange, onQr }) {
     set({ zones: zones.map((z) => (z.name === zone.name ? { ...z, ...patch } : z)) });
   };
 
-  const nextNumber = (list = tables) => list.reduce((m, t) => Math.max(m, Number(t.table_number) || 0), 0) + 1;
-  // A free spot near the top left of the visible plan.
+  const nextNumber = () => tables.reduce((m, t) => Math.max(m, Number(t.table_number) || 0), 0) + 1;
+  // A free spot near the top left of the plan.
   const freeSpot = (w, h) => {
     const boxes = [
-      ...zoneTables.map((t) => ({ x: t.x, y: t.y, ...tableSize(t) })),
-      ...items.filter((i) => i.zone === zone.name).map((i) => ({ x: i.x, y: i.y, w: i.w, h: i.h })),
+      ...zoneTables.map((t) => ({ x: t.x, y: t.y, ...tableBox(t) })),
+      ...items.filter((i) => i.zone === zone.name && !['rug', 'area'].includes(i.type)).map((i) => ({ x: i.x, y: i.y, ...itemBox(i) })),
     ];
-    for (let y = 1; y < height + 20; y += 1) {
-      for (let x = 1; x + w <= zone.w; x += 1) {
+    for (let y = 0.5; y < height + 20; y += 0.5) {
+      for (let x = 0.5; x + w <= zone.w; x += 0.5) {
         if (!boxes.some((o) => x < o.x + o.w && o.x < x + w && y < o.y + o.h && o.y < y + h)) return { x, y };
       }
     }
@@ -65,8 +135,9 @@ export default function FloorEditor({ tables, zones, items, onChange, onQr }) {
 
   const addTable = (preset) => {
     const n = nextNumber();
-    const t = { id: n, table_number: n, capacity: preset.capacity, shape: preset.shape, zone: zone.name, min: Math.max(1, preset.capacity - 2) };
-    const s = tableSize(t);
+    const { label: _l, ...rest } = preset;
+    const t = { id: n, table_number: n, zone: zone.name, min: Math.max(1, preset.capacity - 2), material: zone.outdoor ? 'metal' : 'madera', ...rest };
+    const s = tableBox(t);
     set({ tables: [...tables, { ...t, ...freeSpot(s.w, s.h) }] });
     setSelected({ kind: 'table', key: n });
     setAdding(null);
@@ -80,8 +151,8 @@ export default function FloorEditor({ tables, zones, items, onChange, onQr }) {
   };
 
   const move = (kind, key, x, y) => {
-    if (kind === 'table') set({ tables: tables.map((t) => (String(t.table_number) === String(key) ? { ...t, x, y } : t)) });
-    else set({ items: items.map((i) => (i.id === key ? { ...i, x, y } : i)) });
+    if (kind === 'table') commit({ tables: tables.map((t) => (String(t.table_number) === String(key) ? { ...t, x, y } : t)) });
+    else commit({ items: items.map((i) => (i.id === key ? { ...i, x, y } : i)) });
   };
 
   const table = selected?.kind === 'table' && tables.find((t) => String(t.table_number) === String(selected.key));
@@ -99,8 +170,8 @@ export default function FloorEditor({ tables, zones, items, onChange, onQr }) {
   };
   const duplicateTable = () => {
     const n = nextNumber();
-    const s = tableSize(table);
-    set({ tables: [...tables, { ...table, id: n, table_number: n, join: [], ...freeSpot(s.w, s.h) }] });
+    const s = tableBox(table);
+    set({ tables: [...tables, { ...table, id: n, table_number: n, name: '', join: [], ...freeSpot(s.w, s.h) }] });
     setSelected({ kind: 'table', key: n });
   };
   const toggleJoin = (other) => {
@@ -120,9 +191,10 @@ export default function FloorEditor({ tables, zones, items, onChange, onQr }) {
     const base = outdoor ? 'Terraza' : 'Sala';
     let name = base;
     for (let i = 2; zones.some((z) => z.name === name); i += 1) name = `${base} ${i}`;
-    set({ zones: [...zones, { name, outdoor, open: true, from: '', to: '', w: 16, h: 12 }] });
+    set({ zones: [...zones, { name, outdoor, open: true, from: '', to: '', w: 16, h: 12, floor: outdoor ? 'tarima' : 'parquet', walls: !outdoor, plates: true }] });
     setZoneName(name);
     setSelected(null);
+    setZoneOpen(true);
   };
   const removeZone = () => {
     set({ zones: zones.filter((z) => z.name !== zone.name), items: items.filter((i) => i.zone !== zone.name) });
@@ -140,10 +212,11 @@ export default function FloorEditor({ tables, zones, items, onChange, onQr }) {
     });
     if (built.joinRows) {
       for (const t of made) {
-        t.join = made.filter((o) => o !== t && o.y === t.y && Math.abs(o.x - t.x) === 4).map((o) => o.table_number);
+        t.join = made.filter((o) => o !== t && o.y === t.y && Math.abs(o.x - t.x) === built.joinRows).map((o) => o.table_number);
       }
     }
     set({
+      zones: zones.map((z) => (z.name === zone.name ? { ...z, ...tpl.zone } : z)),
       tables: [...others, ...made],
       items: [...items.filter((i) => i.zone !== zone.name), ...built.items.map((i) => ({ ...i, id: newId(), zone: zone.name }))],
     });
@@ -151,8 +224,26 @@ export default function FloorEditor({ tables, zones, items, onChange, onQr }) {
     setTemplates(false);
   };
 
+  const groups = Object.entries(DECOR).reduce((acc, [k, d]) => ({ ...acc, [d.group]: [...(acc[d.group] || []), k] }), {});
+  const size = table ? tableSize(table) : null;
+
+  const wrap = full
+    ? { position: 'fixed', inset: 0, zIndex: 80, background: 'var(--bg)', overflowY: 'auto', padding: '16px 16px 120px' }
+    : {};
+
   return (
-    <div className="stack">
+    <div className="stack" style={wrap}>
+      <svg width={0} height={0} style={{ position: 'absolute' }} aria-hidden="true"><Defs /></svg>
+      {full && (
+        <div className="row between">
+          <strong style={{ fontSize: 20 }}>{zone.name}</strong>
+          <span style={ROW}>
+            {dirty && <button className="btn primary sm" disabled={busy} onClick={onSave}>{busy ? 'Guardando…' : 'Guardar'}</button>}
+            <button className="btn soft sm" onClick={() => setFull(false)}>Salir</button>
+          </span>
+        </div>
+      )}
+
       <div className="chips">
         {zones.map((z) => (
           <button key={z.name} className={`chip ${z.name === zone.name ? 'on' : ''}`} onClick={() => { setZoneName(z.name); setSelected(null); setDraft(null); }}>
@@ -160,123 +251,198 @@ export default function FloorEditor({ tables, zones, items, onChange, onQr }) {
           </button>
         ))}
         <button className="chip" style={{ background: 'var(--bg)' }} onClick={() => addZone(false)}>+ Sala</button>
-        {!zones.some((z) => z.outdoor) && <button className="chip" style={{ background: 'var(--accent)' }} onClick={() => addZone(true)}>+ Terraza</button>}
+        <button className="chip" style={{ background: 'var(--accent)' }} onClick={() => addZone(true)}>+ Terraza</button>
       </div>
 
-      <div className="widget stack" style={{ gap: 10 }}>
-        <div style={ROW}>
-          <input className="input grow" aria-label="Nombre de la zona" style={{ height: 40, fontWeight: 700, minWidth: 140 }} value={draft ?? zone.name} maxLength={30}
-            onChange={(e) => setDraft(e.target.value.replace(/[()]/g, ''))}
-            onBlur={() => {
-              const name = (draft ?? '').trim();
-              if (name && !zones.some((z) => z.name === name)) setZone({ name });
-              setDraft(null);
-            }} />
-          <label className="row small" style={{ gap: 6, fontWeight: 600, cursor: 'pointer' }}>
-            <input type="checkbox" checked={!!zone.outdoor} onChange={(e) => setZone({ outdoor: e.target.checked })} style={{ width: 20, height: 20, accentColor: 'var(--ink)' }} />
-            Al aire libre
-          </label>
-        </div>
-        {zone.outdoor && (
+      <div className="widget stack" style={{ gap: 12 }}>
+        <button className="row between" style={{ border: 0, background: 'none', padding: 0, textAlign: 'left' }} onClick={() => setZoneOpen(!zoneOpen)} aria-expanded={zoneOpen}>
+          <span className="stack" style={{ gap: 0 }}>
+            <strong>Zona: {zone.name}</strong>
+            <span className="small muted">Suelo {FLOORS.find((f) => f.id === zone.floor)?.label.toLowerCase() || ''} · {zone.w / 2} × {zone.h / 2} m{zone.outdoor ? ` · ${zone.open === false ? 'cerrada' : 'abierta'}` : ''}</span>
+          </span>
+          <span className="small" style={{ fontWeight: 700 }}>{zoneOpen ? 'Cerrar' : 'Personalizar'}</span>
+        </button>
+        {zoneOpen && (
           <>
             <div style={ROW}>
-              <button className="pill" onClick={() => setZone({ open: zone.open === false })} aria-pressed={zone.open !== false}
-                style={{ height: 36, background: zone.open === false ? '#F3C9C9' : 'var(--accent)', color: zone.open === false ? '#8E2B2B' : 'var(--ink)' }}>
-                {zone.open === false ? 'Cerrada: no se reserva' : 'Abierta a reservas'}
-              </button>
-              <span className="small muted">Ciérrala en invierno o si llueve.</span>
+              <input className="input grow" aria-label="Nombre de la zona" style={{ height: 40, fontWeight: 700, minWidth: 140 }} value={draft ?? zone.name} maxLength={30}
+                onChange={(e) => setDraft(e.target.value.replace(/[()]/g, ''))}
+                onBlur={() => {
+                  const name = (draft ?? '').trim();
+                  if (name && !zones.some((z) => z.name === name)) setZone({ name });
+                  setDraft(null);
+                }} />
+              <label className="row small" style={{ gap: 6, fontWeight: 600, cursor: 'pointer' }}>
+                <input type="checkbox" checked={!!zone.outdoor} onChange={(e) => setZone({ outdoor: e.target.checked })} style={{ width: 20, height: 20, accentColor: 'var(--ink)' }} />
+                Al aire libre
+              </label>
+            </div>
+            {zone.outdoor && (
+              <>
+                <div style={ROW}>
+                  <button className="pill" onClick={() => setZone({ open: zone.open === false })} aria-pressed={zone.open !== false}
+                    style={{ height: 36, background: zone.open === false ? '#F3C9C9' : 'var(--accent)', color: zone.open === false ? '#8E2B2B' : 'var(--ink)' }}>
+                    {zone.open === false ? 'Cerrada: no se reserva' : 'Abierta a reservas'}
+                  </button>
+                  <span className="small muted">Ciérrala en invierno o si llueve.</span>
+                </div>
+                <div style={ROW}>
+                  <span style={label}>Horario propio</span>
+                  <input className="input" type="time" aria-label="Terraza desde" style={{ height: 40, width: 128 }} value={zone.from || ''} onChange={(e) => setZone({ from: e.target.value })} />
+                  <span className="small muted">a</span>
+                  <input className="input" type="time" aria-label="Terraza hasta" style={{ height: 40, width: 128 }} value={zone.to || ''} onChange={(e) => setZone({ to: e.target.value })} />
+                  {(zone.from || zone.to) && <button className="btn soft sm" onClick={() => setZone({ from: '', to: '' })}>Quitar</button>}
+                </div>
+              </>
+            )}
+            <Section title="Suelo">
+              <Swatches options={FLOORS} value={zone.floor} onChange={(floor) => setZone({ floor })} size={34} />
+            </Section>
+            <div style={ROW}>
+              <label className="row small" style={{ gap: 6, fontWeight: 600, cursor: 'pointer' }}>
+                <input type="checkbox" checked={zone.walls !== false} onChange={(e) => setZone({ walls: e.target.checked })} style={{ width: 20, height: 20, accentColor: 'var(--ink)' }} />
+                Paredes alrededor
+              </label>
+              <label className="row small" style={{ gap: 6, fontWeight: 600, cursor: 'pointer' }}>
+                <input type="checkbox" checked={zone.plates !== false} onChange={(e) => setZone({ plates: e.target.checked })} style={{ width: 20, height: 20, accentColor: 'var(--ink)' }} />
+                Platos y copas en las mesas
+              </label>
             </div>
             <div style={ROW}>
-              <span className="small muted" style={{ fontWeight: 600 }}>Horario propio</span>
-              <input className="input" type="time" aria-label="Terraza desde" style={{ height: 40, width: 128 }} value={zone.from || ''} onChange={(e) => setZone({ from: e.target.value })} />
-              <span className="small muted">a</span>
-              <input className="input" type="time" aria-label="Terraza hasta" style={{ height: 40, width: 128 }} value={zone.to || ''} onChange={(e) => setZone({ to: e.target.value })} />
-              {(zone.from || zone.to) && <button className="btn soft sm" onClick={() => setZone({ from: '', to: '' })}>Quitar</button>}
+              <Stepper name="Ancho (m)" value={zone.w / 2} min={4} max={25} onChange={(v) => setZone({ w: Math.round(v * 2) })} />
+              <Stepper name="Fondo (m)" value={zone.h / 2} min={3} max={25} onChange={(v) => setZone({ h: Math.round(v * 2) })} />
             </div>
+            {zones.length > 1 && (zoneTables.length
+              ? <span className="small muted">Para borrar la zona, quita o mueve antes sus mesas.</span>
+              : <button className="btn soft sm" style={{ alignSelf: 'flex-start' }} onClick={removeZone}><Icon name="trash" size={15} /> Borrar zona</button>)}
           </>
         )}
-        <div style={ROW}>
-          <Stepper label="Ancho" value={zone.w} min={8} max={40} onChange={(w) => setZone({ w })} />
-          <Stepper label="Fondo" value={zone.h} min={6} max={40} onChange={(h) => setZone({ h })} />
-          {zones.length > 1 && (zoneTables.length
-            ? <span className="small muted">Para borrar la zona, quita o mueve antes sus mesas.</span>
-            : <button className="btn soft sm" onClick={removeZone}><Icon name="trash" size={15} /> Borrar zona</button>)}
-        </div>
       </div>
 
-      <div style={ROW}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
         <button className={`btn sm ${adding === 'table' ? 'primary' : 'soft'}`} onClick={() => setAdding(adding === 'table' ? null : 'table')}><Icon name="plus" size={15} /> Mesa</button>
-        <button className={`btn sm ${adding === 'decor' ? 'primary' : 'soft'}`} onClick={() => setAdding(adding === 'decor' ? null : 'decor')}><Icon name="plus" size={15} /> Pared, barra…</button>
+        <button className={`btn sm ${adding === 'decor' ? 'primary' : 'soft'}`} onClick={() => setAdding(adding === 'decor' ? null : 'decor')}><Icon name="plus" size={15} /> Piezas</button>
         <button className="btn soft sm" onClick={() => setTemplates(true)}>Plantillas</button>
-        <span className="grow" />
-        <button className="icon-btn" style={{ width: 36, height: 36 }} disabled={zoom <= 1} onClick={() => setZoom((z) => Math.max(1, z - 0.5))} aria-label="Alejar"><Icon name="minus" size={16} /></button>
-        <button className="icon-btn" style={{ width: 36, height: 36 }} disabled={zoom >= 3} onClick={() => setZoom((z) => Math.min(3, z + 0.5))} aria-label="Acercar"><Icon name="plus" size={16} /></button>
       </div>
+      <div style={{ ...ROW, flexWrap: 'nowrap', gap: 6 }}>
+        <button className="icon-btn" style={{ width: 38, height: 38, fontSize: 18 }} disabled={!past.current.length} onClick={undo} aria-label="Deshacer">↶</button>
+        <button className="icon-btn" style={{ width: 38, height: 38, fontSize: 18 }} disabled={!future.current.length} onClick={redo} aria-label="Rehacer">↷</button>
+        <button className={`pill ${magnet ? 'on' : ''}`} style={{ height: 36, minWidth: 0 }} onClick={() => setMagnet(!magnet)} aria-pressed={magnet} title="Encajar en la cuadrícula">Imán</button>
+        <span className="grow" />
+        <button className="icon-btn" style={{ width: 38, height: 38 }} disabled={zoom <= 1} onClick={() => setZoom((z) => Math.max(1, z - 0.5))} aria-label="Alejar"><Icon name="minus" size={16} /></button>
+        <button className="icon-btn" style={{ width: 38, height: 38 }} disabled={zoom >= 3} onClick={() => setZoom((z) => Math.min(3, z + 0.5))} aria-label="Acercar"><Icon name="plus" size={16} /></button>
+        {!full && <button className="icon-btn" style={{ width: 38, height: 38, fontSize: 18 }} onClick={() => setFull(true)} aria-label="Pantalla completa" title="Pantalla completa">⤢</button>}
+      </div>
+
       {adding === 'table' && (
-        <div className="chips" style={{ flexWrap: 'wrap' }}>
-          {TABLE_PRESETS.map((p) => <button key={p.label} className="chip" style={{ height: 36 }} onClick={() => addTable(p)}>{p.label}</button>)}
-        </div>
-      )}
-      {adding === 'decor' && (
-        <div className="chips" style={{ flexWrap: 'wrap' }}>
-          {Object.entries(DECOR).map(([k, d]) => (
-            <button key={k} className="chip" style={{ height: 36 }} onClick={() => addDecor(k)}>
-              <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: d.round ? 5 : 2, background: d.fill, marginRight: 6, boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.15)' }} />{d.label}
+        <div className="widget" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8, padding: 12 }}>
+          {TABLE_PRESETS.map((p) => (
+            <button key={p.label} className="row" style={{ gap: 8, border: 0, borderRadius: 14, background: 'var(--bg)', padding: '6px 10px', textAlign: 'left', fontWeight: 600, fontSize: 13 }} onClick={() => addTable(p)}>
+              <TablePreview t={{ ...p, material: p.material || (zone.outdoor ? 'metal' : 'madera') }} />{p.label}
             </button>
           ))}
         </div>
       )}
+      {adding === 'decor' && (
+        <div className="widget stack" style={{ gap: 10, padding: 12 }}>
+          {Object.entries(groups).map(([g, keys]) => (
+            <div key={g} className="stack" style={{ gap: 6 }}>
+              <span className="eyebrow">{g}</span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 6 }}>
+                {keys.map((k) => (
+                  <button key={k} className="row" style={{ gap: 8, border: 0, borderRadius: 14, background: 'var(--bg)', padding: '4px 10px', textAlign: 'left', fontWeight: 600, fontSize: 13 }} onClick={() => addDecor(k)}>
+                    <DecorPreview type={k} />{DECOR[k].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-      <FloorPlan zone={zone} height={height + 2} tables={tables} items={items} editable selected={selected} onSelect={setSelected} onMove={move} zoom={zoom}
-        look={(t) => (String(t.table_number) === String(selected?.key) && selected?.kind === 'table' ? { fill: 'var(--accent)' } : { label: `${tableMin(t)}-${t.capacity}` })} />
-      <p className="small muted" style={{ margin: '0 4px' }}>Arrastra las mesas y las piezas. Toca una para cambiarla. Las sillas se ponen solas según las plazas.</p>
+      <FloorPlan zone={zone} height={height + 2} tables={tables} items={items} editable selected={selected} onSelect={setSelected} onMove={move} onDragStart={remember} zoom={zoom} snap={magnet ? 0.5 : 0.1}
+        look={(t) => (t.name ? { badge: t.name, badgeBg: 'rgba(255,255,255,0.92)', badgeFg: '#111' } : {})} />
+      <p className="small muted" style={{ margin: '0 4px' }}>Arrastra las mesas y las piezas. Toca una para personalizarla. Cada cuadro mide 50 cm.</p>
 
       {table && (
-        <div className="widget stack" style={{ gap: 12 }}>
+        <div className="widget stack" style={{ gap: 14 }}>
           <div className="row between">
             <span style={ROW}>
-              <span className="small muted">Mesa</span>
+              <span style={label}>Mesa</span>
               <input className="input" aria-label="Número de mesa" style={{ ...small, width: 64, fontSize: 18 }} inputMode="numeric" value={table.table_number}
                 onChange={(e) => setTable({ table_number: e.target.value.replace(/\D/g, '') })} />
+              <input className="input" aria-label="Nombre de la mesa" placeholder="Nombre (opcional)" maxLength={14} style={{ height: 40, width: 190 }} value={table.name || ''} onChange={(e) => setTable({ name: e.target.value })} />
             </span>
             <button className="icon-btn" style={{ background: 'var(--bg)' }} onClick={() => setSelected(null)} aria-label="Cerrar"><Icon name="close" size={18} /></button>
           </div>
           <div style={ROW}>
-            <span className="small muted" style={{ fontWeight: 600 }}>Personas: de</span>
+            <span style={label}>Personas: de</span>
             <input className="input" style={small} type="number" min={1} max={table.capacity} aria-label="Mínimo de personas" value={table.min ?? tableMin(table)} onChange={(e) => setTable({ min: e.target.value })} />
             <span className="small muted">a</span>
-            <input className="input" style={small} type="number" min={1} max={30} aria-label="Máximo de personas" value={table.capacity} onChange={(e) => setTable({ capacity: e.target.value })} />
+            <input className="input" style={small} type="number" min={1} max={30} aria-label="Máximo de personas" value={table.capacity} onChange={(e) => setTable({ capacity: e.target.value, w: undefined, h: undefined })} />
           </div>
           <div className="segmented" role="tablist" aria-label="Forma">
             {SHAPES.map((s) => (
-              <button key={s.id} role="tab" aria-selected={tableSize(table).shape === s.id} onClick={() => setTable({ shape: s.id })} style={{ background: tableSize(table).shape === s.id ? undefined : 'var(--bg)' }}>{s.label}</button>
+              <button key={s.id} role="tab" aria-selected={size.shape === s.id} onClick={() => setTable({ shape: s.id, w: undefined, h: undefined })} style={{ background: size.shape === s.id ? undefined : 'var(--bg)' }}>{s.label}</button>
             ))}
           </div>
+          <Section title="Material">
+            <div style={{ ...ROW, gap: 6 }}>
+              {TABLE_MATERIALS.map((m) => {
+                const on = (table.material || 'madera') === m.id;
+                return (
+                  <button key={m.id} className="chip" style={{ height: 36, paddingLeft: 8, background: on ? 'var(--ink)' : 'var(--bg)', color: on ? '#fff' : 'var(--ink)' }} onClick={() => setTable({ material: m.id })} aria-pressed={on}>
+                    <span style={{ display: 'inline-block', width: 20, height: 20, borderRadius: 10, background: m.swatch, marginRight: 6, verticalAlign: 'middle', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.15)' }} />{m.label}
+                  </button>
+                );
+              })}
+            </div>
+          </Section>
+          <Section title="Asientos">
+            <div className="chips" style={{ flexWrap: 'wrap' }}>
+              {CHAIR_STYLES.map((c) => {
+                const on = (table.chairs || 'silla') === c.id;
+                return <button key={c.id} className={`chip ${on ? 'on' : ''}`} style={{ height: 36, background: on ? undefined : 'var(--bg)' }} onClick={() => setTable({ chairs: c.id })}>{c.label}</button>;
+              })}
+            </div>
+            {table.chairs !== 'ninguna' && <Swatches options={CHAIR_COLORS} value={table.chairColor || '#A57A52'} onChange={(chairColor) => setTable({ chairColor })} />}
+          </Section>
+          <Section title="Tamaño">
+            <div style={ROW}>
+              {size.shape === 'round'
+                ? <Stepper name="Diámetro (m)" value={size.w / 2} min={0.8} max={4} step={0.25} onChange={(v) => setTable({ w: v * 2, h: v * 2 })} />
+                : (
+                  <>
+                    <Stepper name="Largo (m)" value={size.w / 2} min={0.8} max={8} step={0.25} onChange={(v) => setTable({ w: v * 2, h: size.h })} />
+                    <Stepper name="Ancho (m)" value={size.h / 2} min={0.8} max={4} step={0.25} onChange={(v) => setTable({ h: v * 2, w: size.w })} />
+                  </>
+                )}
+            </div>
+          </Section>
+          {size.shape !== 'round' && <Turn value={table.rot} onChange={(rot) => setTable({ rot })} />}
           <label className="row small" style={{ gap: 8, fontWeight: 600, cursor: 'pointer' }}>
             <input type="checkbox" checked={table.online !== false} onChange={(e) => setTable({ online: e.target.checked })} style={{ width: 20, height: 20, accentColor: 'var(--ink)' }} />
             Se puede reservar online
           </label>
           {zones.length > 1 && (
             <div style={ROW}>
-              <span className="small muted" style={{ fontWeight: 600 }}>Zona</span>
+              <span style={label}>Zona</span>
               <select className="input" style={{ height: 40, width: 'auto' }} value={zoneOf(table)} onChange={(e) => { setTable({ zone: e.target.value, x: undefined, y: undefined, join: [] }); setZoneName(e.target.value); }}>
                 {zones.map((z) => <option key={z.name}>{z.name}</option>)}
               </select>
             </div>
           )}
           {zoneTables.length > 1 && (
-            <div className="stack" style={{ gap: 6 }}>
-              <span className="small muted" style={{ fontWeight: 600 }}>Se puede juntar con (para grupos grandes)</span>
+            <Section title="Se puede juntar con (para grupos grandes)">
               <div className="chips" style={{ flexWrap: 'wrap' }}>
                 {zoneTables.filter((o) => o !== table).map((o) => {
                   const on = (table.join || []).map(Number).includes(Number(o.table_number)) || (o.join || []).map(Number).includes(Number(table.table_number));
                   return <button key={o.table_number} className={`chip ${on ? 'on' : ''}`} style={{ height: 36, background: on ? undefined : 'var(--bg)' }} aria-pressed={on} onClick={() => toggleJoin(o)}>Mesa {o.table_number} ({o.capacity})</button>;
                 })}
               </div>
-            </div>
+            </Section>
           )}
           <div style={ROW}>
-            {tableSize(table).shape !== 'round' && <button className="btn soft sm" onClick={() => setTable({ rot: table.rot === 90 ? 0 : 90 })}>Girar</button>}
             <button className="btn soft sm" onClick={duplicateTable}>Duplicar</button>
             {onQr && <button className="btn soft sm" onClick={() => onQr(table)}><Icon name="qr" size={15} /> QR</button>}
             <button className="btn soft sm" onClick={removeTable}><Icon name="trash" size={15} /> Quitar</button>
@@ -285,22 +451,25 @@ export default function FloorEditor({ tables, zones, items, onChange, onQr }) {
       )}
 
       {item && (
-        <div className="widget stack" style={{ gap: 12 }}>
+        <div className="widget stack" style={{ gap: 14 }}>
           <div className="row between">
-            <strong>{DECOR[item.type]?.label || 'Pieza'}</strong>
+            <span className="row" style={{ gap: 8 }}><DecorPreview type={item.type} /><strong>{DECOR[item.type]?.label || 'Pieza'}</strong></span>
             <button className="icon-btn" style={{ background: 'var(--bg)' }} onClick={() => setSelected(null)} aria-label="Cerrar"><Icon name="close" size={18} /></button>
           </div>
-          {DECOR[item.type]?.text && (
-            <input className="input" aria-label="Texto" maxLength={16} value={item.label ?? DECOR[item.type].text} onChange={(e) => setItem({ label: e.target.value })} />
+          {DECOR[item.type]?.text !== undefined && (
+            <input className="input" aria-label="Texto" maxLength={20} value={item.label ?? DECOR[item.type].text} onChange={(e) => setItem({ label: e.target.value })} />
           )}
+          <Section title="Color">
+            <Swatches options={DECOR_COLORS} value={item.color || DECOR[item.type]?.color} onChange={(color) => setItem({ color })} />
+          </Section>
           <div style={ROW}>
-            <Stepper label="Largo" value={item.w} step={0.5} onChange={(w) => setItem({ w })} />
-            <Stepper label="Ancho" value={item.h} step={item.h < 1 ? 0.1 : 0.5} onChange={(h) => setItem({ h })} />
+            <Stepper name="Largo (m)" value={item.w / 2} min={0.1} max={20} step={0.25} onChange={(v) => setItem({ w: v * 2 })} />
+            <Stepper name="Ancho (m)" value={item.h / 2} min={0.05} max={20} step={item.h < 1 ? 0.05 : 0.25} onChange={(v) => setItem({ h: v * 2 })} />
           </div>
+          <Turn value={item.rot} onChange={(rot) => setItem({ rot })} />
           <div style={ROW}>
-            <button className="btn soft sm" onClick={() => setItem({ w: item.h, h: item.w })}>Girar</button>
             <button className="btn soft sm" onClick={() => {
-              const copy = { ...item, id: newId(), ...freeSpot(Math.ceil(item.w), Math.ceil(item.h)) };
+              const copy = { ...item, id: newId(), ...freeSpot(Math.ceil(itemBox(item).w), Math.ceil(itemBox(item).h)) };
               set({ items: [...items, copy] });
               setSelected({ kind: 'item', key: copy.id });
             }}>Duplicar</button>
@@ -311,7 +480,7 @@ export default function FloorEditor({ tables, zones, items, onChange, onQr }) {
 
       <Sheet open={templates} onClose={() => setTemplates(false)} title={`Plantilla para ${zone.name}`}>
         <div className="stack">
-          <p className="small muted" style={{ margin: 0 }}>Se cambia lo que hay dibujado en esta zona. Luego puedes mover y ajustar cada mesa.</p>
+          <p className="small muted" style={{ margin: 0 }}>Se cambia lo que hay dibujado en esta zona (puedes deshacerlo). Luego mueves y ajustas cada mesa.</p>
           {TEMPLATES.map((t) => (
             <button key={t.id} className="widget row between" style={{ border: 0, textAlign: 'left', background: 'var(--bg)' }} onClick={() => applyTemplate(t)}>
               <span className="stack" style={{ gap: 0 }}>
