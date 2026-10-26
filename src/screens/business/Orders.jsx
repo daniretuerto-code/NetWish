@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Empty, PageHeader, Spinner, useToast } from '../../components/ui.jsx';
+import { Empty, PageHeader, Skeleton, Spinner, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { businessOrders, isReservation, notifyOrder, setOrderStatus, STATUS, subscribe } from '../../lib/data.js';
@@ -57,7 +57,7 @@ export default function Orders({ comandasOnly = false }) {
 
   useEffect(() => subscribe('orders', () => reload()), [reload]);
 
-  if (loading && !data) return <Spinner />;
+  if (loading && !data) return <Skeleton />;
   const orders = data || [];
 
   const move = async (order, status) => {

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Link, Navigate, useOutletContext } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
-import { PageHeader, Ring, Spinner } from '../../components/ui.jsx';
+import { PageHeader, Ring, Skeleton, Spinner } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { businessInbox, businessOrders, isReservation, kitchenSessions, STATUS, subscribe } from '../../lib/data.js';
@@ -35,7 +35,7 @@ function GeneralOverview() {
 
   // A restaurant that hasn't answered the questionnaire starts there.
   if (isRestaurant && settings && !settings.profile?.onboarded) return <Navigate to="/panel/empezar" replace />;
-  if (loading && !data) return <Spinner />;
+  if (loading && !data) return <Skeleton />;
   const pct = isRestaurant && settings ? profileProgress(settings.profile || {}) : 100;
   const today = todayISO();
   const todays = data.orders.filter((o) => o.date === today && o.status !== STATUS.REJECTED);
@@ -75,7 +75,7 @@ function GeneralOverview() {
 
 {(!isRestaurant || modules.reservas) && (
         <Link to="/panel/pedidos" className="widget link stack" style={{ justifyContent: 'space-between', minHeight: 150, background: pendingRes.length ? 'var(--accent)' : undefined }}>
-          <span className="mono" style={{ background: 'var(--ink)', color: 'var(--accent)' }}><Icon name="calendar" /></span>
+          <span className="mono" style={{ background: 'var(--ink)', color: 'var(--accent-on-ink)' }}><Icon name="calendar" /></span>
           <span className="stack" style={{ gap: 0 }}>
             <span className="eyebrow" style={{ color: 'inherit', opacity: 0.7 }}>Reservas</span>
             <span className="title-lg">{pendingRes.length} por confirmar</span>

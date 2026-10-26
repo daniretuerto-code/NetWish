@@ -281,7 +281,7 @@ export default function FloorEditor({ tables, zones, items, onChange, onQr, dirt
               <>
                 <div style={ROW}>
                   <button className="pill" onClick={() => setZone({ open: zone.open === false })} aria-pressed={zone.open !== false}
-                    style={{ height: 36, background: zone.open === false ? '#F3C9C9' : 'var(--accent)', color: zone.open === false ? '#8E2B2B' : 'var(--ink)' }}>
+                    style={{ height: 36, background: zone.open === false ? 'var(--danger-soft)' : 'var(--accent)', color: zone.open === false ? 'var(--danger-ink)' : 'var(--ink)' }}>
                     {zone.open === false ? 'Cerrada: no se reserva' : 'Abierta a reservas'}
                   </button>
                   <span className="small muted">Ciérrala en invierno o si llueve.</span>
@@ -391,7 +391,7 @@ export default function FloorEditor({ tables, zones, items, onChange, onQr, dirt
               {TABLE_MATERIALS.map((m) => {
                 const on = (table.material || 'madera') === m.id;
                 return (
-                  <button key={m.id} className="chip" style={{ height: 36, paddingLeft: 8, background: on ? 'var(--ink)' : 'var(--bg)', color: on ? '#fff' : 'var(--ink)' }} onClick={() => setTable({ material: m.id })} aria-pressed={on}>
+                  <button key={m.id} className="chip" style={{ height: 36, paddingLeft: 8, background: on ? 'var(--ink)' : 'var(--bg)', color: on ? 'var(--on-ink)' : 'var(--ink)' }} onClick={() => setTable({ material: m.id })} aria-pressed={on}>
                     <span style={{ display: 'inline-block', width: 20, height: 20, borderRadius: 10, background: m.swatch, marginRight: 6, verticalAlign: 'middle', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.15)' }} />{m.label}
                   </button>
                 );

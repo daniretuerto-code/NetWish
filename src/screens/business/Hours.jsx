@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Icon from '../../components/Icon.jsx';
-import { PageHeader, Spinner, useToast } from '../../components/ui.jsx';
+import { PageHeader, Skeleton, Spinner, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { getRestaurantSettings, saveRestaurantSettings } from '../../lib/data.js';
@@ -19,7 +19,7 @@ export default function Hours() {
   const [newName, setNewName] = useState('');
   const { data, loading, setData } = useAsync(() => getRestaurantSettings(business.name, kindOf(business)), [business.name]);
 
-  if (loading && !data) return <Spinner />;
+  if (loading && !data) return <Skeleton />;
   const staff = data.staff || [];
   const closed = data.closed_days || [];
 

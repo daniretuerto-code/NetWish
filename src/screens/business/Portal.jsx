@@ -37,7 +37,7 @@ function TypePicker({ onPick }) {
     <div className="stack">
       <h2 className="title-lg" style={{ margin: '0 4px' }}>¿Qué tipo de negocio tienes?</h2>
       <button className="widget link row" onClick={() => onPick(main)} style={{ border: 0, textAlign: 'left', gap: 14, display: 'flex', flexDirection: 'row', alignItems: 'center', background: 'var(--accent)' }}>
-        <span className="mono lg" style={{ background: 'var(--ink)', color: 'var(--accent)', flex: '0 0 auto' }}><Icon name={main.icon} size={26} /></span>
+        <span className="mono lg" style={{ background: 'var(--ink)', color: 'var(--accent-on-ink)', flex: '0 0 auto' }}><Icon name={main.icon} size={26} /></span>
         <span className="grow stack" style={{ gap: 0 }}>
           <strong style={{ fontSize: 19 }}>{main.label}</strong>
           <span className="small">Tu panel listo en 2 minutos</span>

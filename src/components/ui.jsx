@@ -9,17 +9,22 @@ export const useToast = () => useContext(ToastContext);
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
-  const show = useCallback((text, type = 'info') => {
+  // show(text, type, { action: { label, onClick }, duration }): a toast can carry one button, e.g. "Deshacer".
+  const show = useCallback((text, type = 'info', opts = {}) => {
     const id = Math.random();
-    setToasts((t) => [...t, { id, text, type }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3200);
+    const close = () => setToasts((t) => t.filter((x) => x.id !== id));
+    setToasts((t) => [...t, { id, text, type, action: opts.action, close }]);
+    setTimeout(close, opts.duration || (opts.action ? 5000 : 3200));
   }, []);
   return (
     <ToastContext.Provider value={show}>
       {children}
       <div className="toasts" role="status" aria-live="polite">
         {toasts.map((t) => (
-          <div key={t.id} className={`toast ${t.type}`}>{t.text}</div>
+          <div key={t.id} className={`toast ${t.type}`}>
+            <span>{t.text}</span>
+            {t.action && <button className="toast-action" onClick={() => { t.action.onClick(); t.close(); }}>{t.action.label}</button>}
+          </div>
         ))}
       </div>
     </ToastContext.Provider>
@@ -72,6 +77,19 @@ export function Spinner({ label = 'Cargando' }) {
     <div className="center-screen" role="status">
       <div className="spinner" />
       <span className="visually-hidden">{label}</span>
+    </div>
+  );
+}
+
+// Grey shapes in the place of what is loading, instead of a spinner.
+export function Skeleton({ rows = 3 }) {
+  return (
+    <div className="page" aria-busy="true" role="status">
+      <span className="visually-hidden">Cargando</span>
+      <div className="skel" style={{ width: 120, height: 14 }} />
+      <div className="skel" style={{ width: 220, height: 34 }} />
+      <div className="skel" style={{ height: 150, borderRadius: 'var(--r-xl)' }} />
+      {Array.from({ length: rows }, (_, i) => <div key={i} className="skel" style={{ height: 76, borderRadius: 'var(--r-lg)' }} />)}
     </div>
   );
 }
