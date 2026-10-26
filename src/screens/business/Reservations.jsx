@@ -7,7 +7,7 @@ import { busyTables, DEFAULT_TABLES } from '../../components/ReserveSheet.jsx';
 import { Empty, PageHeader, Sheet, Spinner, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
-import { businessOrders, customerNotes, reservationsOn, saveCustomerNote, saveRestaurantSettings, setOrderItems, STATUS, subscribe } from '../../lib/data.js';
+import { businessOrders, businessWaitlist, customerNotes, reservationsOn, setWaitlistStatus, saveCustomerNote, saveRestaurantSettings, setOrderItems, STATUS, subscribe } from '../../lib/data.js';
 import { blockFor, ACTIVE_BOOKING, bookingsOf, byTime, customerKey, customersFrom, dayLabel, guestsOf, parseTableBooking, shiftOf, telLink, whatsappLink } from '../../lib/agenda.js';
 import { nextDays } from '../../lib/booking.js';
 import { minutesToTime, normalize, timeToMinutes, todayISO } from '../../lib/format.js';
@@ -102,10 +102,100 @@ function ChangeTableSheet({ order, settings, business, onClose, onDone }) {
   );
 }
 
+// Close a range of days at once: holidays, a family celebration, works in the kitchen.
+function CloseDaysSheet({ open, onClose, settings, business, reloadSettings }) {
+  const toast = useToast();
+  const [from, setFrom] = useState(todayISO());
+  const [to, setTo] = useState(todayISO());
+  const [busy, setBusy] = useState(false);
+  const save = async (e) => {
+    e.preventDefault();
+    if (to < from) return toast('La fecha final va después de la inicial', 'error');
+    const days = [];
+    for (let d = new Date(`${from}T12:00:00`); days.length < 120; d.setDate(d.getDate() + 1)) {
+      const iso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+      if (iso > to) break;
+      days.push(iso);
+    }
+    const blocks = [...(settings.blocks || []).filter((b) => b.date >= todayISO() && !days.includes(b.date)), ...days.map((date) => ({ date, shift: 'todo' }))];
+    setBusy(true);
+    try {
+      await saveRestaurantSettings(business.name, { blocks });
+      await reloadSettings();
+      toast(`${days.length} ${days.length === 1 ? 'día cerrado' : 'días cerrados'} a reservas online`);
+      onClose();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const closedAhead = (settings.blocks || []).filter((b) => b.shift === 'todo' && b.date >= todayISO()).map((b) => b.date).sort();
+  const reopen = async (date) => {
+    await saveRestaurantSettings(business.name, { blocks: (settings.blocks || []).filter((b) => b.date !== date) });
+    await reloadSettings();
+  };
+  return (
+    <Sheet open={open} onClose={onClose} title="Cerrar varios días">
+      <form className="stack" onSubmit={save}>
+        <p className="small muted" style={{ margin: 0 }}>Vacaciones, festivos o un evento privado. Esos días nadie podrá reservar online.</p>
+        <div className="bento">
+          <div className="field"><label htmlFor="cd-from">Desde</label><input id="cd-from" className="input" type="date" min={todayISO()} value={from} onChange={(e) => { setFrom(e.target.value); if (to < e.target.value) setTo(e.target.value); }} /></div>
+          <div className="field"><label htmlFor="cd-to">Hasta</label><input id="cd-to" className="input" type="date" min={from} value={to} onChange={(e) => setTo(e.target.value)} /></div>
+        </div>
+        <button className="btn primary block" disabled={busy}>{busy ? 'Guardando…' : 'Cerrar esos días'}</button>
+      </form>
+      {closedAhead.length > 0 && (
+        <div className="stack" style={{ gap: 6, marginTop: 14 }}>
+          <span className="eyebrow">Días cerrados</span>
+          <div className="chips" style={{ flexWrap: 'wrap' }}>
+            {closedAhead.map((d) => <button key={d} className="chip" style={{ background: '#F3C9C9' }} onClick={() => reopen(d)} aria-label={`Abrir el ${d}`}>{new Date(`${d}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })} ✕</button>)}
+          </div>
+        </div>
+      )}
+    </Sheet>
+  );
+}
+
+function Waitlist({ day, business }) {
+  const toast = useToast();
+  const { data, setData } = useAsync(() => businessWaitlist(business.name), [business.name]);
+  const list = (data || []).filter((w) => w.date === day && w.status === 'esperando');
+  if (!list.length) return null;
+  const done = async (w, status) => {
+    try {
+      await setWaitlistStatus(w.id, status);
+      setData((all) => all.map((x) => (x.id === w.id ? { ...x, status } : x)));
+    } catch (e) {
+      toast(e.message, 'error');
+    }
+  };
+  return (
+    <div className="stack" style={{ gap: 8 }}>
+      <span className="eyebrow">Lista de espera · {list.length}</span>
+      {list.map((w) => (
+        <div key={w.id} className="order-card">
+          <span className="row between"><strong>{w.name}</strong><span className="small" style={{ fontWeight: 700 }}>{w.guests} pers. · {w.shift === 'comida' ? 'comida' : 'cena'}</span></span>
+          <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+            {w.phone && <a className="btn soft sm" href={telLink(w.phone)}><Icon name="phone" size={15} /> Llamar</a>}
+            {w.phone && <a className="btn soft sm" href={whatsappLink(w.phone, `Hola ${w.name}, te escribimos de ${business.name}: se ha liberado una mesa para ${w.guests}. ¿Os la guardamos?`)} target="_blank" rel="noreferrer"><Icon name="chat" size={15} /> WhatsApp</a>}
+            {!w.phone && w.email && <a className="btn soft sm" href={`mailto:${w.email}`}><Icon name="mail" size={15} /> Correo</a>}
+          </div>
+          <div className="row" style={{ gap: 8 }}>
+            <button className="btn primary sm" style={{ flex: 1 }} onClick={() => done(w, 'avisado')}>Avisado</button>
+            <button className="btn ghost sm" style={{ flex: 1 }} onClick={() => done(w, 'descartado')}>Quitar</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Agenda({ bookings, history, actions, settings, business, onAdd, onChangeTable, reloadSettings }) {
   const today = todayISO();
   const [day, setDay] = useState(today);
   const [showOld, setShowOld] = useState(false);
+  const [closing, setClosing] = useState(false);
   const pending = bookings.filter((o) => o.status === STATUS.PENDING && o.date >= today).sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`));
   const ofDay = bookings.filter((o) => o.date === day).sort(byTime);
   const active = ofDay.filter((o) => ACTIVE_BOOKING.includes(o.status));
@@ -151,6 +241,8 @@ function Agenda({ bookings, history, actions, settings, business, onAdd, onChang
           <button className="btn primary sm" onClick={() => onAdd({ date: day })}><Icon name="plus" size={16} /> Reserva</button>
         </div>
         <DayOnline day={day} settings={settings} business={business} reloadSettings={reloadSettings} />
+        <button className="btn ghost sm" style={{ alignSelf: 'flex-start', height: 'auto', padding: 0, textDecoration: 'underline' }} onClick={() => setClosing(true)}>Cerrar varios días (vacaciones, festivos)</button>
+        <Waitlist day={day} business={business} />
         {active.length === 0 && <p className="small muted" style={{ margin: '4px 0 8px' }}>No hay reservas este día.</p>}
         {shifts.map((s) => (
           <div key={s.key} className="stack" style={{ gap: 8 }}>
@@ -163,6 +255,7 @@ function Agenda({ bookings, history, actions, settings, business, onAdd, onChang
         )}
         {showOld && closed.map((o) => card(o))}
       </section>
+      <CloseDaysSheet open={closing} onClose={() => setClosing(false)} settings={settings} business={business} reloadSettings={reloadSettings} />
     </>
   );
 }
@@ -224,6 +317,60 @@ function Hall({ bookings, settings, actions, history, business, onAdd, onChangeT
       <Sheet open={!!current} onClose={() => setOpen(null)} title={current ? `Mesa ${parseTableBooking(current).table}` : ''}>
         {current && <BookingCard order={current} history={history.get(customerKey(current))} busy={actions.busy === current.id} onMove={(o, s) => { actions.move(o, s); setOpen(null); }} onChangeTable={(o) => { setOpen(null); onChangeTable(o); }} businessName={business.name} />}
       </Sheet>
+    </>
+  );
+}
+
+const WEEKDAYS_LONG = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+// The last 30 days in numbers: who came, who didn't, and which days are quiet.
+function Stats({ bookings, settings }) {
+  const today = todayISO();
+  const from = (() => { const d = new Date(`${today}T12:00:00`); d.setDate(d.getDate() - 30); return d.toISOString().slice(0, 10); })();
+  const past = bookings.filter((o) => o.date >= from && o.date < today);
+  const came = past.filter((o) => [STATUS.DONE, STATUS.SEATED, STATUS.CONFIRMED].includes(o.status));
+  const noShow = past.filter((o) => o.status === STATUS.NOSHOW).length;
+  const cancelled = past.filter((o) => o.status === STATUS.CANCELLED).length;
+  const online = past.filter((o) => !o.source || o.source === 'app').length;
+  const counted = came.length + noShow;
+  const diners = guestsOf(came);
+  const customers = customersFrom(past);
+  const returning = customers.filter((c) => c.bookings.filter((o) => [STATUS.DONE, STATUS.SEATED, STATUS.CONFIRMED].includes(o.status)).length > 1).length;
+  const byDay = WEEKDAYS_LONG.map((label, i) => ({ label, n: guestsOf(came.filter((o) => new Date(`${o.date}T12:00:00`).getDay() === i)) }));
+  const top = Math.max(1, ...byDay.map((d) => d.n));
+  const order = [1, 2, 3, 4, 5, 6, 0].filter((i) => !(settings.closed_days || []).includes(i));
+  const tile = (label, value, sub, tone) => (
+    <div className="widget tight stack" style={{ gap: 0, background: tone }}>
+      <span className="eyebrow">{label}</span>
+      <span className="title-lg">{value}</span>
+      {sub && <span className="small muted">{sub}</span>}
+    </div>
+  );
+  if (!past.length) return <div className="widget"><Empty icon="chart" title="Aún no hay datos">En cuanto tengas reservas verás aquí tus números de los últimos 30 días.</Empty></div>;
+  return (
+    <>
+      <p className="small muted" style={{ margin: '0 4px' }}>Últimos 30 días</p>
+      <div className="bento">
+        {tile('Comensales', diners, `${came.length} ${came.length === 1 ? 'reserva' : 'reservas'}`)}
+        {tile('Por persona', came.length ? (diners / came.length).toFixed(1) : '0', 'personas por mesa')}
+        {tile('No vinieron', counted ? `${Math.round((noShow / counted) * 100)} %` : '0 %', `${noShow} ${noShow === 1 ? 'reserva' : 'reservas'}`, noShow ? '#F3C9C9' : undefined)}
+        {tile('Cancelaron', cancelled, 'con aviso')}
+        {tile('Por NetWish', past.length ? `${Math.round((online / past.length) * 100)} %` : '0 %', 'del total de reservas')}
+        {tile('Repiten', customers.length ? `${Math.round((returning / customers.length) * 100)} %` : '0 %', `${returning} de ${customers.length} clientes`)}
+      </div>
+      <section className="widget stack" style={{ gap: 8 }}>
+        <h2 className="title-md">Comensales por día de la semana</h2>
+        {order.map((i) => (
+          <div key={i} className="row" style={{ gap: 10 }}>
+            <span className="small" style={{ width: 82, fontWeight: 600 }}>{byDay[i].label}</span>
+            <span className="grow" style={{ background: 'var(--bg)', borderRadius: 8, height: 22, overflow: 'hidden' }}>
+              <span style={{ display: 'block', height: '100%', width: `${(byDay[i].n / top) * 100}%`, background: byDay[i].n === top ? 'var(--ink)' : 'var(--accent)', borderRadius: 8 }} />
+            </span>
+            <span className="small" style={{ width: 32, textAlign: 'right', fontWeight: 800 }}>{byDay[i].n}</span>
+          </div>
+        ))}
+        <span className="small muted">Los días con la barra más corta son los mejores para un menú especial o una promoción.</span>
+      </section>
     </>
   );
 }
@@ -337,7 +484,7 @@ export default function Reservations() {
   if ((loading && !data) || !settings) return <Spinner />;
 
   const tabs = [
-    ['agenda', 'Agenda'], ['sala', 'Sala'], ['clientes', 'Clientes'],
+    ['agenda', 'Agenda'], ['sala', 'Sala'], ['clientes', 'Clientes'], ['datos', 'Datos'],
     ...(modules.pedidosQr ? [['comandas', 'Comandas']] : []),
   ];
   const props = { bookings, history, actions, settings, business, onAdd: setAdding, onChangeTable: setMoving, reloadSettings };
@@ -358,6 +505,7 @@ export default function Reservations() {
       {tab === 'agenda' && <Agenda {...props} />}
       {tab === 'sala' && <Hall {...props} />}
       {tab === 'clientes' && <Customers orders={orders} business={business} />}
+      {tab === 'datos' && <Stats bookings={bookings} settings={settings} />}
       {tab === 'comandas' && <Orders comandasOnly />}
       {moving && <ChangeTableSheet order={moving} settings={settings} business={business} onClose={() => setMoving(null)} onDone={(o, items) => setData((list) => list.map((x) => (x.id === o.id ? { ...x, items } : x)))} />}
       <OwnerBookingSheet open={!!adding} initial={adding} onClose={() => setAdding(null)} business={business} settings={settings} onSaved={reload} />

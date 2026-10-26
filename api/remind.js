@@ -38,7 +38,28 @@ export default async function handler(req, res) {
       });
       if (ok) sent += 1;
     }
-    return res.status(200).json({ sent });
+
+    // Yesterday's customers: thanks, and a nudge to review on Google when the restaurant gave its link.
+    const [settings] = await supabaseRest(`restaurant_settings?select=profile&business_name=ilike.${encodeURIComponent(biz.name)}`, { authorization: auth });
+    const reviewUrl = String(settings?.profile?.google_resenas || '').trim();
+    const reviews = await supabaseRest('rpc/claim_review_requests', { method: 'POST', body: { p_business: biz.name }, authorization: auth });
+    let asked = 0;
+    if (/^https:\/\//.test(reviewUrl)) {
+      for (const row of reviews || []) {
+        const o = row.claim_review_requests || row;
+        const ok = await sendEmail({
+          to: o.customer_email,
+          subject: `¿Qué tal en ${o.business_name}?`,
+          html: emailLayout(
+            `Gracias por venir, ${o.customer}`,
+            `<p>Esperamos que disfrutaras en <strong>${escapeHtml(o.business_name)}</strong>. Si te gustó, una reseña en Google les ayuda muchísimo.</p>
+             <p>${button(escapeHtml(reviewUrl), 'Dejar una reseña', true)}</p>`,
+          ),
+        });
+        if (ok) asked += 1;
+      }
+    }
+    return res.status(200).json({ sent, reviews: asked });
   } catch (error) {
     console.error('remind', error);
     return res.status(500).json({ error: 'No se pudieron enviar los recordatorios' });
