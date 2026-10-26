@@ -132,7 +132,7 @@ export default function Business() {
   const { name } = useParams();
   const [tab, setTab] = useState('carta');
   const [params] = useSearchParams();
-  // The restaurant's short link (netwish.es/r/…) lands here with the booking sheet open.
+  // The restaurant's short link (netwish.es/r/…) and the waiting-list e-mail (…&dia=&pax=) land here with the booking sheet open.
   const [reserveOpen, setReserveOpen] = useState(params.get('reservar') === '1');
 
   const { data, loading } = useAsync(async () => {
@@ -248,7 +248,7 @@ export default function Business() {
         </button>
       )}
 
-      {canBook && <ReserveSheet open={reserveOpen} onClose={() => setReserveOpen(false)} biz={biz} settings={settings} />}
+      {canBook && <ReserveSheet open={reserveOpen} onClose={() => setReserveOpen(false)} biz={biz} settings={settings} initial={{ date: params.get('dia'), guests: params.get('pax') }} />}
     </div>
   );
 }

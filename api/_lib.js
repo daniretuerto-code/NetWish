@@ -48,3 +48,37 @@ export function emailLayout(title, bodyHtml) {
 }
 
 export const euro = (n) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(Number(n) || 0);
+
+export const button = (href, label, dark) =>
+  `<a href="${href}" style="display:inline-block;padding:12px 20px;border-radius:999px;margin:4px 6px 4px 0;font-weight:700;text-decoration:none;${dark ? 'background:#111;color:#D4F25C' : 'background:#F2F0EB;color:#111'}">${escapeHtml(label)}</a>`;
+
+// "2026-10-27" + "21:00 - 22:30" → ["20261027T210000", "20261027T223000"], local time in Madrid.
+export function bookingTimes(date, time) {
+  const [from, to] = String(time || '').split(' - ').map((t) => t.trim());
+  const stamp = (t) => `${String(date).replace(/-/g, '')}T${t.split(':').map((n) => n.padStart(2, '0')).join('')}00`;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{1,2}:\d{2}$/.test(from || '')) return null;
+  const end = /^\d{1,2}:\d{2}$/.test(to || '') ? to : `${String(Number(from.split(':')[0]) + 1).padStart(2, '0')}:${from.split(':')[1]}`;
+  return [stamp(from), stamp(end)];
+}
+
+export function googleCalendarUrl(order) {
+  const times = bookingTimes(order.date, order.time);
+  if (!times) return null;
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: `Reserva en ${order.business_name}`,
+    dates: times.join('/'),
+    ctz: 'Europe/Madrid',
+    details: `${String(order.items || '').split(' · Nota:')[0]}${order.token ? `\n\nVer o cambiar: ${SITE_URL}/reserva/${order.token}` : ''}`,
+    location: order.address ? `${order.address}, Palencia` : `${order.business_name}, Palencia`,
+  });
+  return `https://calendar.google.com/calendar/render?${params}`;
+}
+
+// Two buttons: Google Calendar and the .ics file that iPhone, Outlook and the rest open.
+export function calendarButtons(order) {
+  const google = googleCalendarUrl(order);
+  if (!google || !order.token) return '';
+  return `<p style="margin:16px 0 4px;font-size:13px;color:#6B6862">Añadir al calendario</p>
+    <p style="margin:0">${button(escapeHtml(google), 'Google Calendar')}${button(`${SITE_URL}/api/ics?t=${order.token}`, 'iPhone / Outlook')}</p>`;
+}

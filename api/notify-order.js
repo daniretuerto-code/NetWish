@@ -1,4 +1,4 @@
-import { emailLayout, escapeHtml, euro, sendEmail, SITE_URL, supabaseRest } from './_lib.js';
+import { calendarButtons, emailLayout, escapeHtml, euro, sendEmail, SITE_URL, supabaseRest } from './_lib.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -6,8 +6,11 @@ const row = (label, value) =>
   `<tr><td style="color:#6B6862;padding:6px 0">${escapeHtml(label)}</td><td style="text-align:right;font-weight:600;padding:6px 0">${escapeHtml(value)}</td></tr>`;
 
 const manage = (order) => (order.token
-  ? `<p><a href="${SITE_URL}/reserva/${order.token}" style="color:#111;font-weight:700">Ver, confirmar o cancelar mi reserva</a></p>`
+  ? `<p><a href="${SITE_URL}/reserva/${order.token}" style="color:#111;font-weight:700">Ver, cambiar o cancelar mi reserva</a></p>`
   : '');
+
+// Confirmed bookings also carry the "add to calendar" buttons.
+const confirmedBody = (order, intro) => `<p>${intro}</p>${summary(order)}${calendarButtons(order)}${manage(order)}`;
 
 function summary(order) {
   return `<table style="width:100%;border-collapse:collapse;font-size:15px">
@@ -21,7 +24,7 @@ function summary(order) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
   const { orderId, kind = 'created' } = req.body || {};
-  if (!UUID.test(String(orderId)) || !['created', 'confirmed'].includes(kind)) {
+  if (!UUID.test(String(orderId)) || !['created', 'confirmed', 'changed'].includes(kind)) {
     return res.status(400).json({ error: 'Petición no válida' });
   }
 
@@ -41,8 +44,31 @@ export default async function handler(req, res) {
       await sendEmail({
         to: order.customer_email,
         subject: `Reserva confirmada en ${order.business_name}`,
-        html: emailLayout('¡Tu reserva está confirmada!', `<p>Hola ${escapeHtml(order.customer)}, ${escapeHtml(order.business_name)} te espera.</p>${summary(order)}${manage(order)}`),
+        html: emailLayout('¡Tu reserva está confirmada!', confirmedBody(order, `Hola ${escapeHtml(order.customer)}, ${escapeHtml(order.business_name)} te espera.`)),
       });
+      return res.status(200).json({ sent: true });
+    }
+
+    // The customer moved their booking from the e-mail link.
+    if (kind === 'changed') {
+      const ok = order.status === 'Mesa Confirmada';
+      await Promise.all([
+        sendEmail({
+          to: order.customer_email,
+          subject: ok ? `Reserva cambiada en ${order.business_name}` : `Hemos recibido tu cambio en ${order.business_name}`,
+          html: ok
+            ? emailLayout('Reserva cambiada', confirmedBody(order, `Hola ${escapeHtml(order.customer)}, ya está: ${escapeHtml(order.business_name)} te espera a la nueva hora.`))
+            : emailLayout('Hemos recibido tu cambio', `<p>${escapeHtml(order.business_name)} lo confirmará en breve y te avisaremos por correo.</p>${summary(order)}${manage(order)}`),
+        }),
+        sendEmail({
+          to: order.business_email,
+          subject: `Reserva cambiada: ${order.customer}`,
+          html: emailLayout(
+            ok ? 'Un cliente ha cambiado su reserva' : 'Cambio de reserva por confirmar',
+            `${summary(order)}<p>Cliente: ${escapeHtml(order.customer)}${order.customer_email ? ` · ${escapeHtml(order.customer_email)}` : ''}${order.phone ? ` · ${escapeHtml(order.phone)}` : ''}</p><p><a href="${SITE_URL}/panel/pedidos">Abrir el panel</a></p>`,
+          ),
+        }),
+      ]);
       return res.status(200).json({ sent: true });
     }
 
@@ -56,7 +82,7 @@ export default async function handler(req, res) {
         to: order.customer_email,
         subject: instant ? `Reserva confirmada en ${order.business_name}` : `Solicitud de reserva en ${order.business_name}`,
         html: instant
-          ? emailLayout('¡Tu reserva está confirmada!', `<p>Hola ${escapeHtml(order.customer)}, ${escapeHtml(order.business_name)} te espera. El día antes te mandaremos un recordatorio.</p>${summary(order)}${manage(order)}`)
+          ? emailLayout('¡Tu reserva está confirmada!', confirmedBody(order, `Hola ${escapeHtml(order.customer)}, ${escapeHtml(order.business_name)} te espera. El día antes te mandaremos un recordatorio.`))
           : emailLayout(
             'Hemos recibido tu solicitud',
             `<p>${escapeHtml(order.business_name)} la confirmará en breve y te avisaremos por correo. El pago se hace en el local.</p>${summary(order)}${manage(order)}`,

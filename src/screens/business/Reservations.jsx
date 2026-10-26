@@ -186,6 +186,7 @@ function Waitlist({ day, business }) {
       {list.map((w) => (
         <div key={w.id} className="order-card">
           <span className="row between"><strong>{w.name}</strong><span className="small" style={{ fontWeight: 700 }}>{w.guests} pers. · {w.shift === 'comida' ? 'comida' : 'cena'}</span></span>
+          {w.notified_at && <span className="small muted">Le avisamos por correo de que se liberó una mesa{w.freed_time ? ` a las ${w.freed_time}` : ''}.</span>}
           <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
             {w.phone && <a className="btn soft sm" href={telLink(w.phone)}><Icon name="phone" size={15} /> Llamar</a>}
             {w.phone && <a className="btn soft sm" href={whatsappLink(w.phone, `Hola ${w.name}, te escribimos de ${business.name}: se ha liberado una mesa para ${w.guests}. ¿Os la guardamos?`)} target="_blank" rel="noreferrer"><Icon name="chat" size={15} /> WhatsApp</a>}
