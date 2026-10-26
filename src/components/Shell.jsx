@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Icon from './Icon.jsx';
-import { Mono, Sheet, useToast } from './ui.jsx';
+import { Mono, Sheet, StatusVeil, useToast } from './ui.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { kindOf } from '../lib/categories.js';
 import useAsync from '../hooks/useAsync.js';
@@ -120,6 +120,7 @@ export function CustomerShell() {
   }
   return (
     <div className="shell">
+      <StatusVeil />
       <SideNav
         items={CUSTOMER_NAV}
         header={<Brand />}
@@ -193,6 +194,7 @@ export function BusinessShell() {
   const rest = nav.filter((n) => !mobileNav.includes(n));
   return (
     <div className={`shell panel${prefs.stand ? ' stand' : ''}`} data-theme={dark ? 'dark' : 'light'}>
+      <StatusVeil />
       <SideNav
         footer={<PanelPrefs prefs={prefs} setPref={setPref} dark />}
         items={nav}

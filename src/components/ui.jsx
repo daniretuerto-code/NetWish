@@ -63,6 +63,18 @@ export function Sheet({ open, onClose, title, children, labelledBy }) {
   );
 }
 
+// Frosts the strip under the phone's status bar once the page scrolls, so titles never run into the clock.
+export function StatusVeil() {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setOn(window.scrollY > 4);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  return <div className={`status-veil${on ? ' on' : ''}`} aria-hidden="true" />;
+}
+
 // ---------- Small pieces ----------
 export function Mono({ name, image, size = '', tone }) {
   return (

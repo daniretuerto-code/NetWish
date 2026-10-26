@@ -86,7 +86,7 @@ export default function Admin() {
             <span className="grow stack" style={{ gap: 2, minWidth: 0 }}>
               <span className="row between" style={{ gap: 8 }}>
                 <strong>{r.name}</strong>
-                <span className="pill" style={{ background: r.kind === 'otro' ? 'var(--accent)' : 'var(--bg)', height: 26, fontSize: 12 }}>{KIND_LABEL[r.kind] || r.kind}</span>
+                <span className="status" style={{ background: r.kind === 'otro' ? 'var(--accent)' : 'var(--bg)' }}>{KIND_LABEL[r.kind] || r.kind}</span>
               </span>
               <span className="small muted">{[r.category, r.email, r.phone].filter(Boolean).join(' · ')} · {timeAgo(r.created_at)}</span>
               {r.description && <span style={{ fontSize: 15, whiteSpace: 'pre-wrap' }}>{r.description}</span>}
