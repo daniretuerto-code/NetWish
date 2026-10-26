@@ -163,35 +163,36 @@ export default function Business() {
   const mods = modulesFor(isRestaurant ? settings?.profile : {});
   const canBook = isRestaurant && mods.reservas;
   const facts = isRestaurant ? publicFacts(settings?.profile) : { headline: '', badges: [] };
-  const tile = { textDecoration: 'none', gap: 8, boxShadow: 'var(--shadow)' };
+  const tile = { textDecoration: 'none', gap: 6, boxShadow: 'var(--shadow)', minWidth: 0 };
+  const tileLabel = { fontSize: 16, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 
   const tiles = [
     canBook && (
       <button key="res" className="widget tight stack" style={{ ...tile, border: 0, textAlign: 'left' }} onClick={() => setReserveOpen(true)}>
         <span className="small muted">Mesa</span>
-        <span style={{ fontSize: 16, fontWeight: 800 }}>Reservar</span>
+        <span style={tileLabel}>Reservar</span>
       </button>
     ),
     isBeauty && (
       <a key="cita" href="#servicios" className="widget tight stack" style={tile}>
         <span className="small muted">Cita</span>
-        <span style={{ fontSize: 16, fontWeight: 800 }}>Reservar</span>
+        <span style={tileLabel}>Reservar</span>
       </a>
     ),
     biz.telefono ? (
       <a key="tel" href={`tel:${biz.telefono}`} className="widget tight stack" style={tile}>
         <span className="small muted">Teléfono</span>
-        <span style={{ fontSize: 16, fontWeight: 800 }}>Llamar</span>
+        <span style={tileLabel}>Llamar</span>
       </a>
     ) : (
       <a key="map" href={`https://www.google.com/maps/search/${encodeURIComponent(`${biz.name} Palencia`)}`} target="_blank" rel="noreferrer" className="widget tight stack" style={tile}>
-        <span className="small muted">Mapa</span>
-        <span style={{ fontSize: 16, fontWeight: 800 }}>Cómo llegar</span>
+        <span className="small muted">Cómo llegar</span>
+        <span style={tileLabel}>Mapa</span>
       </a>
     ),
     <Link key="chat" to={`/chat/${encodeURIComponent(biz.name)}`} className="widget dark tight stack" style={tile}>
       <span className="small muted">Chat</span>
-      <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--accent)' }}>Escribir</span>
+      <span style={{ ...tileLabel, color: 'var(--accent)' }}>Escribir</span>
     </Link>,
   ].filter(Boolean);
 
@@ -206,8 +207,8 @@ export default function Business() {
           <div className="widget stack" style={{ gap: 10 }}>
             {facts.headline && <span style={{ fontSize: 17, fontWeight: 800 }}>{facts.headline}</span>}
             {facts.badges.length > 0 && (
-              <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
-                {facts.badges.map((b) => <span key={b} className="pill" style={{ background: 'var(--bg)', height: 30, fontSize: 13 }}>{b}</span>)}
+              <div className="facts">
+                {facts.badges.map((b) => <span key={b} className="fact">{b}</span>)}
               </div>
             )}
           </div>
@@ -262,7 +263,7 @@ export default function Business() {
 
       {canBook && (
         <button className="cta-bar" onClick={() => setReserveOpen(true)}>
-          <span style={{ fontSize: 16, fontWeight: 800 }}>Reserva tu mesa</span>
+          <span style={tileLabel}>Reserva tu mesa</span>
           <span className="go">Reservar</span>
         </button>
       )}

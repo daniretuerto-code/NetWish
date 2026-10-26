@@ -63,7 +63,7 @@ export default function Kitchen() {
                     <span className="eyebrow" style={paid ? undefined : { color: 'rgba(255,255,255,.6)' }}>Abierta {timeAgo(s.created_at)}</span>
                     <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em' }}>Mesa {s.table_number}</span>
                   </span>
-                  <span className="pill" style={{ background: paid ? 'var(--accent)' : 'rgba(255,255,255,.14)', color: paid ? 'var(--ink)' : '#fff' }}>
+                  <span className="status lg" style={{ background: paid ? 'var(--accent)' : 'rgba(255,255,255,.14)', color: paid ? 'var(--ink)' : '#fff' }}>
                     {paid ? 'Cerrada' : money(s.remaining_amount)}
                   </span>
                 </div>

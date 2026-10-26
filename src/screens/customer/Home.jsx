@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
-import { Empty, Ring, Spinner } from '../../components/ui.jsx';
+import { Empty, Spinner } from '../../components/ui.jsx';
 import { BusinessRow, CoverCard } from '../../components/BusinessCards.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
@@ -14,7 +14,9 @@ const ACTIVE = [STATUS.KITCHEN, STATUS.PENDING, STATUS.CONFIRMED, STATUS.READY];
 function ActiveOrderWidget({ user }) {
   const { data: orders } = useAsync(() => (user ? myOrders() : Promise.resolve([])), [user?.id]);
   const today = new Date().toISOString().slice(0, 10);
-  const active = (orders || []).find((o) => ACTIVE.includes(o.status) && (o.date >= today || isReservation(o)));
+  // Only what is still ahead: the soonest booking or order from today on.
+  const active = (orders || []).filter((o) => ACTIVE.includes(o.status) && (o.date || '') >= today)
+    .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))[0];
 
   if (!active) {
     return (
@@ -28,14 +30,16 @@ function ActiveOrderWidget({ user }) {
     );
   }
 
-  const progress = active.status === STATUS.KITCHEN ? 0.62 : active.status === STATUS.PENDING ? 0.3 : 0.9;
   const label = active.status === STATUS.KITCHEN ? 'En cocina' : active.status === STATUS.PENDING ? 'Pendiente' : active.status === STATUS.CONFIRMED ? 'Confirmada' : 'Listo';
+  const when = [active.date === today ? 'Hoy' : active.date ? new Date(`${active.date}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }) : '', (active.time || '').split(' - ')[0]].filter(Boolean).join(' · ');
+  const confirmed = active.status === STATUS.CONFIRMED || active.status === STATUS.READY;
   return (
-    <Link to="/reservas" className="widget link" style={{ minHeight: 168, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-      <Ring value={progress} label={`${label}`} />
-      <span className="stack" style={{ gap: 0 }}>
+    <Link to="/reservas" className="widget link" style={{ minHeight: 168, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 12 }}>
+      <span className="mono lg" style={{ background: confirmed ? 'var(--accent)' : 'var(--bg)', color: 'var(--ink)', width: 56, height: 56 }} aria-label={isReservation(active) ? 'Tu reserva' : 'Tu pedido'}><Icon name={confirmed ? 'check' : 'calendar'} size={26} stroke={2.4} /></span>
+      <span className="stack" style={{ gap: 2, minWidth: 0 }}>
         <span className="eyebrow" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{active.business_name}</span>
         <span className="title-lg">{label}</span>
+        {when && <span className="small muted" style={{ fontWeight: 600 }}>{when}</span>}
       </span>
     </Link>
   );

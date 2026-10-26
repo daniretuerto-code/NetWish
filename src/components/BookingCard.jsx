@@ -63,7 +63,7 @@ export function useBookingActions(onChange) {
 
 export function StatusChip({ status }) {
   const look = STATUS_LOOK[status] || { label: status, bg: 'var(--bg)', fg: 'var(--ink)' };
-  return <span className="pill" style={{ minWidth: 0, height: 26, fontSize: 12, background: look.bg, color: look.fg, display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap' }}>{look.label}</span>;
+  return <span className="status" style={{ background: look.bg, color: look.fg }}>{look.label}</span>;
 }
 
 const ACTIONS = {

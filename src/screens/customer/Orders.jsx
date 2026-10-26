@@ -13,12 +13,25 @@ const LABELS = {
   [STATUS.KITCHEN]: { text: 'En cocina', tone: '#F7D2C4' },
   [STATUS.CONFIRMED]: { text: 'Confirmada', tone: 'var(--accent)' },
   [STATUS.READY]: { text: 'Listo', tone: 'var(--accent)' },
-  [STATUS.DONE]: { text: 'Completado', tone: 'var(--bg)' },
+  [STATUS.DONE]: { text: 'Completado', tone: '#E4EFE8' },
   [STATUS.REJECTED]: { text: 'Rechazado', tone: '#F3C9C9' },
   [STATUS.CANCELLED]: { text: 'Cancelada', tone: 'var(--bg)' },
   [STATUS.SEATED]: { text: 'En la mesa', tone: 'var(--accent)' },
   [STATUS.NOSHOW]: { text: 'No asististe', tone: '#F3C9C9' },
 };
+
+// Newest first by the day of the visit, not by when it was booked.
+const byDateDesc = (a, b) => `${b.date || ''} ${b.time || ''}`.localeCompare(`${a.date || ''} ${a.time || ''}`);
+
+// "Reserva 2 pax — Mesa 12 (Terraza) · Nota: Cumpleaños" → "2 personas · Mesa 12 (Terraza)" and the note apart.
+function bookingLines(items = '') {
+  const [main, ...rest] = String(items).split(' · ');
+  const note = rest.join(' · ').replace(/^Nota:\s*/i, '');
+  const pax = main.match(/(\d+)\s*pax/i);
+  const table = main.split('—')[1]?.trim();
+  const head = pax ? [`${pax[1]} ${pax[1] === '1' ? 'persona' : 'personas'}`, table].filter(Boolean).join(' · ') : main;
+  return { head, note };
+}
 
 const dateLabel = (iso) => {
   if (!iso) return '';
@@ -29,20 +42,33 @@ const dateLabel = (iso) => {
 
 function OrderRow({ order }) {
   const label = LABELS[order.status] || { text: order.status, tone: 'var(--bg)' };
+  const booking = isReservation(order);
+  const { head, note } = booking ? bookingLines(order.items) : { head: order.items, note: '' };
   return (
-    <div className="list-row" style={{ alignItems: 'flex-start' }}>
+    <Link to={`/negocio/${encodeURIComponent(order.business_name)}`} className="list-row" style={{ alignItems: 'flex-start', padding: '12px 0' }}>
       <Mono name={order.business_name} />
-      <span className="grow stack" style={{ gap: 2, minWidth: 0 }}>
-        <span className="row between" style={{ gap: 8 }}>
-          <Link to={`/negocio/${encodeURIComponent(order.business_name)}`} className="t" style={{ textDecoration: 'none', color: 'inherit' }}>{order.business_name}</Link>
-          <span className="price" style={{ fontSize: 15 }}>{Number(order.total) > 0 ? money(order.total) : ''}</span>
+      <span className="grow stack" style={{ gap: 3, minWidth: 0 }}>
+        <span className="row between" style={{ gap: 8, alignItems: 'baseline' }}>
+          <span className="t" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{order.business_name}</span>
+          <span className="small muted" style={{ flex: 'none', fontVariantNumeric: 'tabular-nums' }}>{dateLabel(order.date)}{order.time ? ` · ${order.time.split(' - ')[0]}` : ''}</span>
         </span>
-        <span className="s" style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{order.items}</span>
-        <span className="row" style={{ gap: 8, marginTop: 4 }}>
-          <span className="pill" style={{ background: label.tone, height: 26, fontSize: 12 }}>{label.text}</span>
-          <span className="small muted">{dateLabel(order.date)} · {order.time}</span>
+        <span className="s" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{head}</span>
+        {note && <span className="s" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{note}</span>}
+        <span className="row between" style={{ gap: 8, marginTop: 4 }}>
+          <span className="status" style={{ background: label.tone }}>{label.text}</span>
+          {Number(order.total) > 0 && <span className="price" style={{ fontSize: 15 }}>{money(order.total)}</span>}
         </span>
       </span>
+    </Link>
+  );
+}
+
+function HistoryBlock({ title, list }) {
+  if (!list.length) return null;
+  return (
+    <div className="widget" style={{ paddingBottom: 4 }}>
+      <h2 className="title-lg" style={{ marginBottom: 2 }}>{title}</h2>
+      {list.map((o) => <OrderRow key={o.id} order={o} />)}
     </div>
   );
 }
@@ -85,7 +111,11 @@ export default function Orders() {
   if (loading && !data) return <Spinner />;
   const orders = data || [];
   const reservations = orders.filter((o) => isReservation(o) && [STATUS.PENDING, STATUS.CONFIRMED].includes(o.status) && (o.date || '') >= todayISO());
+  reservations.sort((a, b) => byDateDesc(b, a));
   const rest = orders.filter((o) => !reservations.includes(o));
+  // Bookings and old QR orders are different things: each gets its own list.
+  const pastBookings = rest.filter(isReservation).sort(byDateDesc);
+  const pastOrders = rest.filter((o) => !isReservation(o)).sort(byDateDesc);
 
   return (
     <div className="page">
@@ -102,15 +132,17 @@ export default function Orders() {
             {reservations.length > 0 && (
               <div className="widget dark stack">
                 <span className="eyebrow row" style={{ gap: 6 }}><Icon name="calendar" size={14} /> Próximas reservas</span>
-                {reservations.map((o) => (
-                  <div key={o.id} className="stack" style={{ gap: 8, paddingBottom: 10, borderBottom: '1px solid rgba(255,255,255,.1)' }}>
-                  <div className="row between" style={{ gap: 10 }}>
-                    <span className="stack" style={{ gap: 0, minWidth: 0 }}>
-                      <strong>{o.business_name}</strong>
-                      <span className="small" style={{ opacity: 0.7 }}>{dateLabel(o.date)} · {o.time}</span>
-                      <span className="small" style={{ opacity: 0.7 }}>{o.items}</span>
+                {reservations.map((o, i) => {
+                  const { head, note } = bookingLines(o.items);
+                  return (
+                  <div key={o.id} className="stack" style={{ gap: 10, paddingTop: i ? 14 : 4, borderTop: i ? '1px solid rgba(255,255,255,.1)' : 0 }}>
+                  <div className="row between" style={{ gap: 10, alignItems: 'flex-start' }}>
+                    <span className="stack" style={{ gap: 2, minWidth: 0 }}>
+                      <strong style={{ fontSize: 17 }}>{o.business_name}</strong>
+                      <span className="small" style={{ opacity: 0.85, fontWeight: 600 }}>{dateLabel(o.date)} · {o.time}</span>
+                      <span className="small" style={{ opacity: 0.62 }}>{head}{note ? ` · ${note}` : ''}</span>
                     </span>
-                    <span className="pill" style={{ background: o.status === STATUS.CONFIRMED ? 'var(--accent)' : 'rgba(255,255,255,.14)', color: o.status === STATUS.CONFIRMED ? 'var(--ink)' : '#fff' }}>
+                    <span className="status lg" style={{ background: o.status === STATUS.CONFIRMED ? 'var(--accent)' : 'rgba(255,255,255,.14)', color: o.status === STATUS.CONFIRMED ? 'var(--ink)' : '#fff' }}>
                       {o.status === STATUS.CONFIRMED ? 'Confirmada' : 'Pendiente'}
                     </span>
                   </div>
@@ -128,15 +160,20 @@ export default function Orders() {
                     </div>
                   )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
-            <div className="widget" style={{ paddingBottom: 4 }}>
-              <h2 className="title-lg">Historial</h2>
-              {rest.map((o) => <OrderRow key={o.id} order={o} />)}
-              {rest.length === 0 && <p className="small muted" style={{ padding: '10px 0' }}>Nada más por aquí.</p>}
-            </div>
+            <HistoryBlock title="Historial" list={pastBookings} />
+            {reservations.length === 0 && pastBookings.length === 0 && (
+              <div className="widget"><Empty icon="calendar" title="No tienes reservas próximas"><Link to="/explorar">Busca dónde ir</Link></Empty></div>
+            )}
           </div>
+          {pastOrders.length > 0 && (
+          <div className="stack">
+            <HistoryBlock title="Pedidos" list={pastOrders} />
+          </div>
+          )}
         </div>
       )}
     </div>

@@ -153,13 +153,13 @@ export default function Account() {
           </div>
 
           <div className="bento">
-            <Link to="/reservas" className="widget link stack" style={{ gap: 18 }}>
-              <Icon name="calendar" size={24} />
-              <strong>Mis reservas</strong>
+            <Link to="/reservas" className="widget link stack" style={{ gap: 14, minHeight: 116, justifyContent: 'space-between' }}>
+              <span className="mono" style={{ background: 'var(--bg)', color: 'var(--ink)' }}><Icon name="calendar" size={22} /></span>
+              <strong style={{ fontSize: 17 }}>Mis reservas</strong>
             </Link>
-            <Link to="/escanear" className="widget link dark stack" style={{ gap: 18 }}>
-              <Icon name="scan" size={24} />
-              <strong>Escanear QR</strong>
+            <Link to="/escanear" className="widget link dark stack" style={{ gap: 14, minHeight: 116, justifyContent: 'space-between' }}>
+              <span className="mono" style={{ background: 'var(--accent)', color: 'var(--ink)' }}><Icon name="scan" size={22} /></span>
+              <strong style={{ fontSize: 17 }}>Escanear QR</strong>
             </Link>
           </div>
 
@@ -172,7 +172,7 @@ export default function Account() {
             <Icon name="chevron" size={18} />
           </Link>
 
-          <button className="btn soft block" onClick={() => signOut().then(() => navigate('/'))}>
+          <button className="btn block" onClick={() => signOut().then(() => navigate('/'))}>
             <Icon name="logout" size={18} /> Cerrar sesión
           </button>
         </>
