@@ -58,8 +58,24 @@ export const RESTAURANT_SECTIONS = [
       { id: 'caduca_horas', type: 'choice', label: 'Si no confirmas una reserva, ¿cuándo la damos por rechazada?', help: 'Así el cliente no se queda esperando para siempre.', when: (a) => a.auto_confirm === false || Number(a.grupo_desde) > 0, options: [
         { value: 2, label: 'A las 2 horas' }, { value: 6, label: 'A las 6 horas' }, { value: 12, label: 'A las 12 horas' }, { value: 24, label: 'Al día siguiente' },
       ] },
-      { id: 'google_resenas', type: 'text', label: '¿Cuál es el enlace para dejarte una reseña en Google?', help: 'Al día siguiente de venir, pediremos una reseña a tus clientes. Lo encuentras en tu Perfil de Empresa de Google → "Pedir reseñas".', placeholder: 'https://g.page/r/…' },
+      { id: 'google_resenas', type: 'text', label: '¿Cuál es el enlace para dejarte una reseña en Google?', help: 'Quien te ponga un 4 o un 5 en la encuesta del día siguiente irá directo a dejarte la reseña en Google. Lo encuentras en tu Perfil de Empresa de Google → "Pedir reseñas".', placeholder: 'https://g.page/r/…' },
       { id: 'cancelacion', type: 'text', label: '¿Tienes alguna norma de cancelación o retraso?', help: 'La verá el cliente antes de reservar.', placeholder: 'Ej.: Guardamos la mesa 15 minutos. Avísanos si no puedes venir.' },
+    ],
+  },
+  {
+    key: 'fidelizar',
+    title: 'Clientes que vuelven',
+    intro: 'Menos mesas vacías por gente que no aparece y más clientes que repiten.',
+    when: (a) => a.reservas !== false,
+    questions: [
+      { id: 'encuesta', type: 'yesno', label: '¿Preguntamos a tus clientes qué tal les fue, al día siguiente?', help: 'Un correo con una nota del 1 al 5. Las notas bajas te llegan solo a ti para que lo arregles; las altas van a Google.' },
+      { id: 'liberar_sin_confirmar', type: 'yesno', label: 'Si alguien no confirma su reserva, ¿liberamos la mesa hora y media antes?', help: 'Le recordamos la reserva el día antes y otra vez esa mañana. Si no contesta a ninguno, la mesa queda libre y avisamos a tu lista de espera.' },
+      { id: 'noshow_limite', type: 'choice', label: '¿Después de cuántos "No vino" quieres revisar tú sus reservas?', help: 'Sus reservas te llegarán sin confirmar para que decidas. También puedes poner la etiqueta "No admitir" a un cliente.', options: [
+        { value: 1, label: '1' }, { value: 2, label: '2' }, { value: 3, label: '3' }, { value: 99, label: 'Nunca' },
+      ] },
+      { id: 'campana_cumple', type: 'yesno', label: '¿Felicitamos a tus clientes una semana antes de su cumpleaños?', help: 'Solo a los que tengan la fecha apuntada en su ficha. Es la reserva más fácil del año.' },
+      { id: 'cumple_oferta', type: 'text', label: '¿Les regalas algo por su cumpleaños?', help: 'Saldrá destacado en el correo. Déjalo vacío si no.', placeholder: 'Ej.: El postre corre de nuestra cuenta', when: (a) => yes(a.campana_cumple) },
+      { id: 'resumen_mensual', type: 'yesno', label: '¿Quieres recibir cada día 1 un resumen de tu mes?', help: 'Comensales, reservas que entraron con el local cerrado, no-shows evitados y tu nota media.' },
     ],
   },
   {

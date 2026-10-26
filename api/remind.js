@@ -23,14 +23,16 @@ export default async function handler(req, res) {
       if (await sendReminder(row.claim_reminders || row)) sent += 1;
     }
 
-    // Yesterday's customers: thanks, and a nudge to review on Google when the restaurant gave its link.
+    // Yesterday's customers: the one-minute survey (the database skips it if the restaurant turned it off).
+    // Until the survey columns exist, only restaurants with a Google link ask, as before.
     const [settings] = await supabaseRest(`restaurant_settings?select=profile&business_name=ilike.${encodeURIComponent(biz.name)}`, { authorization: auth });
-    const reviewUrl = String(settings?.profile?.google_resenas || '').trim();
+    const reviewUrl = /^https:\/\//.test(String(settings?.profile?.google_resenas || '').trim()) ? settings.profile.google_resenas.trim() : '';
+    const survey = await supabaseRest('orders?select=rating&limit=1', { authorization: auth }).then(() => true, () => false);
     let asked = 0;
-    if (/^https:\/\//.test(reviewUrl)) {
+    if (survey || reviewUrl) {
       const reviews = await supabaseRest('rpc/claim_review_requests', { method: 'POST', body: { p_business: biz.name }, authorization: auth });
       for (const row of reviews || []) {
-        if (await sendReviewRequest(row.claim_review_requests || row, reviewUrl)) asked += 1;
+        if (await sendReviewRequest({ review_url: reviewUrl, ...(row.claim_review_requests || row) })) asked += 1;
       }
     }
     return res.status(200).json({ sent, reviews: asked });

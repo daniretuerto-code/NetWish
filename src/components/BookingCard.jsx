@@ -128,6 +128,17 @@ function Swipe({ left, right, onLeft, onRight, children }) {
   );
 }
 
+// Birthday ("MM-DD") within 3 days of the booking.
+function birthdaySoon(birthday, date) {
+  if (!/^\d{2}-\d{2}$/.test(birthday || '') || !date) return false;
+  const day = new Date(`${date}T12:00:00`);
+  return [-3, -2, -1, 0, 1, 2, 3].some((n) => {
+    const d = new Date(day);
+    d.setDate(d.getDate() + n);
+    return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` === birthday;
+  });
+}
+
 // One booking as the restaurant sees it: who, how many, which table, and what to do next.
 // `profile` is what the restaurant keeps about this customer: a private note and tags such as VIP or an allergy.
 export default function BookingCard({ order, history, busy, onMove, onChangeTable, showDate, businessName, profile }) {
@@ -158,11 +169,21 @@ export default function BookingCard({ order, history, busy, onMove, onChangeTabl
           </span>
           {tags.length > 0 && (
             <span className="row" style={{ gap: 4, flexWrap: 'wrap' }}>
-              {tags.map((t) => <span key={t} className={`tag${isAllergyTag(t) ? ' alert' : t === 'VIP' ? ' vip' : ''}`}>{isAllergyTag(t) ? `⚠︎ ${t}` : t}</span>)}
+              {tags.map((t) => <span key={t} className={`tag${isAllergyTag(t) || t === 'No admitir' ? ' alert' : t === 'VIP' ? ' vip' : ''}`}>{isAllergyTag(t) ? `⚠︎ ${t}` : t}</span>)}
             </span>
           )}
           {b.note && <span className="small" style={{ background: 'var(--surface)', borderRadius: 10, padding: '4px 8px' }}>{b.note}</span>}
           {profile?.note && <span className="small" style={{ background: 'var(--surface)', borderRadius: 10, padding: '4px 8px', fontWeight: 600, display: 'inline-flex', gap: 6, alignItems: 'flex-start' }}><Icon name="person" size={14} /> {profile.note}</span>}
+          {tags.includes('No admitir') && order.status === STATUS.PENDING && (
+            <span className="small" style={{ fontWeight: 800, color: 'var(--danger-ink)' }}>Marcado «No admitir»: no se confirmó solo</span>
+          )}
+          {order.status === STATUS.CONFIRMED && order.reminded_at && !order.customer_confirmed_at && (
+            <span className="small" style={{ fontWeight: 700, color: 'var(--danger-ink)' }}>No ha contestado al recordatorio{order.second_reminded_at ? ' (avisado dos veces)' : ''}</span>
+          )}
+          {birthdaySoon(profile?.birthday, order.date) && <span className="small" style={{ fontWeight: 700 }}>🎂 Celebra su cumpleaños estos días</span>}
+          {history && history.visits === 0 && history.noShows === 0 && [STATUS.PENDING, STATUS.CONFIRMED].includes(order.status) && (
+            <span className="small" style={{ fontWeight: 700, color: 'var(--muted)' }}>Primera vez que viene</span>
+          )}
           {history && (history.noShows > 0 || history.visits > 0) && (
             <span className="small" style={{ fontWeight: 700, color: history.noShows ? 'var(--danger-ink)' : 'var(--muted)' }}>
               {history.noShows ? `Ojo: no vino ${history.noShows} ${history.noShows === 1 ? 'vez' : 'veces'}` : `Cliente habitual · ${history.visits} ${history.visits === 1 ? 'visita' : 'visitas'}`}

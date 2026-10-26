@@ -9,6 +9,7 @@ import { findBusiness, getRestaurantSettings, listProducts } from '../../lib/dat
 import { categoryOf, kindOf } from '../../lib/categories.js';
 import { initials, money, toneFor } from '../../lib/format.js';
 import { modulesFor, publicFacts } from '../../lib/questionnaire.js';
+import { eventDay, upcomingEvents } from '../../lib/events.js';
 
 function Hero({ biz }) {
   return (
@@ -131,7 +132,7 @@ function DailyMenu({ menu }) {
 export default function Business() {
   const { name } = useParams();
   const [tab, setTab] = useState('carta');
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   // The restaurant's short link (netwish.es/r/…) and the waiting-list e-mail (…&dia=&pax=) land here with the booking sheet open.
   const [reserveOpen, setReserveOpen] = useState(params.get('reservar') === '1');
 
@@ -209,6 +210,24 @@ export default function Business() {
                 {facts.badges.map((b) => <span key={b} className="pill" style={{ background: 'var(--bg)', height: 30, fontSize: 13 }}>{b}</span>)}
               </div>
             )}
+          </div>
+        )}
+
+        {isRestaurant && upcomingEvents(settings?.profile?.eventos).length > 0 && (
+          <div className="widget stack" style={{ gap: 4 }}>
+            <span className="eyebrow">Próximamente</span>
+            {upcomingEvents(settings.profile.eventos).slice(0, 4).map((ev) => (
+              <button key={ev.id} className="list-row" disabled={!canBook} onClick={() => { setParams({ reservar: '1', dia: ev.date }, { replace: true }); setReserveOpen(true); }}>
+                <span className="stack" style={{ gap: 0, minWidth: 56, alignItems: 'center' }}>
+                  <strong style={{ fontSize: 14 }}>{eventDay(ev.date)}</strong>
+                </span>
+                <span className="grow stack" style={{ gap: 0, minWidth: 0 }}>
+                  <span className="t">{ev.title}{ev.price ? ` · ${money(ev.price)}` : ''}</span>
+                  {ev.text && <span className="s">{ev.text}</span>}
+                </span>
+                {canBook && <span className="small" style={{ fontWeight: 800 }}>Reservar</span>}
+              </button>
+            ))}
           </div>
         )}
 

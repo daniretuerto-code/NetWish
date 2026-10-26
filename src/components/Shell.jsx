@@ -96,10 +96,28 @@ function SideNav({ items, header, footer }) {
   );
 }
 
+// Inside the booking button a restaurant puts on its own website (public/reservar.js):
+// only the page, no NetWish menus. Remembered for the visit so inner links keep it.
+function isEmbedded(search) {
+  try {
+    if (new URLSearchParams(search).get('embed') === '1') sessionStorage.setItem('netwish.embed', '1');
+    return window.self !== window.top && sessionStorage.getItem('netwish.embed') === '1';
+  } catch {
+    return false;
+  }
+}
+
 export function CustomerShell() {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const { business } = useAuth();
   const isDetail = DETAIL_ROUTES.some((r) => pathname.startsWith(r));
+  if (isEmbedded(search)) {
+    return (
+      <div className="shell embed">
+        <main className="shell-main"><Outlet /></main>
+      </div>
+    );
+  }
   return (
     <div className="shell">
       <SideNav
@@ -163,6 +181,8 @@ export function BusinessShell() {
     ...(isRestaurant && mods.cocina ? [{ to: '/panel/cocina', label: 'Cocina', icon: 'flame' }] : []),
     { to: '/panel/carta', label: isRestaurant ? 'Carta' : isBeauty ? 'Servicios' : 'Catálogo', icon: isBeauty ? 'scissors' : 'book' },
     ...(isRestaurant && (mods.reservas || mods.pedidosQr) ? [{ to: '/panel/mesas', label: 'Tu sala', icon: 'grid' }] : []),
+    ...(isRestaurant && mods.reservas ? [{ to: '/panel/campanas', label: 'Campañas', icon: 'mail' }] : []),
+    ...(isRestaurant ? [{ to: '/panel/eventos', label: 'Eventos', icon: 'music' }] : []),
     ...(isRestaurant ? [{ to: '/panel/personalizar', label: 'Personalizar', icon: 'gear' }] : []),
     ...(isBeauty ? [{ to: '/panel/horario', label: 'Horario y equipo', icon: 'calendar' }] : []),
     { to: '/panel/mensajes', label: 'Mensajes', icon: 'chat' },
