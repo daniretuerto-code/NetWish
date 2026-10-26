@@ -7,9 +7,14 @@ export const TABLES_RE = /Mesas? (\d+(?:\+\d+)*)/;
 export const tablesIn = (items) => (TABLES_RE.exec(String(items || '').split(' · Nota:')[0])?.[1] || '').split('+').filter(Boolean).map(Number);
 export const tableLabel = (list, zone) => `${list.length > 1 ? 'Mesas' : 'Mesa'} ${list.join('+')}${zone ? ` (${zone})` : ''}`;
 
+// Since the panel update each booking also has guests, tables, zone and note columns (filled by the database);
+// older rows and lists that only carry the text fall back to reading it.
 export function parseTableBooking(o) {
   const items = String(o.items || '');
   const range = /(\d{1,2}:\d{2})\s*(?:-\s*(\d{1,2}:\d{2}))?/.exec(o.time || '') || [];
+  if (o.guests != null && Array.isArray(o.tables)) {
+    return { guests: o.guests, table: o.tables[0] || null, tables: o.tables, zone: o.zone || '', note: o.note || '', start: range[1] || '', end: range[2] || '' };
+  }
   const tables = tablesIn(items);
   return {
     guests: Number(/(\d+)\s*pax/i.exec(items)?.[1]) || 0,
@@ -26,10 +31,10 @@ export const ACTIVE_BOOKING = [STATUS.PENDING, STATUS.CONFIRMED, STATUS.SEATED];
 
 export const STATUS_LOOK = {
   [STATUS.PENDING]: { label: 'Por confirmar', bg: 'var(--accent)', fg: 'var(--ink)' },
-  [STATUS.CONFIRMED]: { label: 'Confirmada', bg: 'var(--ink)', fg: '#fff' },
-  [STATUS.SEATED]: { label: 'Sentados', bg: '#2F5D46', fg: '#fff' },
+  [STATUS.CONFIRMED]: { label: 'Confirmada', bg: 'var(--ink)', fg: 'var(--on-ink)' },
+  [STATUS.SEATED]: { label: 'Sentados', bg: 'var(--seated-ink)', fg: '#fff' },
   [STATUS.DONE]: { label: 'Terminada', bg: 'var(--bg)', fg: 'var(--muted)' },
-  [STATUS.NOSHOW]: { label: 'No vino', bg: '#F3C9C9', fg: '#8E2B2B' },
+  [STATUS.NOSHOW]: { label: 'No vino', bg: 'var(--danger-soft)', fg: 'var(--danger-ink)' },
   [STATUS.CANCELLED]: { label: 'Cancelada', bg: 'var(--bg)', fg: 'var(--muted)' },
   [STATUS.REJECTED]: { label: 'Rechazada', bg: 'var(--bg)', fg: 'var(--muted)' },
 };

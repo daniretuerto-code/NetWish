@@ -323,13 +323,20 @@ export async function sendReminders() {
   }
 }
 
+// What the restaurant keeps about each customer: { [customerKey]: { note, tags } }.
 export async function customerNotes(businessName) {
-  const { data } = await supabase.from('customer_notes').select('customer_key, note').ilike('business_name', escapeLike(businessName));
-  return Object.fromEntries((data || []).map((n) => [n.customer_key, n.note]));
+  const { data } = await supabase.from('customer_notes').select('*').ilike('business_name', escapeLike(businessName));
+  return Object.fromEntries((data || []).map((n) => [n.customer_key, { note: n.note || '', tags: n.tags || [] }]));
 }
 
-export async function saveCustomerNote(businessName, key, note) {
-  const { error } = await supabase.from('customer_notes').upsert([{ business_name: businessName, customer_key: key, note, updated_at: new Date().toISOString() }]);
+export async function saveCustomerNote(businessName, key, { note, tags }) {
+  const row = { business_name: businessName, customer_key: key, note, tags, updated_at: new Date().toISOString() };
+  let { error } = await supabase.from('customer_notes').upsert([row]);
+  // Until the tags column exists the note still saves.
+  if (error && /tags/.test(error.message || '')) {
+    delete row.tags;
+    ({ error } = await supabase.from('customer_notes').upsert([row]));
+  }
   fail(error);
 }
 
@@ -352,13 +359,18 @@ export async function myOrders() {
   return data || [];
 }
 
+// Everything from the last 13 months onwards (past visits for customers and stats, and every booking ahead),
+// by booking date rather than by when it was made, so busy restaurants never lose future bookings.
 export async function businessOrders(businessName) {
+  const from = new Date();
+  from.setMonth(from.getMonth() - 13);
   const { data, error } = await supabase
     .from('orders')
     .select('*')
     .ilike('business_name', escapeLike(businessName))
-    .order('created_at', { ascending: false })
-    .limit(300);
+    .gte('date', from.toISOString().slice(0, 10))
+    .order('date', { ascending: false })
+    .limit(5000);
   fail(error);
   return data || [];
 }

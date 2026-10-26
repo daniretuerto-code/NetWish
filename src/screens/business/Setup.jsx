@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
 import ContactTeam from '../../components/ContactTeam.jsx';
-import { PageHeader, Ring, Spinner, useToast } from '../../components/ui.jsx';
+import { PageHeader, Ring, Skeleton, Spinner, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { saveRestaurantSettings } from '../../lib/data.js';
 import { isAnswered, profileProgress, RESTAURANT_SECTIONS, sectionProgress, settingsFromProfile, visibleQuestions } from '../../lib/questionnaire.js';
@@ -10,7 +10,7 @@ import { isAnswered, profileProgress, RESTAURANT_SECTIONS, sectionProgress, sett
 function Option({ on, onClick, children }) {
   return (
     <button onClick={onClick} aria-pressed={on} className="row between"
-      style={{ width: '100%', minHeight: 56, padding: '0 18px', borderRadius: 18, border: 0, fontSize: 17, fontWeight: 700, textAlign: 'left', background: on ? 'var(--ink)' : 'var(--surface)', color: on ? '#fff' : 'var(--ink)', boxShadow: on ? 'none' : 'var(--shadow)' }}>
+      style={{ width: '100%', minHeight: 56, padding: '0 18px', borderRadius: 18, border: 0, fontSize: 17, fontWeight: 700, textAlign: 'left', background: on ? 'var(--ink)' : 'var(--surface)', color: on ? 'var(--on-ink)' : 'var(--ink)', boxShadow: on ? 'none' : 'var(--shadow)' }}>
       <span>{children}</span>
       {on && <Icon name="check" size={18} stroke={3} style={{ color: 'var(--accent)' }} />}
     </button>
@@ -156,7 +156,7 @@ function Wizard({ section, onboarding }) {
 
 export function Onboarding() {
   const { settings } = useOutletContext();
-  if (!settings) return <Spinner />;
+  if (!settings) return <Skeleton />;
   return <Wizard section={RESTAURANT_SECTIONS[0]} onboarding={!settings.profile?.onboarded} />;
 }
 
@@ -164,7 +164,7 @@ export function SectionWizard() {
   const { key } = useParams();
   const { settings } = useOutletContext();
   const section = RESTAURANT_SECTIONS.find((s) => s.key === key);
-  if (!settings) return <Spinner />;
+  if (!settings) return <Skeleton />;
   if (!section) return <Navigate to="/panel/personalizar" replace />;
   return <Wizard section={section} />;
 }
@@ -172,7 +172,7 @@ export function SectionWizard() {
 export default function Personalize() {
   const { business } = useAuth();
   const { settings } = useOutletContext();
-  if (!settings) return <Spinner />;
+  if (!settings) return <Skeleton />;
   const answers = settings.profile || {};
   const pct = profileProgress(answers);
   const sections = RESTAURANT_SECTIONS.filter((s) => !s.when || s.when(answers));

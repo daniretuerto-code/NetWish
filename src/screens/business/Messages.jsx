@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from '../../components/Icon.jsx';
-import { BackButton, Empty, Mono, PageHeader, Spinner, useToast } from '../../components/ui.jsx';
+import { BackButton, Empty, Mono, PageHeader, Skeleton, Spinner, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { businessInbox, markThreadRead, sendMessage, subscribe } from '../../lib/data.js';
@@ -50,7 +50,7 @@ function Thread({ thread, business, onBack, onSent }) {
       {thread.customerId ? (
         <form className="row" onSubmit={send}>
           <input className="input grow" placeholder={`Responder a ${thread.name}`} value={text} onChange={(e) => setText(e.target.value)} aria-label="Respuesta" />
-          <button className="icon-btn" style={{ background: 'var(--ink)', color: 'var(--accent)', width: 50, height: 50 }} disabled={sending || !text.trim()} aria-label="Enviar">
+          <button className="icon-btn" style={{ background: 'var(--ink)', color: 'var(--accent-on-ink)', width: 50, height: 50 }} disabled={sending || !text.trim()} aria-label="Enviar">
             <Icon name="send" size={20} />
           </button>
         </form>
@@ -77,7 +77,7 @@ export default function Messages() {
     if (open?.unread && open.customerId) markThreadRead(business.name, open.customerId).then(reload);
   }, [open?.key, open?.unread, open?.customerId, business.name, reload]);
 
-  if (loading && !data) return <Spinner />;
+  if (loading && !data) return <Skeleton />;
 
   return (
     <div className="page">

@@ -84,7 +84,7 @@ export default function OwnerBookingSheet({ open, onClose, business, settings, i
     const on = chosen && Number(chosen.table_number) === Number(t.table_number);
     return (
       <button type="button" key={t.table_number} className="pill" onClick={() => setTable(t.table_number)}
-        style={{ minWidth: 0, height: 44, background: on ? 'var(--ink)' : 'var(--bg)', color: on ? '#fff' : 'var(--ink)' }}>
+        style={{ minWidth: 0, height: 44, background: on ? 'var(--ink)' : 'var(--bg)', color: on ? 'var(--on-ink)' : 'var(--ink)' }}>
         {t.table_number}<span style={{ opacity: 0.6, fontWeight: 600 }}> · {t.capacity}p</span>
       </button>
     );
@@ -126,7 +126,7 @@ export default function OwnerBookingSheet({ open, onClose, business, settings, i
             <span className="eyebrow">Hora</span>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8 }}>
               {daySlots.map((t) => (
-                <button type="button" key={t} className="pill" onClick={() => setTime(t)} style={{ minWidth: 0, height: 40, background: time === t ? 'var(--ink)' : 'var(--bg)', color: time === t ? '#fff' : 'var(--ink)' }}>{t}</button>
+                <button type="button" key={t} className="pill" onClick={() => setTime(t)} style={{ minWidth: 0, height: 40, background: time === t ? 'var(--ink)' : 'var(--bg)', color: time === t ? 'var(--on-ink)' : 'var(--ink)' }}>{t}</button>
               ))}
             </div>
             {daySlots.length === 0 && <p className="small muted" style={{ margin: 0 }}>No hay turnos este día. Revisa tu horario en Personalizar.</p>}

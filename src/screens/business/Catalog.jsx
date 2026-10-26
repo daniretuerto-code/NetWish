@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
-import { Empty, PageHeader, Sheet, Spinner, useToast } from '../../components/ui.jsx';
+import { Empty, PageHeader, Sheet, Skeleton, Spinner, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { createProduct, deleteProduct, getRestaurantSettings, listProducts, safeSlug, saveRestaurantSettings, uploadPublicFile } from '../../lib/data.js';
@@ -129,7 +129,7 @@ function DailyMenuEditor({ business }) {
   const toast = useToast();
   const { data, loading, setData } = useAsync(() => getRestaurantSettings(business.name), [business.name]);
   const [busy, setBusy] = useState(false);
-  if (loading && !data) return <Spinner />;
+  if (loading && !data) return <Skeleton />;
   const menu = data.daily_menu || { active: false, price: 0, first_courses: [], second_courses: [], includes: '' };
   const update = (patch) => setData({ ...data, daily_menu: { ...menu, ...patch } });
   const lines = (k) => (e) => update({ [k]: e.target.value.split('\n') });
@@ -182,7 +182,7 @@ export default function Catalog() {
   const [confirmId, setConfirmId] = useState(null);
   const { data, loading, reload, setData } = useAsync(() => listProducts(business.name), [business.name]);
 
-  if (loading && !data) return <Spinner />;
+  if (loading && !data) return <Skeleton />;
   const products = data || [];
   const sections = [...new Set(products.map((p) => p.section).filter(Boolean))];
   const groups = new Map();
