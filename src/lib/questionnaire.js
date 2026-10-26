@@ -49,6 +49,16 @@ export const RESTAURANT_SECTIONS = [
       { id: 'aviso_min', type: 'choice', label: '¿Y como mínimo, cuánto antes?', options: [
         { value: 30, label: '30 min' }, { value: 60, label: '1 hora' }, { value: 120, label: '2 horas' }, { value: 1440, label: 'El día antes' },
       ] },
+      { id: 'grupo_desde', type: 'choice', label: '¿A partir de cuántas personas quieres decidir tú si aceptas la reserva?', help: 'Esas reservas te llegarán como solicitud de grupo para que juntes mesas.', options: [
+        { value: 6, label: '6' }, { value: 8, label: '8' }, { value: 10, label: '10' }, { value: 0, label: 'Nunca' },
+      ] },
+      { id: 'aforo_franja', type: 'choice', label: '¿Cuántas personas puede atender tu cocina cada media hora?', help: 'Así no te entran 40 personas a la vez. Si no te importa, elige "Sin límite".', options: [
+        { value: 10, label: '10' }, { value: 20, label: '20' }, { value: 30, label: '30' }, { value: 50, label: '50' }, { value: 0, label: 'Sin límite' },
+      ] },
+      { id: 'caduca_horas', type: 'choice', label: 'Si no confirmas una reserva, ¿cuándo la damos por rechazada?', help: 'Así el cliente no se queda esperando para siempre.', when: (a) => a.auto_confirm === false || Number(a.grupo_desde) > 0, options: [
+        { value: 2, label: 'A las 2 horas' }, { value: 6, label: 'A las 6 horas' }, { value: 12, label: 'A las 12 horas' }, { value: 24, label: 'Al día siguiente' },
+      ] },
+      { id: 'google_resenas', type: 'text', label: '¿Cuál es el enlace para dejarte una reseña en Google?', help: 'Al día siguiente de venir, pediremos una reseña a tus clientes. Lo encuentras en tu Perfil de Empresa de Google → "Pedir reseñas".', placeholder: 'https://g.page/r/…' },
       { id: 'cancelacion', type: 'text', label: '¿Tienes alguna norma de cancelación o retraso?', help: 'La verá el cliente antes de reservar.', placeholder: 'Ej.: Guardamos la mesa 15 minutos. Avísanos si no puedes venir.' },
     ],
   },

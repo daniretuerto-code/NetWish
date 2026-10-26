@@ -255,6 +255,36 @@ export async function setOrderItems(id, items) {
   fail(error);
 }
 
+// Booking without an account: name and e-mail. Returns { id, status, token }.
+export async function createGuestBooking({ business, name, email, phone, itemsText, date, time }) {
+  const { data, error } = await supabase.rpc('create_guest_booking', {
+    p_business: business, p_name: name, p_email: email, p_phone: phone || null, p_items: itemsText, p_date: date, p_time: time,
+  });
+  fail(error);
+  notifyOrder(data.id, 'created');
+  return data;
+}
+
+export async function joinWaitlist(entry) {
+  const { error } = await supabase.from('waitlist').insert([entry]);
+  fail(error);
+}
+
+export async function businessWaitlist(businessName) {
+  const { data } = await supabase.from('waitlist').select('*').ilike('business_name', escapeLike(businessName)).gte('date', todayISO()).order('created_at');
+  return data || [];
+}
+
+export async function setWaitlistStatus(id, status) {
+  const { error } = await supabase.from('waitlist').update({ status }).eq('id', id);
+  fail(error);
+}
+
+export async function expirePending(businessName) {
+  const { data } = await supabase.rpc('expire_pending', { p_business: businessName });
+  return data || 0;
+}
+
 export async function cancelMyBooking(id) {
   const { error } = await supabase.rpc('cancel_my_booking', { p_order: id });
   fail(error);

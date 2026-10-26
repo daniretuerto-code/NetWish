@@ -6,7 +6,7 @@ import OwnerBookingSheet from '../../components/OwnerBookingSheet.jsx';
 import { PageHeader, Ring, Spinner, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
-import { businessInbox, businessOrders, listProducts, notifyReady, sendReminders, STATUS, subscribe } from '../../lib/data.js';
+import { businessInbox, businessOrders, expirePending, listProducts, notifyReady, sendReminders, STATUS, subscribe } from '../../lib/data.js';
 import { ACTIVE_BOOKING, bookingsOf, byTime, customerKey, customersFrom, guestsOf, parseTableBooking, shiftOf } from '../../lib/agenda.js';
 import { greeting, longDate, minutesToTime, todayISO } from '../../lib/format.js';
 import { profileProgress } from '../../lib/questionnaire.js';
@@ -91,6 +91,8 @@ export default function Today() {
   const [adding, setAdding] = useState(null);
   const [reminded, setReminded] = useState(0);
   const { data, loading, reload, setData } = useAsync(async () => {
+    // Unanswered requests past their time are released before counting anything.
+    await expirePending(business.name);
     const [orders, inbox, products] = await Promise.all([businessOrders(business.name), businessInbox(business.name), listProducts(business.name)]);
     return { orders, inbox, products: products.length };
   }, [business.name]);

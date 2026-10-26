@@ -5,6 +5,10 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const row = (label, value) =>
   `<tr><td style="color:#6B6862;padding:6px 0">${escapeHtml(label)}</td><td style="text-align:right;font-weight:600;padding:6px 0">${escapeHtml(value)}</td></tr>`;
 
+const manage = (order) => (order.token
+  ? `<p><a href="${SITE_URL}/reserva/${order.token}" style="color:#111;font-weight:700">Ver, confirmar o cancelar mi reserva</a></p>`
+  : '');
+
 function summary(order) {
   return `<table style="width:100%;border-collapse:collapse;font-size:15px">
     ${row('Comercio', order.business_name)}
@@ -37,7 +41,7 @@ export default async function handler(req, res) {
       await sendEmail({
         to: order.customer_email,
         subject: `Reserva confirmada en ${order.business_name}`,
-        html: emailLayout('¡Tu reserva está confirmada!', `<p>Hola ${escapeHtml(order.customer)}, ${escapeHtml(order.business_name)} te espera.</p>${summary(order)}`),
+        html: emailLayout('¡Tu reserva está confirmada!', `<p>Hola ${escapeHtml(order.customer)}, ${escapeHtml(order.business_name)} te espera.</p>${summary(order)}${manage(order)}`),
       });
       return res.status(200).json({ sent: true });
     }
@@ -52,10 +56,10 @@ export default async function handler(req, res) {
         to: order.customer_email,
         subject: instant ? `Reserva confirmada en ${order.business_name}` : `Solicitud de reserva en ${order.business_name}`,
         html: instant
-          ? emailLayout('¡Tu reserva está confirmada!', `<p>Hola ${escapeHtml(order.customer)}, ${escapeHtml(order.business_name)} te espera. El día antes te mandaremos un recordatorio.</p>${summary(order)}`)
+          ? emailLayout('¡Tu reserva está confirmada!', `<p>Hola ${escapeHtml(order.customer)}, ${escapeHtml(order.business_name)} te espera. El día antes te mandaremos un recordatorio.</p>${summary(order)}${manage(order)}`)
           : emailLayout(
             'Hemos recibido tu solicitud',
-            `<p>${escapeHtml(order.business_name)} la confirmará en breve y te avisaremos por correo. El pago se hace en el local.</p>${summary(order)}`,
+            `<p>${escapeHtml(order.business_name)} la confirmará en breve y te avisaremos por correo. El pago se hace en el local.</p>${summary(order)}${manage(order)}`,
           ),
       }),
       sendEmail({
@@ -63,7 +67,7 @@ export default async function handler(req, res) {
         subject: instant ? `Reserva nueva confirmada: ${order.customer}` : `Nueva reserva por confirmar: ${order.customer}`,
         html: emailLayout(
           instant ? 'Reserva nueva (ya confirmada)' : 'Nueva solicitud de reserva',
-          `${summary(order)}${order.customer_email ? `<p>Cliente: ${escapeHtml(order.customer)} · ${escapeHtml(order.customer_email)}</p>` : ''}<p><a href="${SITE_URL}/panel/pedidos">Abrir el panel</a></p>`,
+          `${summary(order)}${order.customer_email ? `<p>Cliente: ${escapeHtml(order.customer)} · ${escapeHtml(order.customer_email)}${order.phone ? ` · ${escapeHtml(order.phone)}` : ''}</p>` : ''}<p><a href="${SITE_URL}/panel/pedidos">Abrir el panel</a></p>`,
         ),
       }),
     ]);
