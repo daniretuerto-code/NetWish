@@ -39,6 +39,7 @@ export const RESTAURANT_SECTIONS = [
     intro: 'Decide cómo y cuándo te pueden reservar.',
     when: (a) => a.reservas !== false,
     questions: [
+      { id: 'auto_confirm', type: 'yesno', label: '¿Confirmamos las reservas al momento cuando hay mesa libre?', help: 'El cliente recibe "confirmada" al instante. Si dices que no, tendrás que confirmar tú cada una.' },
       { id: 'max_personas', type: 'choice', label: '¿Hasta cuántas personas se puede reservar online?', help: 'Para grupos más grandes les pediremos que te llamen.', options: [
         { value: 4, label: '4' }, { value: 6, label: '6' }, { value: 8, label: '8' }, { value: 12, label: '12' }, { value: 20, label: '20' },
       ] },

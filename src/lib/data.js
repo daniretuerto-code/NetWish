@@ -156,6 +156,7 @@ export async function getRestaurantSettings(businessName, kind) {
     tables: data?.tables || [],
     staff: data?.staff || [],
     closed_days: data?.closed_days || defaults.closed_days,
+    blocks: data?.blocks || [],
   };
 }
 
@@ -242,6 +243,16 @@ export async function createOwnerBooking({ business, customer, phone, itemsText,
   const { error } = await supabase.from('orders').insert([order]);
   fail(error);
   return order;
+}
+
+export async function orderStatus(id) {
+  const { data } = await supabase.from('orders').select('status').eq('id', id).maybeSingle();
+  return data?.status || null;
+}
+
+export async function setOrderItems(id, items) {
+  const { error } = await supabase.from('orders').update({ items }).eq('id', id);
+  fail(error);
 }
 
 export async function cancelMyBooking(id) {

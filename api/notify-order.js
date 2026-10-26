@@ -45,20 +45,24 @@ export default async function handler(req, res) {
     // Only reservations are emailed; table orders go straight to the kitchen screen.
     if (!reservation) return res.status(200).json({ sent: false });
 
+    // Bookings the database confirmed on the spot get a "confirmed" e-mail straight away.
+    const instant = order.status === 'Mesa Confirmada';
     await Promise.all([
       sendEmail({
         to: order.customer_email,
-        subject: `Solicitud de reserva en ${order.business_name}`,
-        html: emailLayout(
-          'Hemos recibido tu solicitud',
-          `<p>${escapeHtml(order.business_name)} la confirmará en breve y te avisaremos por correo. El pago se hace en el local.</p>${summary(order)}`,
-        ),
+        subject: instant ? `Reserva confirmada en ${order.business_name}` : `Solicitud de reserva en ${order.business_name}`,
+        html: instant
+          ? emailLayout('¡Tu reserva está confirmada!', `<p>Hola ${escapeHtml(order.customer)}, ${escapeHtml(order.business_name)} te espera. El día antes te mandaremos un recordatorio.</p>${summary(order)}`)
+          : emailLayout(
+            'Hemos recibido tu solicitud',
+            `<p>${escapeHtml(order.business_name)} la confirmará en breve y te avisaremos por correo. El pago se hace en el local.</p>${summary(order)}`,
+          ),
       }),
       sendEmail({
         to: order.business_email,
-        subject: `Nueva reserva: ${order.customer}`,
+        subject: instant ? `Reserva nueva confirmada: ${order.customer}` : `Nueva reserva por confirmar: ${order.customer}`,
         html: emailLayout(
-          'Nueva solicitud de reserva',
+          instant ? 'Reserva nueva (ya confirmada)' : 'Nueva solicitud de reserva',
           `${summary(order)}${order.customer_email ? `<p>Cliente: ${escapeHtml(order.customer)} · ${escapeHtml(order.customer_email)}</p>` : ''}<p><a href="${SITE_URL}/panel/pedidos">Abrir el panel</a></p>`,
         ),
       }),

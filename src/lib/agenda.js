@@ -32,11 +32,7 @@ export const bookingsOf = (orders) => orders.filter(isReservation);
 export const byTime = (a, b) => String(a.time).localeCompare(String(b.time));
 
 // Lunch or dinner, from the start time and the restaurant's shifts.
-export function shiftOf(o, settings) {
-  const start = timeToMinutes(parseTableBooking(o).start);
-  const dinner = settings?.dinner_start ? timeToMinutes(settings.dinner_start) - 60 : 18 * 60;
-  return start >= dinner ? 'cena' : 'comida';
-}
+export const shiftOf = (o, settings) => slotShift(settings, parseTableBooking(o).start);
 
 export const guestsOf = (list) => list.reduce((n, o) => n + parseTableBooking(o).guests, 0);
 
@@ -78,3 +74,18 @@ export const dayLabel = (iso, today) => {
   const text = d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
   return text.charAt(0).toUpperCase() + text.slice(1);
 };
+
+// A table takes bookings from `min` to `capacity` people; by default up to two seats can go empty.
+export const tableMin = (t) => Math.max(1, Number(t.min) || Number(t.capacity) - 2 || 1);
+export const tableFits = (t, guests) => guests >= tableMin(t) && guests <= Number(t.capacity);
+
+// Days or shifts the restaurant closed to online bookings ("Completo").
+export function blockFor(settings, date) {
+  const list = (settings?.blocks || []).filter((b) => b.date === date);
+  return { todo: list.some((b) => b.shift === 'todo'), comida: list.some((b) => b.shift === 'comida' || b.shift === 'todo'), cena: list.some((b) => b.shift === 'cena' || b.shift === 'todo') };
+}
+
+export function slotShift(settings, slot) {
+  const dinner = settings?.dinner_start ? timeToMinutes(settings.dinner_start) - 60 : 18 * 60;
+  return timeToMinutes(slot) >= dinner ? 'cena' : 'comida';
+}

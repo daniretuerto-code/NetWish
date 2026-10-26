@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { getRestaurantSettings, saveRestaurantSettings } from '../../lib/data.js';
 import { tableUrl } from '../../lib/qr.js';
+import { tableMin } from '../../lib/agenda.js';
 
 function QrImage({ text, size = 440 }) {
   const [src, setSrc] = useState('');
@@ -67,7 +68,10 @@ export default function Tables() {
       await saveRestaurantSettings(business.name, {
         lunch_start, lunch_end, dinner_start, dinner_end,
         turn_duration_min: Number(turn_duration_min) || 90,
-        tables: tables.map((t) => ({ ...t, table_number: Number(t.table_number), capacity: Number(t.capacity) || 2 })),
+        tables: tables.map((t) => {
+          const capacity = Number(t.capacity) || 2;
+          return { ...t, table_number: Number(t.table_number), capacity, min: Math.min(capacity, Math.max(1, Number(t.min) || tableMin({ capacity }))) };
+        }),
       });
       setDirty(false);
       toast('Sala guardada');
@@ -89,6 +93,7 @@ export default function Tables() {
     <div className="page" style={{ paddingBottom: dirty ? 200 : undefined }}>
       <PageHeader eyebrow={business.name} title="Mesas y QR" right={<button className="btn primary sm" onClick={addTable}><Icon name="plus" size={16} /> Mesa</button>} />
 
+      <p className="small muted" style={{ margin: '0 4px' }}>Cada mesa se ofrece solo a grupos de su tamaño: así una pareja no ocupa la mesa de 6. Desmarca "online" en las mesas que guardas para quien llega sin reservar.</p>
       <div className="table-grid">
         {tables.map((t, i) => (
           <div key={`${t.id}-${i}`} className="widget stack" style={{ gap: 10, padding: 16 }}>
@@ -99,10 +104,16 @@ export default function Tables() {
               </span>
               <button className="icon-btn" onClick={() => removeTable(i)} aria-label={`Quitar mesa ${t.table_number}`}><Icon name="trash" size={18} /></button>
             </div>
-            <div className="row" style={{ gap: 8 }}>
-              <label className="small muted" htmlFor={`cap-${i}`}>Plazas</label>
-              <input id={`cap-${i}`} className="input" style={{ height: 40 }} type="number" min={1} max={30} value={t.capacity} onChange={(e) => setTable(i, { capacity: e.target.value })} />
+            <div className="row" style={{ gap: 6 }}>
+              <label className="small muted" htmlFor={`min-${i}`}>De</label>
+              <input id={`min-${i}`} className="input" style={{ height: 40, width: 54, padding: '0 4px', textAlign: 'center', fontWeight: 800 }} type="number" min={1} max={t.capacity} value={t.min ?? tableMin(t)} onChange={(e) => setTable(i, { min: e.target.value })} aria-label={`Mínimo de personas en la mesa ${t.table_number}`} />
+              <label className="small muted" htmlFor={`cap-${i}`}>a</label>
+              <input id={`cap-${i}`} className="input" style={{ height: 40, width: 54, padding: '0 4px', textAlign: 'center', fontWeight: 800 }} type="number" min={1} max={30} value={t.capacity} onChange={(e) => setTable(i, { capacity: e.target.value })} aria-label={`Máximo de personas en la mesa ${t.table_number}`} />
             </div>
+            <label className="row small" style={{ gap: 8, fontWeight: 600, cursor: 'pointer' }}>
+              <input type="checkbox" checked={t.online !== false} onChange={(e) => setTable(i, { online: e.target.checked })} style={{ width: 20, height: 20, accentColor: 'var(--ink)' }} />
+              Se puede reservar online
+            </label>
             <select className="input" style={{ height: 40 }} aria-label="Zona" value={t.zone || 'Sala Principal'} onChange={(e) => setTable(i, { zone: e.target.value })}>
               {zones.map((z) => <option key={z}>{z}</option>)}
             </select>
