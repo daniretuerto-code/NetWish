@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
 import { BackButton, Empty, Spinner } from '../../components/ui.jsx';
 import ReserveSheet from '../../components/ReserveSheet.jsx';
@@ -131,7 +131,9 @@ function DailyMenu({ menu }) {
 export default function Business() {
   const { name } = useParams();
   const [tab, setTab] = useState('carta');
-  const [reserveOpen, setReserveOpen] = useState(false);
+  const [params] = useSearchParams();
+  // The restaurant's short link (netwish.es/r/…) lands here with the booking sheet open.
+  const [reserveOpen, setReserveOpen] = useState(params.get('reservar') === '1');
 
   const { data, loading } = useAsync(async () => {
     const biz = await findBusiness(name);

@@ -19,5 +19,5 @@ export default function useAsync(loader, deps = []) {
     run();
     return () => { alive.current = false; };
   }, [run]);
-  return { ...state, reload: run, setData: (data) => setState((s) => ({ ...s, data })) };
+  return { ...state, reload: run, setData: (data) => setState((s) => ({ ...s, data: typeof data === 'function' ? data(s.data) : data })) };
 }

@@ -47,7 +47,7 @@ function Column({ title, count, accent, children }) {
   );
 }
 
-export default function Orders() {
+export default function Orders({ comandasOnly = false }) {
   const { business } = useAuth();
   const isRestaurant = kindOf(business) === 'restaurant';
   const toast = useToast();
@@ -83,6 +83,23 @@ export default function Orders() {
     .filter((o) => isReservation(o) && o.status === STATUS.CONFIRMED && o.date >= todayISO())
     .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
   const history = orders.filter((o) => [STATUS.DONE, STATUS.REJECTED].includes(o.status) || (isReservation(o) && o.status === STATUS.CONFIRMED && o.date < todayISO()));
+
+  if (comandasOnly) {
+    return (
+      <div className="kanban" style={{ gridTemplateColumns: undefined }}>
+        <Column title="En preparación" count={preparing.length} accent>
+          {preparing.map((o) => (
+            <OrderCard key={o.id} order={o} busy={busy === o.id} actions={[{ label: 'Listo', run: () => move(o, STATUS.READY) }]} />
+          ))}
+        </Column>
+        <Column title="Listos para entregar" count={ready.length}>
+          {ready.map((o) => (
+            <OrderCard key={o.id} order={o} busy={busy === o.id} actions={[{ label: 'Entregado', kind: 'accent', run: () => move(o, STATUS.DONE) }]} />
+          ))}
+        </Column>
+      </div>
+    );
+  }
 
   return (
     <div className="page">

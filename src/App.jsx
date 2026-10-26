@@ -10,10 +10,13 @@ import Table from './screens/customer/Table.jsx';
 import Orders from './screens/customer/Orders.jsx';
 import Account from './screens/customer/Account.jsx';
 import Chat from './screens/customer/Chat.jsx';
+import BookingResponse from './screens/customer/BookingResponse.jsx';
+import { kindOf } from './lib/categories.js';
 
 const Scan = lazy(() => import('./screens/customer/Scan.jsx'));
 const BizOverview = lazy(() => import('./screens/business/Overview.jsx'));
 const BizOrders = lazy(() => import('./screens/business/Orders.jsx'));
+const BizReservations = lazy(() => import('./screens/business/Reservations.jsx'));
 const BizKitchen = lazy(() => import('./screens/business/Kitchen.jsx'));
 const BizCatalog = lazy(() => import('./screens/business/Catalog.jsx'));
 const BizTables = lazy(() => import('./screens/business/Tables.jsx'));
@@ -47,6 +50,18 @@ function RequireBusiness({ children }) {
   return children;
 }
 
+// Restaurants get the agenda, hall and customers; other businesses the simple list.
+function BizBookings() {
+  const { business } = useAuth();
+  return kindOf(business) === 'restaurant' ? <BizReservations /> : <BizOrders />;
+}
+
+// netwish.es/r/casa-lucio: the short booking link restaurants paste on Google and Instagram.
+function ShortLink() {
+  const { slug } = useParams();
+  return <Navigate to={`/negocio/${encodeURIComponent(slug)}?reservar=1`} replace />;
+}
+
 // Old payment QR codes and links now land on the business page.
 function OldPayLink() {
   const { name } = useParams();
@@ -74,12 +89,14 @@ export default function App() {
           <Route path="pagar/:name" element={<OldPayLink />} />
           <Route path="mesa/:name/:table" element={<Table />} />
           <Route path="chat/:name" element={<Chat />} />
+          <Route path="reserva/:token" element={<BookingResponse />} />
+          <Route path="r/:slug" element={<ShortLink />} />
         </Route>
         <Route path="negocios" element={<BizPortal />} />
         <Route path="admin" element={<Admin />} />
         <Route path="panel" element={<RequireBusiness><BusinessShell /></RequireBusiness>}>
           <Route index element={<BizOverview />} />
-          <Route path="pedidos" element={<BizOrders />} />
+          <Route path="pedidos" element={<BizBookings />} />
           <Route path="cocina" element={<BizKitchen />} />
           <Route path="carta" element={<BizCatalog />} />
           <Route path="mesas" element={<BizTables />} />

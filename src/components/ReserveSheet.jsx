@@ -7,20 +7,20 @@ import { createOrder, reservationsOn, STATUS } from '../lib/data.js';
 import { minutesToTime, timeToMinutes, todayISO } from '../lib/format.js';
 import { isClosed } from '../lib/booking.js';
 
-const DEFAULT_TABLES = [
+export const DEFAULT_TABLES = [
   { table_number: 1, capacity: 2, zone: 'Sala Principal' },
   { table_number: 2, capacity: 4, zone: 'Sala Principal' },
   { table_number: 3, capacity: 6, zone: 'Sala Principal' },
 ];
 
-function slots(start, end, step = 30) {
+export function slots(start, end, step = 30) {
   const out = [];
   for (let m = timeToMinutes(start); m <= timeToMinutes(end) - 60; m += step) out.push(minutesToTime(m));
   return out;
 }
 
 // Existing bookings are stored as orders like "Reserva 4 pax — Mesa 3 (Terraza)" with time "21:00 - 22:30".
-function busyTables(bookings, start, duration) {
+export function busyTables(bookings, start, duration) {
   const s = timeToMinutes(start);
   const e = s + duration;
   const busy = new Set();
@@ -54,6 +54,7 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
   const [guests, setGuests] = useState(2);
   const [zone, setZone] = useState(zones[0]);
   const [time, setTime] = useState('');
+  const [phone, setPhone] = useState('');
   const [bookings, setBookings] = useState([]);
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
@@ -96,6 +97,7 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
         date,
         time: `${time} - ${end}`,
         status: STATUS.PENDING,
+        phone: phone.trim().slice(0, 20),
       });
       setDone(true);
     } catch (e) {
@@ -161,6 +163,10 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
           {guests >= maxGuests && (
             <p className="small muted" style={{ margin: 0 }}>¿Sois más de {maxGuests}? Llama a {biz.name}{biz.telefono ? ` al ${biz.telefono}` : ''} para reservar.</p>
           )}
+          <div className="field">
+            <label htmlFor="resv-phone">Tu teléfono (opcional)</label>
+            <input id="resv-phone" className="input" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Por si el restaurante necesita llamarte" />
+          </div>
           {rules.cancelacion && <p className="small muted" style={{ margin: 0 }}>{rules.cancelacion}</p>}
           <button className="btn primary block" disabled={!time || saving} onClick={submit}>
             {saving ? 'Enviando…' : time ? `Solicitar mesa a las ${time}` : 'Elige una hora'}

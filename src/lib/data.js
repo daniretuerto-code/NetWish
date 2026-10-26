@@ -159,6 +159,19 @@ export async function getRestaurantSettings(businessName, kind) {
   };
 }
 
+// Public settings of every restaurant, for "Hoy en Palencia" on the home screen.
+export async function restaurantsToday() {
+  const [businesses, { data }] = await Promise.all([
+    listBusinesses(),
+    supabase.from('restaurant_settings').select('business_name, daily_menu, closed_days, lunch_start, dinner_start, profile'),
+  ]);
+  const byName = new Map((data || []).map((r) => [normalize(r.business_name), r]));
+  const today = new Date().getDay();
+  return businesses
+    .map((b) => ({ biz: b, settings: byName.get(normalize(b.name)) }))
+    .filter(({ settings }) => settings && !(settings.closed_days || []).includes(today) && settings.profile?.reservas !== false);
+}
+
 export async function saveRestaurantSettings(businessName, patch) {
   const { error } = await supabase
     .from('restaurant_settings')
@@ -178,7 +191,10 @@ export const STATUS = {
   KITCHEN: 'Comanda en Cocina',
   CONFIRMED: 'Mesa Confirmada',
   READY: 'Listo para servir',
+  SEATED: 'Sentado',
   DONE: 'Completado',
+  NOSHOW: 'No vino',
+  CANCELLED: 'Cancelado',
   REJECTED: 'Rechazado',
 };
 
@@ -187,7 +203,7 @@ export const isReservation = (o) => {
   return s.includes('reserva') || s.includes('pax') || s.includes('aprobacion');
 };
 
-export async function createOrder({ business, user, items, itemsText, total, date, time, status }) {
+export async function createOrder({ business, user, items, itemsText, total, date, time, status, phone }) {
   const id = crypto.randomUUID();
   const meta = user?.user_metadata || {};
   const order = {
@@ -201,11 +217,65 @@ export async function createOrder({ business, user, items, itemsText, total, dat
     date: date || todayISO(),
     time: time || nowTime(),
     status,
+    ...(phone ? { phone } : {}),
   };
   const { error } = await supabase.from('orders').insert([order]);
   fail(error);
   notifyOrder(id, 'created');
   return order;
+}
+
+// A booking the restaurant writes down itself: a phone call or someone who walks in.
+export async function createOwnerBooking({ business, customer, phone, itemsText, date, time, status, source }) {
+  const order = {
+    id: crypto.randomUUID(),
+    business_name: business,
+    customer: customer || 'Cliente',
+    phone: phone || null,
+    items: itemsText,
+    total: 0,
+    date,
+    time,
+    status,
+    source,
+  };
+  const { error } = await supabase.from('orders').insert([order]);
+  fail(error);
+  return order;
+}
+
+export async function cancelMyBooking(id) {
+  const { error } = await supabase.rpc('cancel_my_booking', { p_order: id });
+  fail(error);
+}
+
+export async function respondBooking(token, action = 'view') {
+  const { data, error } = await supabase.rpc('respond_booking', { p_token: token, p_action: action });
+  fail(error);
+  return data;
+}
+
+// Sends tomorrow's reminders. Runs whenever the owner opens the panel; each booking goes out once.
+export async function sendReminders() {
+  const { data } = await supabase.auth.getSession();
+  if (!data.session) return 0;
+  try {
+    const res = await fetch('/api/remind', { method: 'POST', headers: { Authorization: `Bearer ${data.session.access_token}`, 'Content-Type': 'application/json' }, body: '{}' });
+    const out = await res.json();
+    return out.sent || 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function customerNotes(businessName) {
+  const { data } = await supabase.from('customer_notes').select('customer_key, note').ilike('business_name', escapeLike(businessName));
+  return Object.fromEntries((data || []).map((n) => [n.customer_key, n.note]));
+}
+
+export async function saveCustomerNote(businessName, key, note) {
+  const { error } = await supabase.from('customer_notes').upsert([{ business_name: businessName, customer_key: key, note, updated_at: new Date().toISOString() }]);
+  fail(error);
 }
 
 export function notifyOrder(orderId, kind = 'created') {
@@ -355,6 +425,8 @@ function notifyTeam(payload) {
 }
 
 // kind: 'alta' (a type we don't support yet), 'otro' (described in their words) or 'contacto'.
+export const notifyReady = (business) => notifyTeam({ kind: 'listo', name: business.name, category: business.category, phone: business.telefono, address: business.address, email: business.notification_email });
+
 export async function requestBusinessSignup(form) {
   const { error } = await supabase.from('business_requests').insert([form]);
   fail(error);

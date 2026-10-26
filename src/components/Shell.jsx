@@ -15,7 +15,7 @@ const CUSTOMER_NAV = [
   { to: '/cuenta', label: 'Cuenta', icon: 'person' },
 ];
 
-const DETAIL_ROUTES = ['/negocio/', '/mesa/', '/chat/'];
+const DETAIL_ROUTES = ['/negocio/', '/mesa/', '/chat/', '/reserva/'];
 
 export function Brand({ to = '/', label = 'NetWish' }) {
   return (
@@ -95,8 +95,8 @@ export function BusinessShell() {
   const { data: settings, reload: reloadSettings } = useAsync(() => getRestaurantSettings(business.name, kind), [business.name, kind]);
   const mods = modulesFor(settings?.profile);
   const nav = [
-    { to: '/panel', label: 'Resumen', icon: 'chart', end: true },
-    ...(!isRestaurant || mods.reservas || mods.pedidosQr ? [{ to: '/panel/pedidos', label: isRestaurant ? (mods.reservas ? 'Reservas y mesas' : 'Comandas') : 'Reservas', icon: 'calendar' }] : []),
+    { to: '/panel', label: isRestaurant ? 'Hoy' : 'Resumen', icon: isRestaurant ? 'today' : 'chart', end: true },
+    ...(!isRestaurant || mods.reservas || mods.pedidosQr ? [{ to: '/panel/pedidos', label: isRestaurant && !mods.reservas ? 'Comandas' : 'Reservas', icon: 'calendar' }] : []),
     ...(isRestaurant && mods.cocina ? [{ to: '/panel/cocina', label: 'Cocina', icon: 'flame' }] : []),
     { to: '/panel/carta', label: isRestaurant ? 'Carta' : isBeauty ? 'Servicios' : 'Catálogo', icon: isBeauty ? 'scissors' : 'book' },
     ...(isRestaurant && (mods.reservas || mods.pedidosQr) ? [{ to: '/panel/mesas', label: 'Mesas y QR', icon: 'grid' }] : []),
@@ -124,7 +124,7 @@ export function BusinessShell() {
         {business.status === 'pending' && (
           <div className="widget row" style={{ margin: '12px var(--gutter) 0', background: 'var(--accent)', gap: 12 }} role="status">
             <Icon name="bell" size={20} />
-            <span className="small" style={{ fontWeight: 600 }}>Estamos revisando tu alta. Mientras, prepara tu panel: tu página será pública en cuanto la aprobemos.</span>
+            <span className="small" style={{ fontWeight: 600 }}>Tu página aún no es pública. Completa la lista "Para salir publicado" y la revisamos enseguida.</span>
           </div>
         )}
         {business.status === 'rejected' && (

@@ -3,9 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import Icon from '../../components/Icon.jsx';
 import { Mono, PageHeader, Sheet, useToast } from '../../components/ui.jsx';
+import ContactTeam from '../../components/ContactTeam.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { safeSlug, updateBusiness, uploadPublicFile } from '../../lib/data.js';
-import { CATEGORIES, kindOf } from '../../lib/categories.js';
+import { kindOf } from '../../lib/categories.js';
 import { businessUrl } from '../../lib/qr.js';
 import { toneFor } from '../../lib/format.js';
 
@@ -33,7 +34,7 @@ export default function Settings() {
   const toast = useToast();
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    category: business.category || '',
+    address: business.address || '',
     telefono: business.telefono || '',
     notification_email: business.notification_email || '',
   });
@@ -47,7 +48,7 @@ export default function Settings() {
     setBusy(true);
     try {
       await updateBusiness(business.username, {
-        category: form.category.trim() || null,
+        address: form.address.trim() || null,
         telefono: form.telefono.trim() || null,
         notification_email: form.notification_email.trim() || null,
       });
@@ -110,11 +111,8 @@ export default function Settings() {
 
       <form className="widget stack" onSubmit={save}>
         <h2 className="title-lg">Datos del negocio</h2>
-        <div className="field">
-          <label htmlFor="s-cat">Categoría</label>
-          <input id="s-cat" className="input" list="cats" value={form.category} onChange={set('category')} />
-          <datalist id="cats">{CATEGORIES.map((c) => <option key={c.key} value={c.label} />)}</datalist>
-        </div>
+        <span className="small muted">Tipo de negocio: <strong style={{ color: 'var(--ink)' }}>{business.category || 'Sin tipo'}</strong></span>
+        <div className="field"><label htmlFor="s-addr">Dirección</label><input id="s-addr" className="input" value={form.address} onChange={set('address')} placeholder="Calle Mayor 1, Palencia" /></div>
         <div className="field"><label htmlFor="s-tel">Teléfono</label><input id="s-tel" className="input" type="tel" value={form.telefono} onChange={set('telefono')} /></div>
         <div className="field">
           <label htmlFor="s-mail">Correo para avisos de reservas</label>
@@ -137,6 +135,11 @@ export default function Settings() {
         <button className="list-row" onClick={() => setPayOpen(true)}>
           <Icon name="qr" /><span className="grow t">QR para el escaparate o el mostrador</span><Icon name="chevron" size={18} />
         </button>
+        {business.username && (
+          <button className="list-row" onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/r/${business.username}`).then(() => toast('Enlace de reservas copiado'))}>
+            <Icon name="link" /><span className="grow t">Copiar mi enlace de reservas</span><Icon name="chevron" size={18} />
+          </button>
+        )}
         <a className="list-row" href={businessUrl(business.name)} target="_blank" rel="noreferrer">
           <Icon name="store" /><span className="grow t">Ver mi página como cliente</span><Icon name="chevron" size={18} />
         </a>
@@ -145,6 +148,7 @@ export default function Settings() {
         </button>
       </div>
 
+      <ContactTeam />
       <BusinessQrSheet open={payOpen} onClose={() => setPayOpen(false)} business={business} />
     </div>
   );
