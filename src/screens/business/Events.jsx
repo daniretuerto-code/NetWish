@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
 import { Empty, PageHeader, Skeleton, useToast } from '../../components/ui.jsx';
+import SectionTabs from '../../components/SectionTabs.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { saveRestaurantSettings } from '../../lib/data.js';
 import { money, todayISO } from '../../lib/format.js';
@@ -48,7 +49,8 @@ export default function Events() {
 
   return (
     <div className="page">
-      <PageHeader eyebrow={business.name} title="Eventos y novedades" back="/panel" />
+      <PageHeader eyebrow={business.name} title="Eventos y novedades" />
+      <SectionTabs />
       <p className="muted" style={{ margin: '0 4px' }}>Música en directo, una cata, el menú de fiestas… Sale en tu página y en "Hoy en Palencia" la semana que toca, con el botón de reservar.</p>
 
       {modules.menuDia && (

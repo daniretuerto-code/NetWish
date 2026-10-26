@@ -9,8 +9,10 @@ import { getRestaurantSettings, isReservation, subscribe } from '../lib/data.js'
 import { modulesFor } from '../lib/questionnaire.js';
 import { parseTableBooking } from '../lib/agenda.js';
 import { normalize } from '../lib/format.js';
+import { businessUrl } from '../lib/qr.js';
 import { chime, soundOn, systemNotify, unlockSound } from '../lib/alerts.js';
 import { usePanelPrefs } from '../lib/panelPrefs.js';
+import { isUnseen, markSeen, panelSections, sectionOf } from '../lib/panelNav.js';
 
 const CUSTOMER_NAV = [
   { to: '/', label: 'Hoy', icon: 'today', end: true },
@@ -41,10 +43,10 @@ function TabBar({ items, onMore, moreActive }) {
   return (
     <nav className="tabbar" aria-label="Pestañas">
       {items.map((it) => (
-        <NavLink key={it.to} to={it.to} end={it.end} aria-label={it.label} className={({ isActive }) => (isActive ? 'active' : '')}>
+        <NavLink key={it.to} to={it.to} end={it.end} aria-label={it.label} className={({ isActive }) => (it.className !== undefined ? it.className : isActive ? 'active' : '')}>
           <Icon name={it.icon} size={21} />
-          <span className="tab-label">{it.label}</span>
-          {it.badge ? <span className="tab-dot" aria-label={`${it.badge} nuevas`} /> : null}
+          <span className="tab-label">{it.short || it.label}</span>
+          {it.badge ? <span className="tab-dot" aria-label={`${it.badge} nuevas`} /> : it.isNew ? <span className="tab-dot new" aria-label="Nuevo" /> : null}
         </NavLink>
       ))}
       {onMore && (
@@ -58,7 +60,7 @@ function TabBar({ items, onMore, moreActive }) {
 }
 
 // Device preferences for the panel: night mode, the host-stand tablet mode and the booking chime.
-function PanelPrefs({ prefs, setPref, dark }) {
+export function PanelPrefs({ prefs, setPref, dark }) {
   const row = (label, sub, on, toggle) => (
     <button className="list-row" onClick={toggle} role="switch" aria-checked={on}>
       <span className="grow stack" style={{ gap: 1 }}>
@@ -84,10 +86,10 @@ function SideNav({ items, header, footer }) {
       {header}
       <nav aria-label="Navegación principal">
         {items.map((it) => (
-          <NavLink key={it.to} to={it.to} end={it.end} className={({ isActive }) => (isActive ? 'active' : '')}>
+          <NavLink key={it.to} to={it.to} end={it.end} className={({ isActive }) => (it.className !== undefined ? it.className : isActive ? 'active' : '')}>
             <Icon name={it.icon} size={20} />
             <span>{it.label}</span>
-            {it.badge ? <span className="badge">{it.badge}</span> : null}
+            {it.badge ? <span className="badge">{it.badge}</span> : it.isNew ? <span className="new-dot" aria-label="Nuevo" /> : null}
           </NavLink>
         ))}
       </nav>
@@ -154,7 +156,7 @@ function useNewBookingAlerts(business, onNew) {
       const text = `Nueva reserva · ${o.customer} · ${b.guests} pers. · ${when} ${b.start}`;
       if (soundOn()) chime();
       systemNotify('Nueva reserva', `${o.customer} · ${b.guests} pers. · ${when} ${b.start}`);
-      toast(text, 'info', { action: { label: 'Ver', onClick: () => navigate('/panel/pedidos') }, duration: 9000 });
+      toast(text, 'info', { action: { label: 'Ver', onClick: () => navigate('/panel/reservas') }, duration: 9000 });
       onNew();
     });
     return () => { off(); window.removeEventListener('pointerdown', unlock); };
@@ -168,36 +170,31 @@ export function BusinessShell() {
   const [fresh, setFresh] = useState(0);
   const { prefs, setPref, dark } = usePanelPrefs();
   useNewBookingAlerts(business, () => setFresh((n) => n + 1));
-  useEffect(() => { if (pathname === '/panel/pedidos') setFresh(0); }, [pathname]);
+  useEffect(() => { if (pathname === '/panel/reservas') setFresh(0); }, [pathname]);
   useEffect(() => setMore(false), [pathname]);
   const kind = kindOf(business);
-  const isRestaurant = kind === 'restaurant';
-  const isBeauty = kind === 'beauty';
   // Panel sections follow the business's questionnaire answers.
   const { data: settings, reload: reloadSettings } = useAsync(() => getRestaurantSettings(business.name, kind), [business.name, kind]);
   const mods = modulesFor(settings?.profile);
-  const nav = [
-    { to: '/panel', label: isRestaurant ? 'Hoy' : 'Resumen', icon: isRestaurant ? 'today' : 'chart', end: true },
-    ...(!isRestaurant || mods.reservas || mods.pedidosQr ? [{ to: '/panel/pedidos', label: isRestaurant && !mods.reservas ? 'Comandas' : 'Reservas', icon: 'calendar', badge: fresh || null }] : []),
-    ...(isRestaurant && mods.cocina ? [{ to: '/panel/cocina', label: 'Cocina', icon: 'flame' }] : []),
-    { to: '/panel/carta', label: isRestaurant ? 'Carta' : isBeauty ? 'Servicios' : 'Catálogo', icon: isBeauty ? 'scissors' : 'book' },
-    ...(isRestaurant && (mods.reservas || mods.pedidosQr) ? [{ to: '/panel/mesas', label: 'Tu sala', icon: 'grid' }] : []),
-    ...(isRestaurant && mods.reservas ? [{ to: '/panel/campanas', label: 'Campañas', icon: 'mail' }] : []),
-    ...(isRestaurant ? [{ to: '/panel/eventos', label: 'Eventos', icon: 'music' }] : []),
-    ...(isRestaurant ? [{ to: '/panel/personalizar', label: 'Personalizar', icon: 'gear' }] : []),
-    ...(isBeauty ? [{ to: '/panel/horario', label: 'Horario y equipo', icon: 'calendar' }] : []),
-    { to: '/panel/mensajes', label: 'Mensajes', icon: 'chat' },
-    { to: '/panel/ajustes', label: 'Ajustes', icon: 'gear' },
-  ];
-  // Four sections on the phone's bar; everything else lives under "Más".
-  const mobileNav = nav.filter((n) => ['/panel', '/panel/pedidos', '/panel/carta', '/panel/mensajes'].includes(n.to));
+  const sections = panelSections(kind, mods);
+  const current = sectionOf(sections, pathname);
+  // Opening a section or tab clears its "new" dot.
+  useEffect(() => { if (current) markSeen(current.key, pathname); }, [current?.key, pathname]);
+  const nav = sections.map((s) => ({
+    to: s.to, label: s.label, short: s.short, icon: s.icon, end: s.end,
+    badge: s.alerts ? fresh || null : null,
+    isNew: s.isNew && current?.key !== s.key && isUnseen(s.key),
+    className: current?.key === s.key ? 'active' : '',
+  }));
+  // Up to five sections fit the phone's bar; any more go under "Más".
+  const mobileNav = nav.length <= 5 ? nav : nav.slice(0, 4);
   const rest = nav.filter((n) => !mobileNav.includes(n));
   return (
     <div className={`shell panel${prefs.stand ? ' stand' : ''}`} data-theme={dark ? 'dark' : 'light'}>
       <StatusVeil />
       <SideNav
-        footer={<PanelPrefs prefs={prefs} setPref={setPref} dark />}
         items={nav}
+        footer={<a className="btn ghost block" style={{ color: '#fff' }} href={businessUrl(business.name)} target="_blank" rel="noreferrer">Ver mi página</a>}
         header={(
           <div className="row" style={{ padding: '0 6px' }}>
             <Mono name={business.name} image={business.image} />
@@ -221,9 +218,9 @@ export function BusinessShell() {
             <span className="small" style={{ fontWeight: 600 }}>No hemos podido aprobar tu negocio. Escríbenos desde "Contactar con NetWish" y lo vemos.</span>
           </div>
         )}
-        <Outlet context={{ settings, reloadSettings, modules: mods }} />
+        <Outlet context={{ settings, reloadSettings, modules: mods, sections, prefs, setPref }} />
       </main>
-      <TabBar items={mobileNav} onMore={() => setMore(true)} moreActive={rest.some((n) => pathname.startsWith(n.to))} />
+      <TabBar items={mobileNav} onMore={rest.length ? () => setMore(true) : null} moreActive={rest.some((n) => n.className)} />
       {prefs.stand && <button className="stand-exit" onClick={() => setPref('stand', false)}>Salir del modo atril</button>}
       <Sheet open={more} onClose={() => setMore(false)} title="Más">
         <div className="widget" style={{ paddingTop: 4, paddingBottom: 4 }}>
@@ -234,9 +231,6 @@ export function BusinessShell() {
               <Icon name="chevron" size={18} />
             </NavLink>
           ))}
-        </div>
-        <div className="widget" style={{ marginTop: 12, paddingTop: 4, paddingBottom: 4 }}>
-          <PanelPrefs prefs={prefs} setPref={setPref} />
         </div>
       </Sheet>
     </div>

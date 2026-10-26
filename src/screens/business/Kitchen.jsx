@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Empty, PageHeader, Skeleton, Spinner, useToast } from '../../components/ui.jsx';
+import SectionTabs from '../../components/SectionTabs.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { closeTableSession, kitchenSessions, subscribe } from '../../lib/data.js';
@@ -49,6 +50,7 @@ export default function Kitchen() {
   return (
     <div className="page">
       <PageHeader eyebrow="En directo" title="Cocina" right={<span className="row small" style={{ gap: 6, fontWeight: 600 }}><span className="status-dot" /> {sessions.length} mesas</span>} />
+      <SectionTabs />
 
       {sessions.length === 0 ? (
         <div className="widget"><Empty icon="flame" title="No hay mesas abiertas">Las comandas que envíen tus clientes desde el QR de la mesa aparecerán aquí.</Empty></div>

@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
-import ContactTeam from '../../components/ContactTeam.jsx';
-import { PageHeader, Ring, Skeleton, Spinner, useToast } from '../../components/ui.jsx';
+import { Skeleton, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { saveRestaurantSettings } from '../../lib/data.js';
-import { isAnswered, profileProgress, RESTAURANT_SECTIONS, sectionProgress, settingsFromProfile, visibleQuestions } from '../../lib/questionnaire.js';
+import { isAnswered, RESTAURANT_SECTIONS, settingsFromProfile, visibleQuestions } from '../../lib/questionnaire.js';
 
 function Option({ on, onClick, children }) {
   return (
@@ -105,7 +104,7 @@ function Wizard({ section, onboarding }) {
       await saveRestaurantSettings(business.name, { ...patch, profile });
       await reloadSettings();
       toast(onboarding ? '¡Tu panel está listo!' : 'Guardado');
-      navigate(onboarding ? '/panel' : '/panel/personalizar', { replace: true });
+      navigate(onboarding ? '/panel' : '/panel/ajustes', { replace: true });
     } catch (e) {
       toast(e.message, 'error');
       setSaving(false);
@@ -127,7 +126,7 @@ function Wizard({ section, onboarding }) {
         {i > 0 ? (
           <button className="icon-btn" onClick={() => setI((n) => n - 1)} aria-label="Pregunta anterior"><Icon name="back" stroke={2.6} /></button>
         ) : onboarding ? <span style={{ width: 44 }} /> : (
-          <Link to="/panel/personalizar" className="icon-btn" aria-label="Volver"><Icon name="back" stroke={2.6} /></Link>
+          <Link to="/panel/ajustes" className="icon-btn" aria-label="Volver"><Icon name="back" stroke={2.6} /></Link>
         )}
         <span className="small muted" style={{ fontWeight: 700 }}>{section.title} · {i + 1} de {qs.length}</span>
         <span style={{ width: 44 }} />
@@ -165,47 +164,6 @@ export function SectionWizard() {
   const { settings } = useOutletContext();
   const section = RESTAURANT_SECTIONS.find((s) => s.key === key);
   if (!settings) return <Skeleton />;
-  if (!section) return <Navigate to="/panel/personalizar" replace />;
+  if (!section) return <Navigate to="/panel/ajustes" replace />;
   return <Wizard section={section} />;
-}
-
-export default function Personalize() {
-  const { business } = useAuth();
-  const { settings } = useOutletContext();
-  if (!settings) return <Skeleton />;
-  const answers = settings.profile || {};
-  const pct = profileProgress(answers);
-  const sections = RESTAURANT_SECTIONS.filter((s) => !s.when || s.when(answers));
-
-  return (
-    <div className="page" style={{ maxWidth: 820 }}>
-      <PageHeader eyebrow={business.name} title="Personaliza tu negocio" />
-      <div className="widget dark row" style={{ gap: 16 }}>
-        <Ring value={pct / 100} color="var(--accent)" label={`Perfil completado al ${pct} %`} />
-        <span className="stack" style={{ gap: 2 }}>
-          <span style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em' }}>{pct} % completado</span>
-          <span className="small" style={{ opacity: 0.7 }}>Cada respuesta ajusta tu panel o lo que ven tus clientes.</span>
-        </span>
-      </div>
-      <div className="widget" style={{ paddingBottom: 4 }}>
-        {sections.map((s) => {
-          const p = sectionProgress(s, answers);
-          const complete = p.done >= p.total;
-          return (
-            <Link key={s.key} to={s.onboarding ? '/panel/empezar' : `/panel/personalizar/${s.key}`} className="list-row">
-              <span className="mono" style={{ background: complete ? 'var(--accent)' : 'var(--bg)', color: 'var(--ink)' }}>
-                {complete ? <Icon name="check" size={18} stroke={3} /> : `${p.done}/${p.total}`}
-              </span>
-              <span className="grow stack" style={{ gap: 1 }}>
-                <span className="t">{s.title}</span>
-                <span className="s">{s.intro}</span>
-              </span>
-              <Icon name="chevron" size={18} />
-            </Link>
-          );
-        })}
-      </div>
-      <ContactTeam />
-    </div>
-  );
 }

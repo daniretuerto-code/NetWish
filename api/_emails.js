@@ -77,7 +77,7 @@ export function sendBadRating(o) {
        ${o.rating_comment ? `<p style="background:#F2F0EB;border-radius:14px;padding:12px 14px;font-size:15px">«${escapeHtml(o.rating_comment)}»</p>` : ''}
        <p style="font-size:14px">${[o.phone && `Teléfono: <strong>${escapeHtml(o.phone)}</strong>`, o.customer_email && `Correo: <strong>${escapeHtml(o.customer_email)}</strong>`].filter(Boolean).join(' · ')}</p>
        <p style="font-size:13px;color:#6B6862">Una llamada o un correo para disculparte suele convertir a un cliente enfadado en uno fiel.</p>
-       <p>${button(`${SITE_URL}/panel/pedidos?ver=clientes`, 'Ver en mi panel', true)}</p>`,
+       <p>${button(`${SITE_URL}/panel/clientes`, 'Ver en mi panel', true)}</p>`,
     ),
   });
 }
@@ -153,7 +153,7 @@ export function sendMonthly(m) {
        <table style="width:100%;border-collapse:collapse"><tr>${tile(n.diners || 0, 'comensales en total')}${tile(n.no_shows || 0, 'no vinieron')}</tr></table>
        ${lines.length ? `<ul style="padding-left:18px;line-height:1.6">${lines.map((l) => `<li>${l}</li>`).join('')}</ul>` : ''}
        <p style="font-size:12px;color:#6B6862">El dinero es una estimación: comensales que reservaron por NetWish y vinieron × ${euro(ticket)} de gasto medio por persona.</p>
-       <p>${button(`${SITE_URL}/panel/pedidos?ver=datos`, 'Ver todos mis datos', true)}</p>`,
+       <p>${button(`${SITE_URL}/panel/numeros`, 'Ver todos mis datos', true)}</p>`,
     ),
   });
 }
