@@ -120,7 +120,12 @@ export default function Orders() {
                       <button className="btn soft sm" style={{ flex: 1 }} onClick={() => setConfirming(null)}>No</button>
                     </div>
                   ) : (
-                    <button className="btn ghost sm" style={{ color: '#fff', alignSelf: 'flex-start' }} onClick={() => setConfirming(o.id)}>Cancelar reserva</button>
+                    <div className="row" style={{ gap: 8 }}>
+                      {/\d+\s*pax/i.test(o.items) && o.remind_token && (
+                        <Link className="btn soft sm" to={`/reserva/${o.remind_token}?r=cambiar`}>Cambiar</Link>
+                      )}
+                      <button className="btn ghost sm" style={{ color: '#fff' }} onClick={() => setConfirming(o.id)}>Cancelar reserva</button>
+                    </div>
                   )}
                   </div>
                 ))}

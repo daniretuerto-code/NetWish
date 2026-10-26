@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Sheet, useToast } from './ui.jsx';
 import Icon from './Icon.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { createGuestBooking, createOrder, joinWaitlist, orderStatus, reservationsOn, STATUS } from '../lib/data.js';
+import { bookingState, changeBooking, createGuestBooking, createOrder, joinWaitlist, reservationsOn, STATUS } from '../lib/data.js';
 import { blockFor, slotShift, tableFits, tableLabel, tableMin, tablesIn } from '../lib/agenda.js';
 import { joinPairs, zoneOf, zoneOpenAt, zonesOf } from '../lib/floor.js';
 import { minutesToTime, timeToMinutes, todayISO } from '../lib/format.js';
 import { isClosed } from '../lib/booking.js';
+import { calendarLinks } from '../lib/calendar.js';
 
 export const DEFAULT_TABLES = [
   { table_number: 1, capacity: 2, zone: 'Sala Principal' },
@@ -53,9 +54,17 @@ const addDays = (iso, n) => {
   d.setDate(d.getDate() + n);
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 };
+// While changing a booking its own table must not count as taken: drop it from that day's list once.
+const withoutOwn = (list, own) => {
+  const i = list.findIndex((b) => b.items === own.items && b.time === own.time);
+  return i < 0 ? list : [...list.slice(0, i), ...list.slice(i + 1)];
+};
+
 const shortDay = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' });
 
-export default function ReserveSheet({ open, onClose, biz, settings }) {
+// `initial` preselects day and party size (the waiting-list e-mail link); `change` turns the sheet
+// into "move my booking" for the booking behind that token.
+export default function ReserveSheet({ open, onClose, biz, settings, initial, change, onChanged }) {
   const { user, displayName } = useAuth();
   const toast = useToast();
   // Tables the restaurant keeps for walk-ins, or in a closed terrace, never show up online.
@@ -78,9 +87,12 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
   const groupFrom = Number(rules.grupo_desde) || 0;
   const lastDay = addDays(todayISO(), Number(rules.dias_vista) || 60);
 
-  const [date, setDate] = useState(todayISO());
-  const [guests, setGuests] = useState(2);
-  const [zone, setZone] = useState(zones[0]);
+  const startDay = [change?.date, initial?.date].find((d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '') && d >= todayISO() && d <= lastDay) || todayISO();
+  const startGuests = Number(/(\d+)\s*pax/i.exec(change?.items || '')?.[1]) || Number(initial?.guests) || 2;
+  const startZone = /Mesas? [\d+]+ \(([^)]+)\)/.exec(change?.items || '')?.[1];
+  const [date, setDate] = useState(startDay);
+  const [guests, setGuests] = useState(Math.min(Math.max(1, startGuests), maxGuests));
+  const [zone, setZone] = useState(zones.includes(startZone) ? startZone : zones[0]);
   const [time, setTime] = useState('');
   const [guest, setGuest] = useState({ name: '', email: '', phone: '' });
   const [occasions, setOccasions] = useState([]);
@@ -98,7 +110,9 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
     if (!open) return;
     setDone(null);
     setBookings(null);
-    reservationsOn(biz.name, date).then(setBookings).catch(() => setBookings([]));
+    reservationsOn(biz.name, date)
+      .then((list) => setBookings(change && date === change.date ? withoutOwn(list, change) : list))
+      .catch(() => setBookings([]));
   }, [open, biz.name, date]);
 
   const slotsFor = (day) => {
@@ -150,17 +164,28 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
     setSaving(true);
     try {
       const end = minutesToTime(timeToMinutes(time) + duration);
-      const itemsText = `Reserva ${guests} pax — ${table ? tableLabel(table.map((t) => t.table_number), zoneOf(table[0])) : 'Grupo'}${note ? ` · Nota: ${note}` : ''}`;
+      const what = `Reserva ${guests} pax — ${table ? tableLabel(table.map((t) => t.table_number), zoneOf(table[0])) : 'Grupo'}`;
+      if (change) {
+        // The note stays as it was; the database keeps it.
+        const { status } = await changeBooking(change.token, { itemsText: what, date, time: `${time} - ${end}` });
+        setDone({ kind: status === STATUS.CONFIRMED ? 'changed' : 'change-pending' });
+        onChanged?.();
+        return;
+      }
+      const itemsText = `${what}${note ? ` · Nota: ${note}` : ''}`;
       const base = { business: biz.name, itemsText, date, time: `${time} - ${end}` };
-      let status;
+      let state;
       if (user) {
         const order = await createOrder({ ...base, user, items: [], total: 0, status: STATUS.PENDING, phone: guest.phone.trim().slice(0, 20) });
-        status = await orderStatus(order.id);
+        state = await bookingState(order.id);
       } else {
-        status = (await createGuestBooking({ ...base, name: guest.name.trim(), email: guest.email.trim(), phone: guest.phone.trim() })).status;
+        state = await createGuestBooking({ ...base, name: guest.name.trim(), email: guest.email.trim(), phone: guest.phone.trim() });
       }
       // The restaurant may confirm on the spot when the table is free.
-      setDone(status === STATUS.CONFIRMED ? 'confirmed' : 'pending');
+      setDone({
+        kind: state.status === STATUS.CONFIRMED ? 'confirmed' : 'pending',
+        calendar: calendarLinks({ token: state.token, business_name: biz.name, date, time: base.time, items: what, address: biz.address }),
+      });
     } catch (e) {
       toast(e.message, 'error');
     } finally {
@@ -177,33 +202,47 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
         name: (user ? displayName : guest.name).trim().slice(0, 60) || 'Cliente',
         phone: guest.phone.trim() || null, email: (user?.email || guest.email.trim()) || null,
       });
-      setDone('waitlist');
+      setDone({ kind: 'waitlist' });
     } catch (err) {
       toast(err.message, 'error');
     }
   };
 
   const email = user?.email || guest.email;
-  const titles = { confirmed: 'Reserva confirmada', pending: 'Solicitud enviada', waitlist: 'Estás en la lista de espera' };
+  const titles = { confirmed: 'Reserva confirmada', pending: 'Solicitud enviada', waitlist: 'Estás en la lista de espera', changed: 'Reserva cambiada', 'change-pending': 'Cambio enviado' };
+  const kind = done?.kind;
 
   return (
-    <Sheet open={open} onClose={onClose} title={titles[done] || 'Reservar mesa'}>
+    <Sheet open={open} onClose={onClose} title={titles[kind] || (change ? 'Cambiar reserva' : 'Reservar mesa')}>
       {done ? (
         <div className="stack" style={{ alignItems: 'center', textAlign: 'center', padding: '12px 0' }}>
           <span className="mono lg" style={{ background: 'var(--accent)', color: 'var(--ink)' }}><Icon name="check" size={30} stroke={3} /></span>
-          {done === 'confirmed' && (
+          {kind === 'confirmed' && (
             <>
               <p style={{ fontSize: 17, fontWeight: 700 }}>¡Tienes mesa en {biz.name}!</p>
               <p className="muted">Te hemos mandado la confirmación a {email}. El día antes te recordaremos la reserva.</p>
+              {done.calendar && <CalendarButtons links={done.calendar} />}
             </>
           )}
-          {done === 'pending' && (
+          {kind === 'pending' && (
             <>
               <p style={{ fontSize: 17, fontWeight: 700 }}>{biz.name} revisará tu {isGroup ? 'solicitud de grupo' : 'reserva'}</p>
               <p className="muted">Te avisaremos en {email} cuando la confirme.</p>
             </>
           )}
-          {done === 'waitlist' && <p className="muted">Si se libera una mesa, {biz.name} te avisará.</p>}
+          {kind === 'changed' && (
+            <>
+              <p style={{ fontSize: 17, fontWeight: 700 }}>Listo: {shortDay(date)} a las {time}</p>
+              <p className="muted">{biz.name} ya tiene el cambio. Te lo hemos mandado también por correo.</p>
+            </>
+          )}
+          {kind === 'change-pending' && (
+            <>
+              <p style={{ fontSize: 17, fontWeight: 700 }}>{biz.name} revisará el cambio</p>
+              <p className="muted">Te avisaremos por correo cuando lo confirme.</p>
+            </>
+          )}
+          {kind === 'waitlist' && <p className="muted">Si se libera una mesa{(user?.email || guest.email) ? ' te avisaremos por correo al momento' : `, ${biz.name} te avisará`}. Se la queda quien reserve antes.</p>}
           <button className="btn primary block" onClick={onClose}>Hecho</button>
         </div>
       ) : (
@@ -268,18 +307,23 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
                     </div>
                   </>
                 )}
-                {!isClosed(settings, date) && !waiting && <button className="btn soft sm" style={{ alignSelf: 'flex-start' }} onClick={() => setWaiting(true)}>Apuntarme a la lista de espera</button>}
+                {!isClosed(settings, date) && !waiting && !change && <button className="btn soft sm" style={{ alignSelf: 'flex-start' }} onClick={() => setWaiting(true)}>Apuntarme a la lista de espera</button>}
               </div>
             )}
           </div>
 
-          {waiting && freeCount === 0 ? (
+          {waiting && freeCount === 0 && !change ? (
             <form className="widget stack" onSubmit={joinList}>
               <span className="eyebrow">Lista de espera · {shortDay(date)} · {guests} pers.</span>
               {!user && <div className="field"><label htmlFor="wl-name">Nombre</label><input id="wl-name" className="input" required value={guest.name} onChange={(e) => setGuest({ ...guest, name: e.target.value })} /></div>}
+              {!user && <div className="field"><label htmlFor="wl-mail">Correo, para avisarte al momento</label><input id="wl-mail" className="input" type="email" autoComplete="email" required value={guest.email} onChange={(e) => setGuest({ ...guest, email: e.target.value })} /></div>}
               <div className="field"><label htmlFor="wl-phone">Teléfono</label><input id="wl-phone" className="input" type="tel" required value={guest.phone} onChange={(e) => setGuest({ ...guest, phone: e.target.value })} /></div>
               <button className="btn primary block">Avisadme si se libera una mesa</button>
             </form>
+          ) : change ? (
+            <button className="btn primary block" disabled={!time || saving || (date === change.date && `${time} - ${minutesToTime(timeToMinutes(time) + duration)}` === change.time && guests === startGuests)} onClick={submit}>
+              {saving ? 'Cambiando…' : !time ? 'Elige la nueva hora' : `Cambiar a ${shortDay(date)} · ${time}`}
+            </button>
           ) : (
             <>
               <div className="widget stack">
@@ -315,5 +359,17 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
         </div>
       )}
     </Sheet>
+  );
+}
+
+export function CalendarButtons({ links }) {
+  return (
+    <div className="stack" style={{ gap: 6, width: '100%' }}>
+      <span className="eyebrow">Añadir al calendario</span>
+      <div className="row" style={{ gap: 8 }}>
+        <a className="btn soft sm" style={{ flex: 1 }} href={links.google} target="_blank" rel="noreferrer"><Icon name="calendar" size={15} /> Google</a>
+        <a className="btn soft sm" style={{ flex: 1 }} href={links.ics}><Icon name="calendar" size={15} /> iPhone / Outlook</a>
+      </div>
+    </div>
   );
 }

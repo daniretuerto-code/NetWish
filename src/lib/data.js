@@ -250,6 +250,20 @@ export async function orderStatus(id) {
   return data?.status || null;
 }
 
+// Status and the link token of a booking just made, for the "add to calendar" buttons.
+export async function bookingState(id) {
+  const { data } = await supabase.from('orders').select('status, remind_token').eq('id', id).maybeSingle();
+  return { status: data?.status || null, token: data?.remind_token || null };
+}
+
+// The customer moves their table booking (link in the e-mail). Returns { id, status }.
+export async function changeBooking(token, { itemsText, date, time }) {
+  const { data, error } = await supabase.rpc('change_booking', { p_token: token, p_items: itemsText, p_date: date, p_time: time });
+  fail(error);
+  notifyOrder(data.id, 'changed');
+  return data;
+}
+
 export async function setOrderItems(id, items) {
   const { error } = await supabase.from('orders').update({ items }).eq('id', id);
   fail(error);
