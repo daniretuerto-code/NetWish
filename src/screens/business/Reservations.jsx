@@ -8,7 +8,9 @@ import { Empty, PageHeader, Sheet, Spinner, useToast } from '../../components/ui
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { businessOrders, businessWaitlist, customerNotes, reservationsOn, setWaitlistStatus, saveCustomerNote, saveRestaurantSettings, setOrderItems, STATUS, subscribe } from '../../lib/data.js';
-import { blockFor, ACTIVE_BOOKING, bookingsOf, byTime, customerKey, customersFrom, dayLabel, guestsOf, parseTableBooking, shiftOf, telLink, whatsappLink } from '../../lib/agenda.js';
+import FloorPlan from '../../components/FloorPlan.jsx';
+import { joinPairs, placeTables, zoneHeight, zoneOf, zonesOf } from '../../lib/floor.js';
+import { tableLabel, blockFor, ACTIVE_BOOKING, bookingsOf, byTime, customerKey, customersFrom, dayLabel, guestsOf, parseTableBooking, shiftOf, telLink, whatsappLink } from '../../lib/agenda.js';
 import { nextDays } from '../../lib/booking.js';
 import { minutesToTime, normalize, timeToMinutes, todayISO } from '../../lib/format.js';
 import Orders from './Orders.jsx';
@@ -67,14 +69,15 @@ function ChangeTableSheet({ order, settings, business, onClose, onDone }) {
   }, [order?.id]);
   if (!order) return null;
   const tables = settings?.tables?.length ? settings.tables : DEFAULT_TABLES;
-  const move = async (t) => {
-    const label = `Mesa ${t.table_number} (${t.zone || 'Sala Principal'})`;
-    const items = /Mesa \d+/.test(order.items)
-      ? order.items.replace(/Mesa \d+( \([^)]*\))?/, label)
+  const pairs = joinPairs(tables).filter(([x, y]) => Number(x.capacity) + Number(y.capacity) >= b.guests);
+  const move = async (t, other) => {
+    const label = tableLabel(other ? [t.table_number, other.table_number] : [t.table_number], zoneOf(t));
+    const items = /Mesas? \d+/.test(order.items)
+      ? order.items.replace(/Mesas? [\d+]+( \([^)]*\))?/, label)
       : order.items.replace(/(\d+\s*pax)/i, `$1 — ${label}`);
     try {
       await setOrderItems(order.id, items);
-      toast(`Pasada a la mesa ${t.table_number}`);
+      toast(other ? `Pasada a las mesas ${t.table_number}+${other.table_number}` : `Pasada a la mesa ${t.table_number}`);
       onDone(order, items);
       onClose();
     } catch (e) {
@@ -83,10 +86,17 @@ function ChangeTableSheet({ order, settings, business, onClose, onDone }) {
   };
   return (
     <Sheet open onClose={onClose} title={`Cambiar mesa · ${order.customer}`}>
-      <p className="small muted" style={{ marginTop: 0 }}>{b.guests} personas · {b.start}. Ahora en la mesa {b.table || '?'}.</p>
+      <p className="small muted" style={{ marginTop: 0 }}>{b.guests} personas · {b.start}. Ahora: {b.table ? tableLabel(b.tables) : 'sin mesa'}.</p>
       {!busyList ? <Spinner /> : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(84px, 1fr))', gap: 8 }}>
-          {tables.filter((t) => Number(t.table_number) !== Number(b.table)).map((t) => {
+          {pairs.filter(([x, y]) => !busyList.has(Number(x.table_number)) && !busyList.has(Number(y.table_number))).map(([x, y]) => (
+            <button key={`${x.table_number}+${y.table_number}`} className="pill" onClick={() => move(x, y)}
+              style={{ minWidth: 0, height: 56, flexDirection: 'column', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--accent)', boxShadow: 'inset 0 0 0 1px var(--line)' }}>
+              <span style={{ fontSize: 17 }}>{x.table_number}+{y.table_number}</span>
+              <span style={{ fontSize: 11, fontWeight: 600 }}>juntas · {Number(x.capacity) + Number(y.capacity)}</span>
+            </button>
+          ))}
+          {tables.filter((t) => !(b.tables.length === 1 && Number(t.table_number) === Number(b.table))).map((t) => {
             const taken = busyList.has(Number(t.table_number));
             return (
               <button key={t.table_number} className="pill" disabled={taken} onClick={() => move(t)}
@@ -262,18 +272,21 @@ function Agenda({ bookings, history, actions, settings, business, onAdd, onChang
 
 function Hall({ bookings, settings, actions, history, business, onAdd, onChangeTable }) {
   const today = todayISO();
-  const tables = settings?.tables?.length ? settings.tables : DEFAULT_TABLES;
-  const zones = [...new Set(tables.map((t) => t.zone || 'Sala Principal'))];
+  const zones = zonesOf({ ...settings, tables: settings?.tables?.length ? settings.tables : DEFAULT_TABLES });
+  const items = settings?.floor?.items || [];
+  const tables = placeTables(settings?.tables?.length ? settings.tables : DEFAULT_TABLES, zones, items);
   const shiftTimes = [settings.lunch_start, settings.dinner_start].filter(Boolean);
   const [at, setAt] = useState(nowHHMM());
   const [open, setOpen] = useState(null);
+  const [zoneName, setZoneName] = useState(null);
+  const zone = zones.find((z) => z.name === zoneName) || zones[0];
   const todays = bookings.filter((o) => o.date === today && ACTIVE_BOOKING.includes(o.status));
 
   const stateOf = (t) => {
     const m = timeToMinutes(at);
     const hits = todays.filter((o) => {
       const b = parseTableBooking(o);
-      if (Number(b.table) !== Number(t.table_number)) return false;
+      if (!b.tables.includes(Number(t.table_number))) return false;
       const s = timeToMinutes(b.start);
       const e = b.end ? timeToMinutes(b.end) : s + (settings.turn_duration_min || 90);
       return s - 30 <= m && m < (o.status === STATUS.SEATED ? e + 60 : e);
@@ -281,6 +294,13 @@ function Hall({ bookings, settings, actions, history, business, onAdd, onChangeT
     return hits.find((o) => o.status === STATUS.SEATED) || hits[0] || null;
   };
   const current = open && todays.find((o) => o.id === open);
+  const look = (t) => {
+    const o = stateOf(t);
+    if (!o) return { fill: '#fff', label: `${t.capacity} pl.` };
+    const seated = o.status === STATUS.SEATED;
+    return { fill: seated ? '#2F5D46' : 'var(--ink)', fg: '#fff', stroke: seated ? '#2F5D46' : '#111', chair: seated ? '#8FB59F' : '#6B6862', label: o.customer.split(' ')[0] };
+  };
+  const zoneCount = (z) => tables.filter((t) => zoneOf(t) === z.name && stateOf(t)).length;
 
   return (
     <>
@@ -288,33 +308,26 @@ function Hall({ bookings, settings, actions, history, business, onAdd, onChangeT
         <button className={`chip ${at === nowHHMM() ? 'on' : ''}`} onClick={() => setAt(nowHHMM())}>Ahora</button>
         {shiftTimes.flatMap((t) => [t, minutesToTime(timeToMinutes(t) + 60)]).sort().map((t) => <button key={t} className={`chip ${at === t ? 'on' : ''}`} onClick={() => setAt(t)}>{t}</button>)}
       </div>
+      {zones.length > 1 && (
+        <div className="segmented" role="tablist" aria-label="Zona">
+          {zones.map((z) => (
+            <button key={z.name} role="tab" aria-selected={z.name === zone.name} onClick={() => setZoneName(z.name)}>
+              {z.name}{zoneCount(z) ? ` · ${zoneCount(z)}` : ''}{z.outdoor && z.open === false ? ' (cerrada)' : ''}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="row" style={{ gap: 14, flexWrap: 'wrap', padding: '0 4px' }}>
         {[['var(--surface)', 'Libre'], ['var(--ink)', 'Reservada'], ['#2F5D46', 'Ocupada']].map(([c, l]) => (
           <span key={l} className="row small" style={{ gap: 6, fontWeight: 600 }}><span style={{ width: 14, height: 14, borderRadius: 4, background: c, boxShadow: 'inset 0 0 0 1px var(--line)' }} />{l}</span>
         ))}
       </div>
-      {zones.map((z) => (
-        <section key={z} className="widget stack" style={{ gap: 10 }}>
-          <h2 className="title-md">{z}</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 10 }}>
-            {tables.filter((t) => (t.zone || 'Sala Principal') === z).map((t) => {
-              const o = stateOf(t);
-              const seated = o?.status === STATUS.SEATED;
-              return (
-                <button key={t.table_number} onClick={() => (o ? setOpen(o.id) : onAdd({ walkIn: true, table: t.table_number }))}
-                  className="stack" aria-label={`Mesa ${t.table_number}${o ? `, ${o.customer}` : ', libre'}`}
-                  style={{ gap: 2, alignItems: 'flex-start', minHeight: 92, padding: 12, borderRadius: 20, border: 0, textAlign: 'left', background: o ? (seated ? '#2F5D46' : 'var(--ink)') : 'var(--bg)', color: o ? '#fff' : 'var(--ink)' }}>
-                  <span style={{ fontSize: 22, fontWeight: 800 }}>{t.table_number}</span>
-                  <span className="small" style={{ opacity: 0.7 }}>{t.capacity} plazas</span>
-                  {o && <span className="small" style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{parseTableBooking(o).start} {o.customer}</span>}
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      ))}
-      <p className="small muted" style={{ margin: '0 4px' }}>Toca una mesa libre para sentar a alguien que llega sin reserva. Las mesas se cambian en Mesas y QR.</p>
-      <Sheet open={!!current} onClose={() => setOpen(null)} title={current ? `Mesa ${parseTableBooking(current).table}` : ''}>
+      <section className="widget" style={{ padding: 10 }}>
+        <FloorPlan zone={zone} height={zoneHeight(zone, tables, items)} tables={tables} items={items} look={look}
+          onTableClick={(t) => { const o = stateOf(t); return o ? setOpen(o.id) : onAdd({ walkIn: true, table: t.table_number }); }} />
+      </section>
+      <p className="small muted" style={{ margin: '0 4px' }}>Toca una mesa libre para sentar a alguien que llega sin reserva. El plano se cambia en <Link to="/panel/mesas">Tu sala</Link>.</p>
+      <Sheet open={!!current} onClose={() => setOpen(null)} title={current ? tableLabel(parseTableBooking(current).tables) : ''}>
         {current && <BookingCard order={current} history={history.get(customerKey(current))} busy={actions.busy === current.id} onMove={(o, s) => { actions.move(o, s); setOpen(null); }} onChangeTable={(o) => { setOpen(null); onChangeTable(o); }} businessName={business.name} />}
       </Sheet>
     </>

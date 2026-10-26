@@ -3,7 +3,8 @@ import { Sheet, useToast } from './ui.jsx';
 import Icon from './Icon.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { createGuestBooking, createOrder, joinWaitlist, orderStatus, reservationsOn, STATUS } from '../lib/data.js';
-import { blockFor, slotShift, tableFits, tableMin } from '../lib/agenda.js';
+import { blockFor, slotShift, tableFits, tableLabel, tableMin, tablesIn } from '../lib/agenda.js';
+import { joinPairs, zoneOf, zoneOpenAt, zonesOf } from '../lib/floor.js';
 import { minutesToTime, timeToMinutes, todayISO } from '../lib/format.js';
 import { isClosed } from '../lib/booking.js';
 
@@ -28,12 +29,12 @@ export function busyTables(bookings, start, duration) {
   const e = s + duration;
   const busy = new Set();
   for (const b of bookings) {
-    const table = /Mesa (\d+)/.exec(b.items || '');
+    const tables = tablesIn(b.items);
     const range = /(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/.exec(b.time || '');
-    if (!table || !range) continue;
+    if (!tables.length || !range) continue;
     const bs = timeToMinutes(range[1]);
     const be = timeToMinutes(range[2]);
-    if (bs < e && s < be) busy.add(Number(table[1]));
+    if (bs < e && s < be) tables.forEach((n) => busy.add(n));
   }
   return busy;
 }
@@ -57,13 +58,18 @@ const shortDay = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES'
 export default function ReserveSheet({ open, onClose, biz, settings }) {
   const { user, displayName } = useAuth();
   const toast = useToast();
-  // Tables the restaurant keeps for walk-ins never show up online.
-  const tables = (settings?.tables?.length ? settings.tables : DEFAULT_TABLES).filter((t) => t.online !== false);
+  // Tables the restaurant keeps for walk-ins, or in a closed terrace, never show up online.
+  const allTables = settings?.tables?.length ? settings.tables : DEFAULT_TABLES;
+  const floorZones = zonesOf({ ...settings, tables: allTables });
+  const zoneInfo = (name) => floorZones.find((z) => z.name === name);
+  const tables = allTables.filter((t) => t.online !== false && zoneInfo(zoneOf(t))?.open !== false);
   const smallest = Math.min(...tables.map((t) => Number(t.capacity) || 2));
-  const biggest = Math.max(0, ...tables.map((t) => Number(t.capacity) || 2));
+  // Two tables the owner marked as joinable seat a bigger group.
+  const pairs = joinPairs(tables);
+  const biggest = Math.max(0, ...tables.map((t) => Number(t.capacity) || 2), ...pairs.map(([a, b]) => Number(a.capacity) + Number(b.capacity)));
   // A party smaller than any table still gets one of the smallest.
   const fits = (t, g) => tableFits(t, g) || (g < tableMin(t) && Number(t.capacity) === smallest);
-  const zones = [...new Set(tables.map((t) => t.zone || 'Sala Principal'))];
+  const zones = [...new Set(tables.map(zoneOf))];
   const duration = settings?.turn_duration_min || 90;
   const rules = settings?.profile || {};
   const maxGuests = Number(rules.max_personas) || 20;
@@ -105,13 +111,19 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
       .filter((t) => (day !== todayISO() || timeToMinutes(t) > nowMin) && startOf(t) - now.getTime() >= notice * 60000 && !block[slotShift(settings, t)]);
   };
 
+  // The smallest free table that fits, or else two joinable tables together. Returns a list of tables.
   const tableFor = (list, slot) => {
     const busy = busyTables(list, slot, duration);
-    return tables
-      .filter((t) => (zones.length < 2 || (t.zone || 'Sala Principal') === zone) && fits(t, guests) && !busy.has(Number(t.table_number)))
-      .sort((a, b) => a.capacity - b.capacity)[0];
+    const usable = (t) => (zones.length < 2 || zoneOf(t) === zone) && zoneOpenAt(zoneInfo(zoneOf(t)), slot) && !busy.has(Number(t.table_number));
+    const single = tables.filter((t) => usable(t) && fits(t, guests)).sort((a, b) => a.capacity - b.capacity)[0];
+    if (single) return [single];
+    const pair = pairs
+      .filter(([a, b]) => usable(a) && usable(b) && Number(a.capacity) + Number(b.capacity) >= guests && guests > Math.max(Number(a.capacity), Number(b.capacity)))
+      .sort(([a, b], [c, d]) => (Number(a.capacity) + Number(b.capacity)) - (Number(c.capacity) + Number(d.capacity)))[0];
+    return pair || null;
   };
-  const isFree = (list, slot) => (!capacity || arrivalsNear(list, slot) + guests <= capacity) && (isGroup || !!tableFor(list, slot));
+  const isFree = (list, slot) => (!capacity || arrivalsNear(list, slot) + guests <= capacity)
+    && (isGroup ? tables.some((t) => zoneOpenAt(zoneInfo(zoneOf(t)), slot)) : !!tableFor(list, slot));
 
   const daySlots = useMemo(() => slotsFor(date), [settings, date, notice, lastDay]);
   const freeCount = bookings ? daySlots.filter((t) => isFree(bookings, t)).length : null;
@@ -138,7 +150,7 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
     setSaving(true);
     try {
       const end = minutesToTime(timeToMinutes(time) + duration);
-      const itemsText = `Reserva ${guests} pax — ${table ? `Mesa ${table.table_number} (${table.zone || 'Sala Principal'})` : 'Grupo'}${note ? ` · Nota: ${note}` : ''}`;
+      const itemsText = `Reserva ${guests} pax — ${table ? tableLabel(table.map((t) => t.table_number), zoneOf(table[0])) : 'Grupo'}${note ? ` · Nota: ${note}` : ''}`;
       const base = { business: biz.name, itemsText, date, time: `${time} - ${end}` };
       let status;
       if (user) {
@@ -211,9 +223,14 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
             </div>
             {zones.length > 1 && !isGroup && (
               <div className="chips">
-                {zones.map((z) => (
-                  <button key={z} className={`chip ${zone === z ? 'on' : ''}`} style={{ background: zone === z ? undefined : 'var(--bg)' }} onClick={() => { setZone(z); setTime(''); }}>{z}</button>
-                ))}
+                {zones.map((z) => {
+                  const info = zoneInfo(z);
+                  return (
+                    <button key={z} className={`chip ${zone === z ? 'on' : ''}`} style={{ background: zone === z ? undefined : 'var(--bg)' }} onClick={() => { setZone(z); setTime(''); }}>
+                      {info?.outdoor ? '☀︎ ' : ''}{z}{info?.from && info?.to ? ` · ${info.from}-${info.to}` : ''}
+                    </button>
+                  );
+                })}
               </div>
             )}
             {isGroup && <p className="small" style={{ margin: 0, fontWeight: 600 }}>Para grupos de {guests} el restaurante prepara las mesas y te confirma la reserva.</p>}

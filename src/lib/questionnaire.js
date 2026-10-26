@@ -189,7 +189,8 @@ export function settingsFromProfile(profile, settings) {
     for (let n = 1; n <= inside + outside; n += 1) {
       const zone = n <= inside ? 'Sala Principal' : 'Terraza';
       const prev = old.get(n);
-      tables.push({ id: n, table_number: n, zone, capacity: prev && prev.zone === zone ? Number(prev.capacity) : seats });
+      // Keep what the owner already set on that table (size, place on the plan, joins) when it stays in its zone.
+      tables.push(prev && (prev.zone || 'Sala Principal') === zone ? { ...prev, id: n, table_number: n } : { id: n, table_number: n, zone, capacity: seats });
     }
     patch.tables = tables;
   }
