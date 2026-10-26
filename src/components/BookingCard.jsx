@@ -45,7 +45,7 @@ const ACTIONS = {
 };
 
 // One booking as the restaurant sees it: who, how many, which table, and what to do next.
-export default function BookingCard({ order, history, busy, onMove, showDate, businessName }) {
+export default function BookingCard({ order, history, busy, onMove, onChangeTable, showDate, businessName }) {
   const b = parseTableBooking(order);
   const actions = ACTIONS[order.status] || [];
   const contactText = `Hola ${order.customer}, te escribimos de ${businessName} por tu reserva del ${order.date} a las ${b.start}.`;
@@ -75,8 +75,11 @@ export default function BookingCard({ order, history, busy, onMove, showDate, bu
           )}
         </span>
       </div>
-      {(order.phone || order.customer_email) && (
+      {(order.phone || order.customer_email || onChangeTable) && (
         <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+          {onChangeTable && [STATUS.PENDING, STATUS.CONFIRMED, STATUS.SEATED].includes(order.status) && (
+            <button className="btn soft sm" onClick={() => onChangeTable(order)}><Icon name="grid" size={15} /> Cambiar mesa</button>
+          )}
           {order.phone && <a className="btn soft sm" href={telLink(order.phone)}><Icon name="phone" size={15} /> {order.phone}</a>}
           {order.phone && <a className="btn soft sm" href={whatsappLink(order.phone, contactText)} target="_blank" rel="noreferrer"><Icon name="chat" size={15} /> WhatsApp</a>}
           {!order.phone && order.customer_email && <a className="btn soft sm" href={`mailto:${order.customer_email}`} style={{ maxWidth: '100%', overflow: 'hidden' }}><Icon name="mail" size={15} /> {order.customer_email}</a>}

@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { Sheet, useToast } from './ui.jsx';
 import Icon from './Icon.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { createOrder, reservationsOn, STATUS } from '../lib/data.js';
+import { createOrder, orderStatus, reservationsOn, STATUS } from '../lib/data.js';
+import { blockFor, slotShift, tableFits, tableMin } from '../lib/agenda.js';
 import { minutesToTime, timeToMinutes, todayISO } from '../lib/format.js';
 import { isClosed } from '../lib/booking.js';
 
@@ -38,7 +39,11 @@ export function busyTables(bookings, start, duration) {
 export default function ReserveSheet({ open, onClose, biz, settings }) {
   const { user } = useAuth();
   const toast = useToast();
-  const tables = settings?.tables?.length ? settings.tables : DEFAULT_TABLES;
+  // Tables the restaurant keeps for walk-ins never show up online.
+  const tables = (settings?.tables?.length ? settings.tables : DEFAULT_TABLES).filter((t) => t.online !== false);
+  const smallest = Math.min(...tables.map((t) => Number(t.capacity) || 2));
+  // A party smaller than any table still gets one of the smallest.
+  const fits = (t, g) => tableFits(t, g) || (g < tableMin(t) && Number(t.capacity) === smallest);
   const zones = [...new Set(tables.map((t) => t.zone || 'Sala Principal'))];
   const duration = settings?.turn_duration_min || 90;
   const rules = settings?.profile || {};
@@ -57,11 +62,11 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
   const [phone, setPhone] = useState('');
   const [bookings, setBookings] = useState([]);
   const [saving, setSaving] = useState(false);
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState(null);
 
   useEffect(() => {
     if (!open) return;
-    setDone(false);
+    setDone(null);
     reservationsOn(biz.name, date).then(setBookings).catch(() => setBookings([]));
   }, [open, biz.name, date]);
 
@@ -69,16 +74,17 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
     const now = new Date();
     const isToday = date === todayISO();
     const nowMin = now.getHours() * 60 + now.getMinutes();
-    if (isClosed(settings, date) || date > lastDay) return [];
+    const block = blockFor(settings, date);
+    if (isClosed(settings, date) || date > lastDay || block.todo) return [];
     const startOf = (t) => new Date(`${date}T${t}:00`).getTime();
     return [...slots(settings.lunch_start, settings.lunch_end), ...slots(settings.dinner_start, settings.dinner_end)]
-      .filter((t) => (!isToday || timeToMinutes(t) > nowMin) && startOf(t) - now.getTime() >= notice * 60000);
+      .filter((t) => (!isToday || timeToMinutes(t) > nowMin) && startOf(t) - now.getTime() >= notice * 60000 && !block[slotShift(settings, t)]);
   }, [settings, date, notice, lastDay]);
 
   const tableFor = (slot) => {
     const busy = busyTables(bookings, slot, duration);
     return tables
-      .filter((t) => (t.zone || 'Sala Principal') === zone && Number(t.capacity) >= guests && !busy.has(Number(t.table_number)))
+      .filter((t) => (t.zone || 'Sala Principal') === zone && fits(t, guests) && !busy.has(Number(t.table_number)))
       .sort((a, b) => a.capacity - b.capacity)[0];
   };
 
@@ -88,7 +94,7 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
     setSaving(true);
     try {
       const end = minutesToTime(timeToMinutes(time) + duration);
-      await createOrder({
+      const order = await createOrder({
         business: biz.name,
         user,
         items: [],
@@ -99,7 +105,8 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
         status: STATUS.PENDING,
         phone: phone.trim().slice(0, 20),
       });
-      setDone(true);
+      // The restaurant may confirm on the spot when the table is free.
+      setDone((await orderStatus(order.id)) === STATUS.CONFIRMED ? 'confirmed' : 'pending');
     } catch (e) {
       toast(e.message, 'error');
     } finally {
@@ -108,7 +115,7 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title={done ? 'Solicitud enviada' : 'Reservar mesa'}>
+    <Sheet open={open} onClose={onClose} title={done === 'confirmed' ? 'Reserva confirmada' : done ? 'Solicitud enviada' : 'Reservar mesa'}>
       {!user ? (
         <div className="stack">
           <p className="muted">Inicia sesión para reservar, así el restaurante puede confirmarte la mesa por correo.</p>
@@ -117,8 +124,17 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
       ) : done ? (
         <div className="stack" style={{ alignItems: 'center', textAlign: 'center', padding: '12px 0' }}>
           <span className="mono lg" style={{ background: 'var(--accent)', color: 'var(--ink)' }}><Icon name="check" size={30} stroke={3} /></span>
-          <p style={{ fontSize: 17, fontWeight: 700 }}>{biz.name} revisará tu reserva</p>
-          <p className="muted">Te avisaremos por correo cuando la confirme.</p>
+          {done === 'confirmed' ? (
+            <>
+              <p style={{ fontSize: 17, fontWeight: 700 }}>¡Tienes mesa en {biz.name}!</p>
+              <p className="muted">Te hemos mandado la confirmación por correo y el día antes te recordaremos la reserva.</p>
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize: 17, fontWeight: 700 }}>{biz.name} revisará tu reserva</p>
+              <p className="muted">Te avisaremos por correo cuando la confirme.</p>
+            </>
+          )}
           <button className="btn primary block" onClick={onClose}>Hecho</button>
         </div>
       ) : (
@@ -157,7 +173,7 @@ export default function ReserveSheet({ open, onClose, biz, settings }) {
                 );
               })}
             </div>
-            {allSlots.length === 0 && <p className="small muted" style={{ marginTop: 8 }}>{isClosed(settings, date) ? 'Este día el restaurante cierra.' : 'No quedan horas libres para este día.'}</p>}
+            {allSlots.length === 0 && <p className="small muted" style={{ marginTop: 8 }}>{isClosed(settings, date) ? 'Este día el restaurante cierra.' : blockFor(settings, date).todo ? 'Este día está completo.' : 'No quedan horas libres para este día.'}</p>}
           </div>
 
           {guests >= maxGuests && (

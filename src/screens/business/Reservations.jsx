@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useOutletContext, useSearchParams } from 'react-router-dom';
+import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
 import BookingCard, { StatusChip, useBookingActions } from '../../components/BookingCard.jsx';
 import OwnerBookingSheet from '../../components/OwnerBookingSheet.jsx';
-import { DEFAULT_TABLES } from '../../components/ReserveSheet.jsx';
+import { busyTables, DEFAULT_TABLES } from '../../components/ReserveSheet.jsx';
 import { Empty, PageHeader, Sheet, Spinner, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
-import { businessOrders, customerNotes, saveCustomerNote, STATUS, subscribe } from '../../lib/data.js';
-import { ACTIVE_BOOKING, bookingsOf, byTime, customerKey, customersFrom, dayLabel, guestsOf, parseTableBooking, shiftOf, telLink, whatsappLink } from '../../lib/agenda.js';
+import { businessOrders, customerNotes, reservationsOn, saveCustomerNote, saveRestaurantSettings, setOrderItems, STATUS, subscribe } from '../../lib/data.js';
+import { blockFor, ACTIVE_BOOKING, bookingsOf, byTime, customerKey, customersFrom, dayLabel, guestsOf, parseTableBooking, shiftOf, telLink, whatsappLink } from '../../lib/agenda.js';
 import { nextDays } from '../../lib/booking.js';
 import { minutesToTime, normalize, timeToMinutes, todayISO } from '../../lib/format.js';
 import Orders from './Orders.jsx';
@@ -18,7 +18,91 @@ const nowHHMM = () => {
   return minutesToTime(d.getHours() * 60 + d.getMinutes());
 };
 
-function Agenda({ bookings, history, actions, settings, business, onAdd }) {
+// "Completo": close a day's lunch or dinner to online bookings. Phone bookings still go in.
+function DayOnline({ day, settings, business, reloadSettings }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const block = blockFor(settings, day);
+  const shifts = [['comida', 'Comidas', settings.lunch_start], ['cena', 'Cenas', settings.dinner_start]].filter((x) => x[2]);
+  const toggle = async (shift) => {
+    setBusy(true);
+    const others = (settings.blocks || []).filter((b) => b.date >= todayISO() && !(b.date === day && (b.shift === shift || b.shift === 'todo')));
+    const keep = block.todo ? shifts.map((x) => x[0]).filter((x) => x !== shift).map((x) => ({ date: day, shift: x })) : [];
+    const blocks = block[shift] ? [...others, ...keep] : [...others, { date: day, shift }];
+    try {
+      await saveRestaurantSettings(business.name, { blocks });
+      await reloadSettings();
+      toast(block[shift] ? 'Abierto otra vez a reservas online' : 'Cerrado a reservas online');
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <span className="small muted" style={{ fontWeight: 600 }}>Online:</span>
+      {shifts.map(([k, label]) => (
+        <button key={k} className="pill" disabled={busy} onClick={() => toggle(k)} aria-pressed={block[k]}
+          style={{ minWidth: 0, height: 32, background: block[k] ? '#F3C9C9' : 'var(--bg)', color: block[k] ? '#8E2B2B' : 'var(--ink)' }}>
+          {block[k] ? `${label}: completo` : `${label}: abiertas`}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Move a booking to another table that is free at that time.
+function ChangeTableSheet({ order, settings, business, onClose, onDone }) {
+  const toast = useToast();
+  const [busyList, setBusyList] = useState(null);
+  const b = order ? parseTableBooking(order) : null;
+  useEffect(() => {
+    if (!order) return;
+    setBusyList(null);
+    reservationsOn(business.name, order.date).then((list) => {
+      const others = list.filter((x) => !(x.time === order.time && x.items === order.items.split(' · Nota:')[0]));
+      setBusyList(busyTables(others, b.start, (settings.turn_duration_min || 90)));
+    });
+  }, [order?.id]);
+  if (!order) return null;
+  const tables = settings?.tables?.length ? settings.tables : DEFAULT_TABLES;
+  const move = async (t) => {
+    const label = `Mesa ${t.table_number} (${t.zone || 'Sala Principal'})`;
+    const items = /Mesa \d+/.test(order.items)
+      ? order.items.replace(/Mesa \d+( \([^)]*\))?/, label)
+      : order.items.replace(/(\d+\s*pax)/i, `$1 — ${label}`);
+    try {
+      await setOrderItems(order.id, items);
+      toast(`Pasada a la mesa ${t.table_number}`);
+      onDone(order, items);
+      onClose();
+    } catch (e) {
+      toast(e.message, 'error');
+    }
+  };
+  return (
+    <Sheet open onClose={onClose} title={`Cambiar mesa · ${order.customer}`}>
+      <p className="small muted" style={{ marginTop: 0 }}>{b.guests} personas · {b.start}. Ahora en la mesa {b.table || '?'}.</p>
+      {!busyList ? <Spinner /> : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(84px, 1fr))', gap: 8 }}>
+          {tables.filter((t) => Number(t.table_number) !== Number(b.table)).map((t) => {
+            const taken = busyList.has(Number(t.table_number));
+            return (
+              <button key={t.table_number} className="pill" disabled={taken} onClick={() => move(t)}
+                style={{ minWidth: 0, height: 56, flexDirection: 'column', display: 'flex', alignItems: 'center', justifyContent: 'center', background: taken ? 'var(--bg)' : Number(t.capacity) >= b.guests ? 'var(--accent)' : 'var(--surface)', color: taken ? '#B5B1A8' : 'var(--ink)', boxShadow: 'inset 0 0 0 1px var(--line)' }}>
+                <span style={{ fontSize: 17 }}>Mesa {t.table_number}</span>
+                <span style={{ fontSize: 11, fontWeight: 600 }}>{taken ? 'ocupada' : `${t.capacity} plazas`}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </Sheet>
+  );
+}
+
+function Agenda({ bookings, history, actions, settings, business, onAdd, onChangeTable, reloadSettings }) {
   const today = todayISO();
   const [day, setDay] = useState(today);
   const [showOld, setShowOld] = useState(false);
@@ -28,7 +112,7 @@ function Agenda({ bookings, history, actions, settings, business, onAdd }) {
   const closed = ofDay.filter((o) => !ACTIVE_BOOKING.includes(o.status));
   const shifts = ['comida', 'cena'].map((s) => ({ key: s, list: active.filter((o) => shiftOf(o, settings) === s) })).filter((s) => s.list.length);
   const card = (o, showDate) => (
-    <BookingCard key={o.id} order={o} history={history.get(customerKey(o))} busy={actions.busy === o.id} onMove={actions.move} businessName={business.name} showDate={showDate} />
+    <BookingCard key={o.id} order={o} history={history.get(customerKey(o))} busy={actions.busy === o.id} onMove={actions.move} onChangeTable={onChangeTable} businessName={business.name} showDate={showDate} />
   );
 
   return (
@@ -66,6 +150,7 @@ function Agenda({ bookings, history, actions, settings, business, onAdd }) {
           </span>
           <button className="btn primary sm" onClick={() => onAdd({ date: day })}><Icon name="plus" size={16} /> Reserva</button>
         </div>
+        <DayOnline day={day} settings={settings} business={business} reloadSettings={reloadSettings} />
         {active.length === 0 && <p className="small muted" style={{ margin: '4px 0 8px' }}>No hay reservas este día.</p>}
         {shifts.map((s) => (
           <div key={s.key} className="stack" style={{ gap: 8 }}>
@@ -82,7 +167,7 @@ function Agenda({ bookings, history, actions, settings, business, onAdd }) {
   );
 }
 
-function Hall({ bookings, settings, actions, history, business, onAdd }) {
+function Hall({ bookings, settings, actions, history, business, onAdd, onChangeTable }) {
   const today = todayISO();
   const tables = settings?.tables?.length ? settings.tables : DEFAULT_TABLES;
   const zones = [...new Set(tables.map((t) => t.zone || 'Sala Principal'))];
@@ -137,7 +222,7 @@ function Hall({ bookings, settings, actions, history, business, onAdd }) {
       ))}
       <p className="small muted" style={{ margin: '0 4px' }}>Toca una mesa libre para sentar a alguien que llega sin reserva. Las mesas se cambian en Mesas y QR.</p>
       <Sheet open={!!current} onClose={() => setOpen(null)} title={current ? `Mesa ${parseTableBooking(current).table}` : ''}>
-        {current && <BookingCard order={current} history={history.get(customerKey(current))} busy={actions.busy === current.id} onMove={(o, s) => { actions.move(o, s); setOpen(null); }} businessName={business.name} />}
+        {current && <BookingCard order={current} history={history.get(customerKey(current))} busy={actions.busy === current.id} onMove={(o, s) => { actions.move(o, s); setOpen(null); }} onChangeTable={(o) => { setOpen(null); onChangeTable(o); }} businessName={business.name} />}
       </Sheet>
     </>
   );
@@ -236,8 +321,9 @@ function Customers({ orders, business }) {
 // The restaurant's bookings: the agenda by day, the hall right now and its customers.
 export default function Reservations() {
   const { business } = useAuth();
-  const { settings, modules } = useOutletContext();
+  const { settings, modules, reloadSettings } = useOutletContext();
   const [params, setParams] = useSearchParams();
+  const [moving, setMoving] = useState(null);
   const tab = params.get('ver') || 'agenda';
   const [adding, setAdding] = useState(null);
   const { data, loading, reload, setData } = useAsync(() => businessOrders(business.name), [business.name]);
@@ -254,7 +340,8 @@ export default function Reservations() {
     ['agenda', 'Agenda'], ['sala', 'Sala'], ['clientes', 'Clientes'],
     ...(modules.pedidosQr ? [['comandas', 'Comandas']] : []),
   ];
-  const props = { bookings, history, actions, settings, business, onAdd: setAdding };
+  const props = { bookings, history, actions, settings, business, onAdd: setAdding, onChangeTable: setMoving, reloadSettings };
+  const auto = settings.profile?.auto_confirm !== false;
 
   return (
     <div className="page">
@@ -263,10 +350,16 @@ export default function Reservations() {
       <div className="segmented" role="tablist">
         {tabs.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setParams(k === 'agenda' ? {} : { ver: k }, { replace: true })}>{l}</button>)}
       </div>
+      {tab === 'agenda' && (
+        <Link to="/panel/personalizar/reservas" className="small muted" style={{ margin: '0 4px', textDecoration: 'none' }}>
+          {auto ? 'Las reservas con mesa libre se confirman solas.' : 'Confirmas tú cada reserva.'} <span style={{ textDecoration: 'underline', fontWeight: 700 }}>Cambiar</span>
+        </Link>
+      )}
       {tab === 'agenda' && <Agenda {...props} />}
       {tab === 'sala' && <Hall {...props} />}
       {tab === 'clientes' && <Customers orders={orders} business={business} />}
       {tab === 'comandas' && <Orders comandasOnly />}
+      {moving && <ChangeTableSheet order={moving} settings={settings} business={business} onClose={() => setMoving(null)} onDone={(o, items) => setData((list) => list.map((x) => (x.id === o.id ? { ...x, items } : x)))} />}
       <OwnerBookingSheet open={!!adding} initial={adding} onClose={() => setAdding(null)} business={business} settings={settings} onSaved={reload} />
     </div>
   );

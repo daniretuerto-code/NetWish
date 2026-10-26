@@ -5,6 +5,7 @@ import { busyTables, DEFAULT_TABLES, slots } from './ReserveSheet.jsx';
 import { createOwnerBooking, reservationsOn, STATUS } from '../lib/data.js';
 import { minutesToTime, timeToMinutes, todayISO } from '../lib/format.js';
 import { nextDays } from '../lib/booking.js';
+import { tableFits } from '../lib/agenda.js';
 
 const nowRounded = () => {
   const d = new Date();
@@ -45,7 +46,9 @@ export default function OwnerBookingSheet({ open, onClose, business, settings, i
   }, [settings, date]);
 
   const busy = time ? busyTables(bookings, time, duration) : new Set();
-  const fitting = tables.filter((t) => Number(t.capacity) >= guests && !busy.has(Number(t.table_number))).sort((a, b) => a.capacity - b.capacity);
+  // Tables of the right size first, smallest first; the rest stay pickable for joined tables.
+  const fitting = tables.filter((t) => Number(t.capacity) >= guests && !busy.has(Number(t.table_number)))
+    .sort((a, b) => (tableFits(b, guests) - tableFits(a, guests)) || a.capacity - b.capacity);
   const others = tables.filter((t) => !busy.has(Number(t.table_number)) && !fitting.includes(t));
   const chosen = tables.find((t) => Number(t.table_number) === Number(table)) || fitting[0];
 
