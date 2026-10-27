@@ -13,74 +13,6 @@ import { eventDay, upcomingEvents } from '../../lib/events.js';
 import { mapsUrl, openState, shiftsOf, weekHours } from '../../lib/hours.js';
 import { isClosed } from '../../lib/booking.js';
 
-async function shareBiz(biz) {
-  const url = window.location.href.split('?')[0];
-  try {
-    if (navigator.share) await navigator.share({ title: biz.name, text: `${biz.name} en NetWish`, url });
-    else await navigator.clipboard.writeText(url);
-  } catch {
-    // Closed the share sheet.
-  }
-}
-
-// Restaurants: a tall cover with what matters now in one line and the one thing to do, Reservar.
-function CoverHero({ biz, eyebrow, line, children }) {
-  return (
-    <header className="hero tall" style={{ background: toneFor(biz.name) }}>
-      {biz.cover_url ? (
-        <>
-          <img className="cover-img" src={biz.cover_url} alt="" />
-          <span className="cover-shade" />
-        </>
-      ) : (
-        <span className="ghost" aria-hidden="true">{initials(biz.name)}</span>
-      )}
-      <div className="hero-actions">
-        <BackButton glass />
-      </div>
-      <span className="eyebrow">{eyebrow}</span>
-      <h1>{biz.name}</h1>
-      {line && <span className="hero-line">{line}</span>}
-      {children}
-    </header>
-  );
-}
-
-// Llamar · Cómo llegar · Escribir · Compartir, as quiet text links under the cover.
-function TextActions({ biz }) {
-  return (
-    <nav className="text-actions" aria-label="Acciones">
-      {biz.telefono && <a href={`tel:${biz.telefono}`}>Llamar</a>}
-      <a href={mapsUrl(biz)} target="_blank" rel="noreferrer">Cómo llegar</a>
-      <Link to={`/chat/${encodeURIComponent(biz.name)}`}>Escribir</Link>
-      <button onClick={() => shareBiz(biz)}>Compartir</button>
-    </nav>
-  );
-}
-
-// Today's set menu told in one paragraph, with the full menu one tap away.
-function TodayCard({ menu, onCarta, showCarta }) {
-  const lower = (t) => t.charAt(0).toLowerCase() + t.slice(1);
-  const line = (list) => {
-    if (!list?.length) return '';
-    const items = list.map((d, i) => (i ? lower(d) : d));
-    return `${items.length > 1 ? `${items.slice(0, -1).join(', ')} o ${items[items.length - 1]}` : items[0]}.`;
-  };
-  return (
-    <section className="widget stack" style={{ gap: 10, padding: 18 }}>
-      <div className="row between" style={{ alignItems: 'baseline' }}>
-        <h2 className="title-lg">Hoy</h2>
-        {Number(menu.price) > 0 && <span className="price" style={{ fontSize: 18 }}>{money(menu.price)}</span>}
-      </div>
-      <p style={{ fontSize: 15, lineHeight: 1.45, color: 'var(--ink-2)' }}>
-        {[line(menu.first_courses), line(menu.second_courses)].filter(Boolean).join(' ')}
-        {menu.includes ? ` Incluye ${lower(menu.includes)}.` : ''}
-      </p>
-      <button className="link-btn" onClick={onCarta} aria-expanded={showCarta}>{showCarta ? 'Ocultar la carta' : 'Ver la carta completa'}</button>
-    </section>
-  );
-}
-
 function Hero({ biz, state, sub }) {
   return (
     <header className="hero" style={{ background: toneFor(biz.name) }}>
@@ -210,6 +142,29 @@ function Hours({ settings }) {
   );
 }
 
+function DailyMenu({ menu }) {
+  if (!menu || menu.active === false) {
+    return <div className="widget"><Empty icon="utensils" title="Hoy no hay menú del día publicado" /></div>;
+  }
+  const block = (title, list) => (list?.length ? (
+    <div className="stack" style={{ gap: 4 }}>
+      <span className="eyebrow">{title}</span>
+      {list.map((d) => <span key={d} style={{ fontSize: 16, fontWeight: 600 }}>{d}</span>)}
+    </div>
+  ) : null);
+  return (
+    <section className="widget stack" style={{ gap: 14 }}>
+      <div className="row between">
+        <h2 className="title-lg">Menú del día</h2>
+        <span className="title-lg price">{money(menu.price)}</span>
+      </div>
+      {block('Primeros', menu.first_courses)}
+      {block('Segundos', menu.second_courses)}
+      {menu.includes && <span className="small muted">Incluye: {menu.includes}</span>}
+    </section>
+  );
+}
+
 function Actions({ biz, booksService }) {
   const share = async () => {
     const url = window.location.href.split('?')[0];
@@ -286,12 +241,25 @@ function BookCard({ biz, settings, onBook }) {
   );
 }
 
+function MenuTeaser({ menu, onOpen }) {
+  return (
+    <button className="widget menu-teaser" onClick={onOpen}>
+      <span className="mono" style={{ background: 'var(--accent)', color: 'var(--ink)' }}><Icon name="utensils" size={20} /></span>
+      <span className="grow stack" style={{ gap: 1, minWidth: 0 }}>
+        <span className="row between" style={{ gap: 8 }}>
+          <strong style={{ fontSize: 16 }}>Menú del día</strong>
+          {Number(menu.price) > 0 && <strong className="price" style={{ fontSize: 16 }}>{money(menu.price)}</strong>}
+        </span>
+        <span className="small muted" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[...(menu.first_courses || []), ...(menu.second_courses || [])].slice(0, 4).join(' · ')}</span>
+      </span>
+      <Icon name="chevron" size={18} style={{ color: 'var(--muted)' }} />
+    </button>
+  );
+}
+
 export default function Business() {
   const { name } = useParams();
-  const [showCarta, setShowCarta] = useState(false);
-  // The floating Reservar bar shows only once the cover's button has scrolled away.
-  const heroBook = useRef(null);
-  const [heroVisible, setHeroVisible] = useState(true);
+  const [tab, setTab] = useState('carta');
   const [params, setParams] = useSearchParams();
   // The restaurant's short link (netwish.es/r/…) and the waiting-list e-mail (…&dia=&pax=) land here with the booking sheet open.
   const [reserveOpen, setReserveOpen] = useState(params.get('reservar') === '1');
@@ -313,14 +281,6 @@ export default function Business() {
     const prev = document.title;
     document.title = `${data.biz.name} · ${data.kind === 'restaurant' ? 'Carta y reservas' : data.biz.category || 'Palencia'} | NetWish`;
     return () => { document.title = prev; };
-  }, [data?.biz?.name]);
-
-  useEffect(() => {
-    const el = heroBook.current;
-    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
-    const io = new IntersectionObserver(([e]) => setHeroVisible(e.isIntersecting));
-    io.observe(el);
-    return () => io.disconnect();
   }, [data?.biz?.name]);
 
   if (loading) return <Spinner />;
@@ -399,37 +359,40 @@ export default function Business() {
     );
   }
 
-  const lineNow = [state?.label, menuToday && Number(menu.price) > 0 && `Menú del día ${money(menu.price)}`].filter(Boolean).join(' · ');
-  const carta = !menuToday || showCarta;
   return (
     <div className="page flush-top" style={{ paddingBottom: canBook ? 120 : undefined }}>
-      <CoverHero biz={biz} eyebrow={[biz.category || categoryOf(biz).label, biz.address].filter(Boolean).join(' · ')} line={lineNow}>
-        {canBook && <button ref={heroBook} className="hero-book" onClick={() => book()}>Reservar mesa</button>}
-      </CoverHero>
+      <Hero biz={biz} state={state} sub={facts.headline} />
 
-      <div className="biz-layout" style={{ marginTop: 6 }}>
-        <div className="biz-main">
-          <TextActions biz={biz} />
-          {menuToday && <TodayCard menu={menu} showCarta={showCarta} onCarta={() => setShowCarta((v) => !v)} />}
-          {carta && <ProductList biz={biz} products={products} compact />}
-          {eventsCard}
-          <div className="wide-hide-flex">
-            <InfoCard biz={biz} settings={settings} extra={(
-              <>
-                {badges && <div style={{ marginTop: 6 }}>{badges}</div>}
-                {settings.profile?.para_llevar && biz.telefono && <a className="btn soft block" href={`tel:${biz.telefono}`}>Llamar para pedir para llevar</a>}
-              </>
-            )} />
+      <div className="overlap stack">
+        <Actions biz={biz} />
+
+        <div className="biz-layout">
+          <div className="biz-main">
+            {badges && <div className="widget" style={{ padding: 14 }}>{badges}</div>}
+            {menuToday && tab !== 'menu' && <MenuTeaser menu={menu} onOpen={() => setTab('menu')} />}
+            {eventsCard}
+
+            <div className="segmented" role="tablist" aria-label="Secciones">
+              <button role="tab" aria-selected={tab === 'carta'} onClick={() => setTab('carta')}>Carta</button>
+              {mods.menuDia && <button role="tab" aria-selected={tab === 'menu'} onClick={() => setTab('menu')}>Menú del día</button>}
+              <button role="tab" aria-selected={tab === 'info'} onClick={() => setTab('info')}>Horario y mapa</button>
+            </div>
+
+            {tab === 'carta' && <ProductList biz={biz} products={products} compact />}
+            {mods.menuDia && tab === 'menu' && <DailyMenu menu={menu} />}
+            {tab === 'info' && (
+              <InfoCard biz={biz} settings={settings} extra={settings.profile?.para_llevar && biz.telefono && <a className="btn soft block" href={`tel:${biz.telefono}`}>Llamar para pedir para llevar</a>} />
+            )}
           </div>
-        </div>
 
-        <aside className="biz-aside">
-          {canBook && <BookCard biz={biz} settings={settings} onBook={book} />}
-          <div className="only-wide" style={{ flexDirection: 'column' }}><InfoCard biz={biz} settings={settings} extra={badges && <div style={{ marginTop: 6 }}>{badges}</div>} /></div>
-        </aside>
+          <aside className="biz-aside">
+            {canBook && <BookCard biz={biz} settings={settings} onBook={book} />}
+            {tab !== 'info' && <div className="only-wide" style={{ flexDirection: 'column' }}><InfoCard biz={biz} settings={settings} /></div>}
+          </aside>
+        </div>
       </div>
 
-      {canBook && !heroVisible && (
+      {canBook && (
         <button className="cta-bar wide-hide" onClick={() => book()}>
           <span className="stack" style={{ gap: 0, textAlign: 'left', minWidth: 0 }}>
             <span style={tileLabel}>Reserva tu mesa</span>
