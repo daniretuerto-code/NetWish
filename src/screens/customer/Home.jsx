@@ -1,12 +1,15 @@
 import { Link } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
 import { Empty, Spinner } from '../../components/ui.jsx';
-import { BusinessRow, CoverCard } from '../../components/BusinessCards.jsx';
+import { BusinessRow, CoverCard, PlaceInfo, placeSummary } from '../../components/BusinessCards.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
-import { listBusinesses, myOrders, isReservation, restaurantsToday, STATUS } from '../../lib/data.js';
-import { CATEGORIES, kindOf, taglineFor } from '../../lib/categories.js';
-import { initials, longDate, money } from '../../lib/format.js';
+import { directory, myOrders, isReservation, restaurantsToday, STATUS } from '../../lib/data.js';
+import { CATEGORIES, kindOf } from '../../lib/categories.js';
+import { initials, longDate, money, timeToMinutes } from '../../lib/format.js';
+import { openState } from '../../lib/hours.js';
+import { isClosed } from '../../lib/booking.js';
+import { modulesFor } from '../../lib/questionnaire.js';
 import { eventDay, eventsWithin } from '../../lib/events.js';
 
 const ACTIVE = [STATUS.KITCHEN, STATUS.PENDING, STATUS.CONFIRMED, STATUS.READY];
@@ -50,11 +53,15 @@ function TodayInPalencia() {
   const { data } = useAsync(() => restaurantsToday(), []);
   const all = data || [];
   const list = all.filter((r) => r.open);
-  const events = all.flatMap(({ biz, settings }) => eventsWithin(settings.profile?.eventos).map((ev) => ({ ev, biz })))
+  // An event on a day the restaurant closes opens its page, not the booking sheet.
+  const events = all.flatMap(({ biz, settings }) => eventsWithin(settings.profile?.eventos).map((ev) => ({ ev, biz, bookable: settings.profile?.reservas !== false && !isClosed(settings, ev.date) })))
     .sort((a, b) => a.ev.date.localeCompare(b.ev.date)).slice(0, 6);
   if (!list.length && !events.length) return null;
-  const withMenu = list.filter(({ settings }) => settings.daily_menu && settings.daily_menu.active !== false && settings.daily_menu.first_courses?.length);
-  const tonight = list.filter(({ settings }) => settings.dinner_start);
+  const withMenu = list.filter(({ settings }) => settings.daily_menu && settings.daily_menu.active !== false && settings.daily_menu.first_courses?.length && modulesFor(settings.profile).menuDia);
+  // Still time to book dinner tonight: up to an hour before the kitchen closes.
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const tonight = list.filter(({ settings }) => settings.dinner_start && settings.dinner_end && nowMin < timeToMinutes(settings.dinner_end) - 60);
   return (
     <section className="widget stack" style={{ gap: 10 }}>
       <span className="stack" style={{ gap: 0 }}>
@@ -73,8 +80,8 @@ function TodayInPalencia() {
       {events.length > 0 && (
         <>
           <span className="eyebrow" style={{ marginTop: 4 }}>Esta semana</span>
-          {events.map(({ ev, biz }) => (
-            <Link key={`${biz.name}-${ev.id}`} to={`/negocio/${encodeURIComponent(biz.name)}?reservar=1&dia=${ev.date}`} className="order-card" style={{ textDecoration: 'none', color: 'inherit' }}>
+          {events.map(({ ev, biz, bookable }) => (
+            <Link key={`${biz.name}-${ev.id}`} to={`/negocio/${encodeURIComponent(biz.name)}${bookable ? `?reservar=1&dia=${ev.date}` : ''}`} className="order-card" style={{ textDecoration: 'none', color: 'inherit' }}>
               <span className="row between" style={{ gap: 8 }}>
                 <strong>{ev.title}</strong>
                 <span className="small" style={{ fontWeight: 800 }}>{eventDay(ev.date)}</span>
@@ -102,9 +109,14 @@ function TodayInPalencia() {
 
 export default function Home() {
   const { user, displayName, avatar } = useAuth();
-  const { data: businesses, loading, error } = useAsync(() => listBusinesses(), []);
-  const list = businesses || [];
-  const featured = list.find((b) => b.cover_url) || list.find((b) => kindOf(b) === 'restaurant') || list[0];
+  const { data: places, loading, error } = useAsync(() => directory(), []);
+  const all = places || [];
+  const list = all.map((r) => r.biz);
+  // A restaurant open right now leads, then one with a photo.
+  const pick = all.find((r) => kindOf(r.biz) === 'restaurant' && placeSummary(r.biz, r.settings).state?.open)
+    || all.find((r) => r.biz.cover_url) || all.find((r) => kindOf(r.biz) === 'restaurant') || all[0];
+  const featured = pick?.biz;
+  const featuredSum = pick ? placeSummary(pick.biz, pick.settings) : null;
   const rest = list.filter((b) => b !== featured);
 
   return (
@@ -124,7 +136,7 @@ export default function Home() {
 
       <div className="two-col">
         <div className="stack">
-          {featured && <CoverCard featured biz={featured} eyebrow="Destacado hoy" subtitle={taglineFor(featured)} />}
+          {featured && <CoverCard featured minHeight={240} biz={featured} eyebrow="Destacado hoy" info={<PlaceInfo state={featuredSum.state} line={featuredSum.line} />} cta={featuredSum.canBook ? 'Reservar' : 'Ver'} to={featuredSum.canBook ? `/negocio/${encodeURIComponent(featured.name)}?reservar=1` : undefined} />}
 
           <div className="bento">
             <Link to="/escanear" className="widget dark link" style={{ minHeight: 168, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
