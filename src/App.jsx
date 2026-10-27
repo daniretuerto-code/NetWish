@@ -13,7 +13,9 @@ import Chat from './screens/customer/Chat.jsx';
 import BookingResponse from './screens/customer/BookingResponse.jsx';
 import Opinion from './screens/customer/Opinion.jsx';
 import Unsubscribe from './screens/customer/Unsubscribe.jsx';
+import ComingSoon from './screens/customer/ComingSoon.jsx';
 import { kindOf } from './lib/categories.js';
+import { showComingSoon } from './lib/launch.js';
 
 const Scan = lazy(() => import('./screens/customer/Scan.jsx'));
 const BizOverview = lazy(() => import('./screens/business/Overview.jsx'));
@@ -91,7 +93,9 @@ function OldPayLink() {
 
 export default function App() {
   const { ready } = useAuth();
+  const { pathname, search } = useLocation();
 
+  if (showComingSoon(pathname, search)) return <ComingSoon />;
   if (!ready) return <Spinner />;
 
   return (

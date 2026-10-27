@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { Empty, Mono, PageHeader, Spinner, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
-import { adminOverview, isAdmin, setBusinessStatus } from '../../lib/data.js';
+import { adminOverview, announceLaunch, isAdmin, launchSignups, setBusinessStatus } from '../../lib/data.js';
+import { grantAccess } from '../../lib/launch.js';
 import { timeAgo } from '../../lib/format.js';
 
 const KIND_LABEL = { alta: 'Quiere entrar', otro: 'No encaja en los tipos', contacto: 'Quiere más', nuevo: 'Alta', listo: 'Listo para publicar' };
@@ -16,7 +17,10 @@ export default function Admin() {
   const { data, loading, reload } = useAsync(async () => {
     if (!user) return null;
     if (!(await isAdmin())) return { denied: true };
-    return adminOverview();
+    // The admin always sees the real app on this device, even before launch.
+    grantAccess();
+    const [overview, signups] = await Promise.all([adminOverview(), launchSignups().catch(() => null)]);
+    return { ...overview, signups };
   }, [user?.id]);
 
   if (!ready || (loading && !data)) return <Spinner />;
@@ -78,6 +82,8 @@ export default function Admin() {
         )}
       </section>
 
+      <LaunchList signups={data.signups} reload={reload} />
+
       <section className="widget" style={{ paddingBottom: 4 }}>
         <h2 className="title-lg">Solicitudes y mensajes</h2>
         {data.requests.length === 0 && <p className="small muted">Todavía no hay ninguna.</p>}
@@ -95,5 +101,110 @@ export default function Admin() {
         ))}
       </section>
     </div>
+  );
+}
+
+const LAUNCH_TEXT = 'Hola:\n\nNos pediste que te avisáramos y aquí estamos: NetWish ya está abierto. Reserva mesa en restaurantes, cita en peluquerías y descubre los comercios de Palencia, todo desde un mismo sitio.\n\nGracias por esperar.\nEl equipo de NetWish';
+
+// People who left their e-mail on the "Muy pronto" screen, and the launch e-mail to all of them.
+function LaunchList({ signups, reload }) {
+  const toast = useToast();
+  const [open, setOpen] = useState(false);
+  const [subject, setSubject] = useState('NetWish ya está abierto en Palencia');
+  const [body, setBody] = useState(LAUNCH_TEXT);
+  const [sure, setSure] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  if (!signups) {
+    return (
+      <section className="widget stack">
+        <h2 className="title-lg">Lista de espera</h2>
+        <p className="small muted" style={{ margin: 0 }}>Falta crear la tabla en Supabase (lista-lanzamiento.sql).</p>
+      </section>
+    );
+  }
+
+  const pending = signups.filter((s) => !s.notified_at).length;
+  const today = signups.filter((s) => new Date(s.created_at).toDateString() === new Date().toDateString()).length;
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(signups.map((s) => s.email).join(', '));
+      toast('Correos copiados');
+    } catch {
+      toast('No se pudo copiar', 'error');
+    }
+  };
+
+  const download = () => {
+    const rows = [['correo', 'fecha', 'origen', 'avisado'], ...signups.map((s) => [s.email, s.created_at, s.source || '', s.notified_at || ''])];
+    const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'netwish-lista-de-espera.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const send = async () => {
+    if (!sure) { setSure(true); return; }
+    setSending(true);
+    try {
+      const out = await announceLaunch({ subject, body });
+      toast(`Enviado a ${out.sent} de ${out.total}`);
+      setOpen(false);
+      reload();
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      setSending(false);
+      setSure(false);
+    }
+  };
+
+  return (
+    <section className="widget stack">
+      <div className="row between" style={{ gap: 8 }}>
+        <h2 className="title-lg" style={{ margin: 0 }}>Lista de espera</h2>
+        <a className="btn soft sm" href="/?muypronto=1" target="_blank" rel="noreferrer">Ver pantalla</a>
+      </div>
+      <p className="small muted" style={{ margin: 0 }}>
+        {signups.length === 1 ? '1 persona apuntada' : `${signups.length} personas apuntadas`}
+        {today > 0 && ` · ${today} hoy`}
+        {signups.length > 0 && ` · ${pending} sin avisar`}
+      </p>
+      {signups.length > 0 && (
+        <>
+          <div className="row" style={{ gap: 8 }}>
+            <button className="btn soft sm" style={{ flex: 1 }} onClick={copy}>Copiar correos</button>
+            <button className="btn soft sm" style={{ flex: 1 }} onClick={download}>Descargar Excel (CSV)</button>
+          </div>
+          <details>
+            <summary className="small muted" style={{ cursor: 'pointer' }}>Ver la lista</summary>
+            {signups.map((s) => (
+              <div key={s.email} className="list-row">
+                <span className="grow t" style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.email}</span>
+                <span className="small muted">{s.notified_at ? 'Avisado' : timeAgo(s.created_at)}</span>
+              </div>
+            ))}
+          </details>
+          {pending > 0 && !open && (
+            <button className="btn primary" onClick={() => setOpen(true)}>Avisar a todos de que ya está abierto</button>
+          )}
+          {open && (
+            <div className="stack" style={{ gap: 8 }}>
+              <input className="input" value={subject} onChange={(e) => setSubject(e.target.value)} aria-label="Asunto" />
+              <textarea className="input" rows={7} value={body} onChange={(e) => setBody(e.target.value)} aria-label="Mensaje" />
+              <div className="row" style={{ gap: 8 }}>
+                <button className="btn ghost" style={{ flex: 1 }} onClick={() => { setOpen(false); setSure(false); }}>Cancelar</button>
+                <button className="btn primary" style={{ flex: 2 }} disabled={sending} onClick={send}>
+                  {sending ? 'Enviando…' : sure ? `Sí, enviar a ${pending}` : `Enviar a ${pending} personas`}
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </section>
   );
 }
