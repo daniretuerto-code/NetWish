@@ -1,6 +1,6 @@
 // The panel's sections. A restaurant gets five, the same on the phone and on the computer;
-// each one groups its pages, which show as tabs under the title.
-export function panelSections(kind, mods) {
+// each one groups its pages, which show as tabs under the title. Other businesses get theirs by engine.
+export function panelSections(kind, mods, type) {
   if (kind === 'restaurant') {
     const service = [
       mods.reservas && { to: '/panel/reservas', label: 'Reservas' },
@@ -30,15 +30,46 @@ export function panelSections(kind, mods) {
       { key: 'ajustes', label: 'Ajustes', icon: 'gear', to: '/panel/ajustes', tabs: [], match: ['/panel/mesas', '/panel/personalizar', '/panel/empezar'] },
     ];
   }
-  const beauty = kind === 'beauty';
   const flat = (key, label, icon, to, extra = {}) => ({ key, label, icon, to, tabs: [], ...extra });
+  const clients = { key: 'clientes', label: 'Clientes', icon: 'users', to: '/panel/clientes', tabs: [{ to: '/panel/clientes', label: 'Clientes' }, { to: '/panel/mensajes', label: 'Mensajes' }] };
+  const settings = flat('ajustes', 'Ajustes', 'gear', '/panel/ajustes', { match: ['/panel/personalizar', '/panel/empezar', '/panel/horario'] });
+  if (kind === 'shop') {
+    const catalog = [{ to: '/panel/carta', label: 'Productos' }, ...(type?.shop?.daily ? [{ to: '/panel/stock', label: 'Mostrador de hoy', isNew: true }] : [])];
+    return [
+      flat('hoy', 'Hoy', 'today', '/panel', { end: true }),
+      flat('servicio', 'Pedidos', 'bag', '/panel/reservas', { alerts: true }),
+      { key: 'carta', label: type?.shop?.noun || 'Catálogo', short: 'Catálogo', icon: 'tag', to: '/panel/carta', tabs: catalog.length > 1 ? catalog : [] },
+      clients,
+      settings,
+    ];
+  }
+  if (kind === 'classes') {
+    return [
+      flat('hoy', 'Hoy', 'today', '/panel', { end: true }),
+      flat('servicio', 'Reservas', 'calendar', '/panel/reservas', { alerts: true }),
+      { key: 'clases', label: 'Clases', icon: 'dumbbell', to: '/panel/clases', tabs: [{ to: '/panel/clases', label: 'Horario' }, { to: '/panel/carta', label: 'Tarifas' }] },
+      clients,
+      settings,
+    ];
+  }
+  if (kind === 'taxi') {
+    return [
+      flat('hoy', 'Hoy', 'today', '/panel', { end: true }),
+      flat('servicio', 'Viajes', 'taxi', '/panel/reservas', { alerts: true }),
+      flat('carta', 'Precios', 'tag', '/panel/carta'),
+      clients,
+      settings,
+    ];
+  }
+  const beauty = kind === 'beauty';
+  const nouns = type?.noun || { list: 'Servicios' };
   return [
-    flat('hoy', 'Resumen', 'chart', '/panel', { end: true }),
-    flat('servicio', 'Reservas', 'calendar', '/panel/reservas', { alerts: true }),
-    flat('carta', beauty ? 'Servicios' : 'Catálogo', beauty ? 'scissors' : 'book', '/panel/carta'),
-    ...(beauty ? [flat('horario', 'Horario y equipo', 'calendar', '/panel/horario')] : []),
-    flat('mensajes', 'Mensajes', 'chat', '/panel/mensajes'),
-    flat('ajustes', 'Ajustes', 'gear', '/panel/ajustes'),
+    flat('hoy', beauty ? 'Hoy' : 'Resumen', beauty ? 'today' : 'chart', '/panel', { end: true }),
+    flat('servicio', beauty ? 'Citas' : 'Reservas', 'calendar', '/panel/reservas', { alerts: true }),
+    flat('carta', beauty ? nouns.list : 'Catálogo', beauty ? type?.icon || 'scissors' : 'book', '/panel/carta', beauty ? { short: 'Servicios' } : {}),
+    ...(beauty ? [flat('horario', 'Horario y equipo', 'clock', '/panel/horario', { short: 'Horario' })] : []),
+    clients,
+    { ...settings, match: ['/panel/personalizar', '/panel/empezar'] },
   ];
 }
 

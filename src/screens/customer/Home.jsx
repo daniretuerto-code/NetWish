@@ -159,7 +159,7 @@ export default function Home() {
               <Link to="/explorar" className="small" style={{ fontWeight: 700, color: 'var(--muted)', textDecoration: 'none' }}>Ver todas</Link>
             </div>
             <div className="cat-wrap"><div className="cat-grid">
-              {CATEGORIES.map((c, i) => {
+              {CATEGORIES.filter((c) => !c.hidden || countIn(c.key)).map((c, i) => {
                 const n = countIn(c.key);
                 return (
                   <Link key={c.key} to={`/explorar?cat=${c.key}`} className="cat-tile" data-cat={c.key} style={{ '--i': i }}>

@@ -4,14 +4,21 @@ import { PageHeader, Skeleton } from '../../components/ui.jsx';
 import SectionTabs from '../../components/SectionTabs.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
-import { businessOrders, customerNotes, subscribe } from '../../lib/data.js';
+import { businessOrders, customerNotes, isPickup, STATUS, subscribe } from '../../lib/data.js';
 import { bookingsOf } from '../../lib/agenda.js';
 import { Customers, Stats } from './Reservations.jsx';
+
+// A shop's pickup orders count as visits, like a booking that turned up.
+const asVisit = (o) => (isPickup(o) ? {
+  ...o,
+  items: `Reserva · ${o.items}`,
+  status: o.status === STATUS.COLLECTED ? STATUS.DONE : [STATUS.CANCELLED, STATUS.REJECTED].includes(o.status) ? STATUS.CANCELLED : STATUS.CONFIRMED,
+} : o);
 
 // Everyone who has booked: visits, notes, allergies and birthdays.
 export default function Clients() {
   const { business } = useAuth();
-  const { data: orders, loading } = useAsync(() => businessOrders(business.name), [business.name]);
+  const { data: orders, loading } = useAsync(async () => (await businessOrders(business.name)).map(asVisit), [business.name]);
   const { data: profiles, setData: setProfiles } = useAsync(() => customerNotes(business.name), [business.name]);
   return (
     <div className="page">

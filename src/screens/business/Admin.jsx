@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import Icon from '../../components/Icon.jsx';
 import { Empty, Mono, PageHeader, Spinner, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
-import { adminOverview, announceLaunch, isAdmin, launchSignups, setBusinessStatus } from '../../lib/data.js';
+import { adminOverview, announceLaunch, demoBusinesses, isAdmin, launchSignups, setBusinessStatus, setDemoAs, setDemoVisibility } from '../../lib/data.js';
+import { typeOf } from '../../lib/businessTypes.js';
 import { grantAccess } from '../../lib/launch.js';
 import { timeAgo } from '../../lib/format.js';
 
@@ -19,8 +21,8 @@ export default function Admin() {
     if (!(await isAdmin())) return { denied: true };
     // The admin always sees the real app on this device, even before launch.
     grantAccess();
-    const [overview, signups] = await Promise.all([adminOverview(), launchSignups().catch(() => null)]);
-    return { ...overview, signups };
+    const [overview, signups, demos] = await Promise.all([adminOverview(), launchSignups().catch(() => null), demoBusinesses().catch(() => [])]);
+    return { ...overview, signups, demos };
   }, [user?.id]);
 
   if (!ready || (loading && !data)) return <Spinner />;
@@ -42,12 +44,15 @@ export default function Admin() {
     }
   };
 
-  const pending = data.pending.filter((b) => b.status === 'pending');
-  const rejected = data.pending.filter((b) => b.status === 'rejected');
+  const real = data.pending.filter((b) => !String(b.username || '').startsWith('demo-'));
+  const pending = real.filter((b) => b.status === 'pending');
+  const rejected = real.filter((b) => b.status === 'rejected');
 
   return (
     <div className="page" style={{ maxWidth: 900 }}>
       <PageHeader eyebrow="NetWish" title="Administración" right={<Link to="/" className="btn soft sm">Ir a la app</Link>} />
+
+      <DemoList demos={data.demos} reload={reload} />
 
       <section className="widget stack">
         <h2 className="title-lg">Negocios por aprobar</h2>
@@ -101,6 +106,63 @@ export default function Admin() {
         ))}
       </section>
     </div>
+  );
+}
+
+// One example business of each type, to see the customer page and open its panel.
+function DemoList({ demos, reload }) {
+  const toast = useToast();
+  const navigate = useNavigate();
+  const { refreshBusiness } = useAuth();
+  const [busy, setBusy] = useState(false);
+  if (!demos?.length) {
+    return (
+      <section className="widget stack">
+        <h2 className="title-lg">Negocios de ejemplo</h2>
+        <p className="small muted" style={{ margin: 0 }}>Aún no están creados. Pega en Supabase el archivo SQL «tiendas-y-mas-tipos.sql» y pulsa Run: aparecerán aquí.</p>
+      </section>
+    );
+  }
+  const visible = demos.some((b) => b.status === 'approved');
+  const open = async (b) => {
+    setDemoAs(b.username);
+    await refreshBusiness();
+    navigate('/panel');
+  };
+  const toggle = async () => {
+    setBusy(true);
+    try {
+      await setDemoVisibility(!visible);
+      toast(visible ? 'Ejemplos ocultos de la app' : 'Ejemplos visibles en la app');
+      reload();
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section className="widget stack" style={{ paddingBottom: 4 }}>
+      <div className="row between" style={{ gap: 10 }}>
+        <h2 className="title-lg">Negocios de ejemplo</h2>
+        <button className="btn soft sm" disabled={busy} onClick={toggle}>{visible ? 'Ocultar de la app' : 'Mostrar en la app'}</button>
+      </div>
+      <p className="small muted" style={{ margin: 0 }}>{visible ? 'Se ven en la app con la etiqueta «Ejemplo».' : 'Ocultos: solo los ves desde aquí.'} «Abrir panel» entra en su panel con tu cuenta; para volver, pulsa «Salir» arriba.</p>
+      {demos.map((b) => {
+        const t = typeOf(b);
+        return (
+          <div key={b.username} className="list-row" style={{ gap: 10, flexWrap: 'wrap' }}>
+            <span className="mono" style={{ background: 'var(--accent)', color: 'var(--ink)', flex: 'none' }}><Icon name={t.icon} size={18} /></span>
+            <span className="grow stack" style={{ gap: 1, minWidth: 140 }}>
+              <span className="t">{b.name}</span>
+              <span className="s">{t.label}</span>
+            </span>
+            <a className="btn soft sm" href={`/negocio/${encodeURIComponent(b.name)}`} target="_blank" rel="noreferrer">Ver como cliente</a>
+            <button className="btn primary sm" onClick={() => open(b)}>Abrir panel</button>
+          </div>
+        );
+      })}
+    </section>
   );
 }
 

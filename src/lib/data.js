@@ -13,9 +13,21 @@ const fail = (error) => {
 // ---------- Businesses ----------
 let businessCache = null;
 
+// `demo` marks the example businesses. Until the column exists the query goes without it.
+let hasDemo = true;
+const columns = (extra = '') => `${BUSINESS_COLUMNS}${hasDemo ? ', demo' : ''}${extra}`;
+async function selectBusinesses(build, extra) {
+  let res = await build(supabase.from('businesses').select(columns(extra)));
+  if (res.error && hasDemo && /demo/.test(res.error.message || '')) {
+    hasDemo = false;
+    res = await build(supabase.from('businesses').select(columns(extra)));
+  }
+  return res;
+}
+
 export async function listBusinesses({ fresh = false } = {}) {
   if (businessCache && !fresh) return businessCache;
-  const { data, error } = await supabase.from('businesses').select(BUSINESS_COLUMNS).eq('status', 'approved').order('name');
+  const { data, error } = await selectBusinesses((q) => q.eq('status', 'approved').order('name'));
   fail(error);
   const seen = new Set();
   businessCache = (data || []).filter((b) => {
@@ -33,7 +45,7 @@ export async function findBusiness(name) {
   const found = list.find((b) => normalize(b.name) === key) || list.find((b) => normalize(b.username) === key);
   if (found) return found;
   // A pending business is hidden from the directory but its owner can preview it.
-  const { data } = await supabase.from('businesses').select(BUSINESS_COLUMNS).ilike('name', escapeLike(name)).maybeSingle();
+  const { data } = await selectBusinesses((q) => q.ilike('name', escapeLike(name)).maybeSingle());
   return data || null;
 }
 
@@ -69,12 +81,42 @@ export async function setBusinessStatus(username, status) {
 
 export async function myBusiness(userId) {
   if (!userId) return null;
-  const { data, error } = await supabase
-    .from('businesses')
-    .select(`${BUSINESS_COLUMNS}, notification_email`)
-    .eq('owner_id', userId)
-    .maybeSingle();
+  // The admin can open the panel of an example business (see /admin).
+  const demo = demoAs();
+  if (demo) {
+    const { data } = await selectBusinesses((q) => q.eq('username', demo).eq('demo', true).maybeSingle(), ', notification_email');
+    if (data && (await isAdmin())) return { ...data, viewingDemo: true };
+    setDemoAs(null);
+  }
+  const { data, error } = await selectBusinesses((q) => q.eq('owner_id', userId).maybeSingle(), ', notification_email');
   fail(error);
+  return data;
+}
+
+// ---------- Example businesses ----------
+const DEMO_KEY = 'netwish.demoAs';
+export function demoAs() {
+  try { return localStorage.getItem(DEMO_KEY); } catch { return null; }
+}
+export function setDemoAs(username) {
+  try {
+    if (username) localStorage.setItem(DEMO_KEY, username);
+    else localStorage.removeItem(DEMO_KEY);
+  } catch { /* storage unavailable */ }
+}
+
+export async function demoBusinesses() {
+  if (!hasDemo) return [];
+  const { data, error } = await selectBusinesses((q) => q.eq('demo', true).order('created_at'), ', created_at');
+  if (error || !hasDemo) return [];
+  return data || [];
+}
+
+export async function setDemoVisibility(visible) {
+  const { data, error } = await supabase.rpc('set_demo_visibility', { p_visible: visible });
+  fail(error);
+  businessCache = null;
+  directoryCache = null;
   return data;
 }
 
@@ -115,6 +157,11 @@ export async function createProduct(product) {
   fail(error);
 }
 
+export async function updateProduct(id, patch) {
+  const { error } = await supabase.from('products').update(patch).eq('id', id);
+  fail(error);
+}
+
 export async function deleteProduct(id) {
   const { error } = await supabase.from('products').delete().eq('id', id);
   fail(error);
@@ -150,7 +197,7 @@ export async function getRestaurantSettings(businessName, kind) {
     .ilike('business_name', escapeLike(businessName))
     .maybeSingle();
   fail(error);
-  const defaults = kind === 'beauty' ? BEAUTY_SETTINGS : DEFAULT_SETTINGS;
+  const defaults = kind && kind !== 'restaurant' ? BEAUTY_SETTINGS : DEFAULT_SETTINGS;
   return {
     ...defaults,
     ...(data || {}),
@@ -222,7 +269,33 @@ export const STATUS = {
   NOSHOW: 'No vino',
   CANCELLED: 'Cancelado',
   REJECTED: 'Rechazado',
+  // Orders to pick up at a shop.
+  ORDERED: 'Pedido Recibido',
+  PREPARING: 'Preparando',
+  PICKUP: 'Listo para recoger',
+  COLLECTED: 'Recogido',
 };
+
+export const isPickup = (o) => /^Pedido para recoger/i.test(o?.items || '') || !!o?.pickup_code;
+
+// The customer's basket goes to the shop; the database checks prices and stock and keeps the items aside.
+export async function createPickupOrder({ business, lines, date, time, payment, name, email, phone, note }) {
+  const { data, error } = await supabase.rpc('create_pickup_order', {
+    p_business: business,
+    p_lines: lines.map((l) => ({ id: l.pid, qty: l.qty, variant: l.variant || null })),
+    p_date: date,
+    p_time: time,
+    p_payment: payment,
+    p_name: name,
+    p_email: email,
+    p_phone: phone || null,
+    p_note: note || null,
+  });
+  if (error && /create_pickup_order/.test(error.message || '')) throw new Error('Esta tienda aún no recibe pedidos online. Llámala o escríbele.');
+  fail(error);
+  notifyOrder(data.id, 'created');
+  return data;
+}
 
 export const isReservation = (o) => {
   const s = normalize(`${o.items} ${o.status}`);
@@ -589,4 +662,15 @@ export async function announceLaunch({ subject, body }) {
   const out = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(out.error || 'No se pudo enviar');
   return out;
+}
+
+// A booking request from the public page, with or without an account. Returns { id, status, token }.
+export async function requestBooking({ business, user, guest, itemsText, date, time, total = 0 }) {
+  if (user) {
+    const order = await createOrder({ business, user, items: [], itemsText, total, date, time, status: STATUS.PENDING, phone: guest?.phone?.trim() || undefined });
+    // The database may have confirmed it on the spot (a class with places left).
+    const state = await bookingState(order.id);
+    return { id: order.id, ...state };
+  }
+  return createGuestBooking({ business, name: guest.name.trim(), email: guest.email.trim(), phone: guest.phone?.trim(), itemsText, date, time });
 }

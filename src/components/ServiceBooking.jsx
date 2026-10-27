@@ -3,7 +3,10 @@ import { Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
 import { Empty, Sheet, useToast } from './ui.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { createOrder, reservationsOn, STATUS } from '../lib/data.js';
+import { requestBooking, reservationsOn, STATUS } from '../lib/data.js';
+import { nounsOf, typeOf } from '../lib/businessTypes.js';
+import { saveGuest } from '../lib/guest.js';
+import GuestFields, { useGuest } from './GuestFields.jsx';
 import { HAIR_LENGTHS, isClosed, nextDays, serviceMinutes, serviceSlots } from '../lib/booking.js';
 import { duration, minutesToTime, money, timeToMinutes, todayISO } from '../lib/format.js';
 
@@ -24,6 +27,8 @@ function BookSheet({ open, onClose, biz, settings, services }) {
   const [bookings, setBookings] = useState([]);
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [guest, setGuest] = useGuest();
+  const type = typeOf(biz);
 
   useEffect(() => {
     if (!open) return;
@@ -37,7 +42,8 @@ function BookSheet({ open, onClose, biz, settings, services }) {
   const slots = serviceSlots(settings, date, minutes, bookings, who);
   const chosen = slots.find((s) => s.time === time && s.free);
 
-  const submit = async () => {
+  const submit = async (e) => {
+    e?.preventDefault();
     if (!chosen) return;
     setSaving(true);
     try {
@@ -46,17 +52,18 @@ function BookSheet({ open, onClose, biz, settings, services }) {
       if (needsLength) parts.push(`Pelo ${HAIR_LENGTHS.find((h) => h.key === hair).label.toLowerCase()}`);
       // The note goes last: the public list of busy slots cuts everything after it.
       if (note.trim()) parts.push(`Nota: ${note.trim().slice(0, 240)}`);
-      await createOrder({
+      const res = await requestBooking({
         business: biz.name,
         user,
-        items: [],
+        guest,
         itemsText: parts.join(' · '),
         total,
         date,
         time: `${time} - ${minutesToTime(timeToMinutes(time) + minutes)}`,
-        status: STATUS.PENDING,
       });
-      setDone(true);
+      if (!user) saveGuest({ name: guest.name.trim(), email: guest.email.trim(), phone: guest.phone.trim() });
+      else if (guest.phone) saveGuest({ phone: guest.phone.trim() });
+      setDone(res.status === STATUS.CONFIRMED ? 'confirmed' : 'pending');
     } catch (e) {
       toast(e.message, 'error');
     } finally {
@@ -67,21 +74,16 @@ function BookSheet({ open, onClose, biz, settings, services }) {
   const chip = (on) => ({ background: on ? undefined : 'var(--bg)' });
 
   return (
-    <Sheet open={open} onClose={onClose} title={done ? 'Cita solicitada' : 'Elige tu hora'}>
-      {!user ? (
-        <div className="stack">
-          <p className="muted">Inicia sesión para reservar, así {biz.name} puede confirmarte la cita por correo.</p>
-          <Link to="/cuenta" className="btn primary block">Iniciar sesión</Link>
-        </div>
-      ) : done ? (
+    <Sheet open={open} onClose={onClose} title={done === 'confirmed' ? 'Cita confirmada' : done ? 'Cita solicitada' : 'Elige tu hora'}>
+      {done ? (
         <div className="stack" style={{ alignItems: 'center', textAlign: 'center', padding: '12px 0' }}>
           <span className="mono lg" style={{ background: 'var(--accent)', color: 'var(--ink)' }}><Icon name="check" size={30} stroke={3} /></span>
-          <p style={{ fontSize: 17, fontWeight: 700 }}>{biz.name} revisará tu cita</p>
-          <p className="muted">Te avisaremos por correo cuando la confirme.</p>
-          <Link to="/reservas" className="btn primary block">Ver mis reservas</Link>
+          <p style={{ fontSize: 17, fontWeight: 700 }}>{done === 'confirmed' ? `${biz.name} te espera` : `${biz.name} revisará tu cita`}</p>
+          <p className="muted">{done === 'confirmed' ? 'Te hemos mandado la confirmación por correo.' : 'Te avisaremos por correo cuando la confirme.'}</p>
+          {user && <Link to="/reservas" className="btn primary block">Ver mis reservas</Link>}
         </div>
       ) : (
-        <div className="stack">
+        <form className="stack" onSubmit={submit}>
           <div className="widget stack" style={{ gap: 6 }}>
             {services.map((s) => (
               <div key={s.id} className="row between" style={{ gap: 10 }}>
@@ -100,7 +102,7 @@ function BookSheet({ open, onClose, biz, settings, services }) {
               <span className="eyebrow">Largo del pelo</span>
               <div className="chips">
                 {HAIR_LENGTHS.map((h) => (
-                  <button key={h.key} className={`chip ${hair === h.key ? 'on' : ''}`} style={chip(hair === h.key)} onClick={() => { setHair(h.key); setTime(''); }}>{h.label}</button>
+                  <button type="button" key={h.key} className={`chip ${hair === h.key ? 'on' : ''}`} style={chip(hair === h.key)} onClick={() => { setHair(h.key); setTime(''); }}>{h.label}</button>
                 ))}
               </div>
             </div>
@@ -108,11 +110,11 @@ function BookSheet({ open, onClose, biz, settings, services }) {
 
           {staff.length > 1 && (
             <div className="widget stack" style={{ gap: 10 }}>
-              <span className="eyebrow">Profesional</span>
+              <span className="eyebrow">{type.car ? 'Puesto' : 'Profesional'}</span>
               <div className="chips">
-                <button className={`chip ${!who ? 'on' : ''}`} style={chip(!who)} onClick={() => { setWho(''); setTime(''); }}>Sin preferencia</button>
+                <button type="button" className={`chip ${!who ? 'on' : ''}`} style={chip(!who)} onClick={() => { setWho(''); setTime(''); }}>Sin preferencia</button>
                 {staff.map((p) => (
-                  <button key={p.name} className={`chip ${who === p.name ? 'on' : ''}`} style={chip(who === p.name)} onClick={() => { setWho(p.name); setTime(''); }}>{p.name}</button>
+                  <button type="button" key={p.name} className={`chip ${who === p.name ? 'on' : ''}`} style={chip(who === p.name)} onClick={() => { setWho(p.name); setTime(''); }}>{p.name}</button>
                 ))}
               </div>
             </div>
@@ -125,7 +127,7 @@ function BookSheet({ open, onClose, biz, settings, services }) {
                 const closed = isClosed(settings, d.iso);
                 const on = date === d.iso;
                 return (
-                  <button key={d.iso} disabled={closed} onClick={() => { setDate(d.iso); setTime(''); }} className="stack" aria-label={`${d.weekday} ${d.day}${closed ? ', cerrado' : ''}`}
+                  <button type="button" key={d.iso} disabled={closed} onClick={() => { setDate(d.iso); setTime(''); }} className="stack" aria-label={`${d.weekday} ${d.day}${closed ? ', cerrado' : ''}`}
                     style={{ flex: '0 0 auto', alignItems: 'center', gap: 2, width: 52, padding: '8px 0', borderRadius: 16, border: 0, background: on ? 'var(--ink)' : 'var(--bg)', color: on ? '#fff' : closed ? '#B5B1A8' : 'var(--ink)' }}>
                     <span className="small" style={{ opacity: 0.7 }}>{d.weekday}</span>
                     <span style={{ fontSize: 18, fontWeight: 800 }}>{d.day}</span>
@@ -138,7 +140,7 @@ function BookSheet({ open, onClose, biz, settings, services }) {
             {slots.some((s) => s.free) ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8 }}>
                 {slots.filter((s) => s.free).map((s) => (
-                  <button key={s.time} onClick={() => setTime(s.time)} className="pill" style={{ minWidth: 0, height: 40, background: time === s.time ? 'var(--ink)' : 'var(--bg)', color: time === s.time ? '#fff' : 'var(--ink)' }}>
+                  <button type="button" key={s.time} onClick={() => setTime(s.time)} className="pill" style={{ minWidth: 0, height: 40, background: time === s.time ? 'var(--ink)' : 'var(--bg)', color: time === s.time ? '#fff' : 'var(--ink)' }}>
                     {s.time}
                   </button>
                 ))}
@@ -149,14 +151,17 @@ function BookSheet({ open, onClose, biz, settings, services }) {
           </div>
 
           <div className="field">
-            <label htmlFor="bk-note">Algo que deba saber {biz.name} (opcional)</label>
-            <textarea id="bk-note" className="input" rows={2} maxLength={240} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ej.: quiero tapar canas, es mi primera vez…" />
+            <label htmlFor="bk-note">{type.car ? 'Coche y matrícula' : `Algo que deba saber ${biz.name}`}{type.car ? '' : ' (opcional)'}</label>
+            <textarea id="bk-note" className="input" rows={2} maxLength={240} required={!!type.car} value={note} onChange={(e) => setNote(e.target.value)}
+              placeholder={type.car ? 'Ej.: Seat León 2017, 1234 KLM. Hace un ruido al frenar.' : type.key === 'salud' ? 'Ej.: dolor de espalda desde hace una semana, primera visita…' : type.key === 'mascotas' ? 'Ej.: Luna, caniche de 6 kg, un poco nerviosa' : 'Ej.: quiero tapar canas, es mi primera vez…'} />
           </div>
 
-          <button className="btn primary block" disabled={!chosen || saving} onClick={submit}>
+          <GuestFields guest={guest} setGuest={setGuest} prefix="bk" />
+
+          <button type="submit" className="btn primary block" disabled={!chosen || saving}>
             {saving ? 'Enviando…' : chosen ? `Reservar a las ${time}${chosen.staff && staff.length > 1 ? ` con ${chosen.staff}` : ''}` : 'Elige una hora'}
           </button>
-        </div>
+        </form>
       )}
     </Sheet>
   );
@@ -177,7 +182,7 @@ export default function ServiceBooking({ biz, services, settings }) {
   }, [services]);
 
   if (!services.length) {
-    return <div className="widget"><Empty icon="scissors" title="Aún no hay servicios">Este negocio todavía no ha publicado sus servicios. Puedes llamar o escribirle.</Empty></div>;
+    return <div className="widget"><Empty icon={typeOf(biz).icon} title={`Aún no hay ${nounsOf(biz).list.toLowerCase()}`}>Este negocio todavía no los ha publicado. Puedes llamar o escribirle.</Empty></div>;
   }
 
   const chosen = services.filter((s) => picked.includes(s.id));
@@ -186,7 +191,7 @@ export default function ServiceBooking({ biz, services, settings }) {
 
   return (
     <>
-      <p className="small muted" style={{ margin: '0 4px' }}>Elige uno o varios servicios y te mostramos las horas en las que cabe todo.</p>
+      <p className="small muted" style={{ margin: '0 4px' }}>Elige uno o varios {nounsOf(biz).list.toLowerCase()} y te mostramos las horas en las que cabe todo.</p>
       <div className="menu-grid" id="servicios">
         {sections.map(([section, items]) => (
           <section key={section} className="widget" style={{ paddingBottom: 4 }}>
@@ -215,7 +220,7 @@ export default function ServiceBooking({ biz, services, settings }) {
       {chosen.length > 0 && (
         <button className="cta-bar" onClick={() => setOpen(true)}>
           <span style={{ fontSize: 16, fontWeight: 800 }}>
-            {chosen.length} {chosen.length === 1 ? 'servicio' : 'servicios'} <span style={{ fontWeight: 400, opacity: 0.6 }}>· {duration(minutes)}</span>
+            {chosen.length} {chosen.length === 1 ? 'elegido' : 'elegidos'} <span style={{ fontWeight: 400, opacity: 0.6 }}>· {duration(minutes)}</span>
           </span>
           <span className="go">Elegir hora</span>
         </button>

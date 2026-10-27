@@ -10,7 +10,9 @@ import { safeSlug, updateBusiness, uploadPublicFile } from '../../lib/data.js';
 import { kindOf } from '../../lib/categories.js';
 import { businessUrl } from '../../lib/qr.js';
 import { normalize, toneFor } from '../../lib/format.js';
-import { profileProgress, RESTAURANT_SECTIONS, sectionProgress } from '../../lib/questionnaire.js';
+import { profileProgress, sectionProgress } from '../../lib/questionnaire.js';
+import { sectionsFor } from '../../lib/typeQuestions.js';
+import { typeOf } from '../../lib/businessTypes.js';
 
 const MAX_IMAGE_MB = 8;
 
@@ -24,7 +26,7 @@ function BusinessQrSheet({ open, onClose, business }) {
       <div className="stack printable" style={{ alignItems: 'center', textAlign: 'center' }}>
         <div className="qr-box">{src ? <img src={src} alt="Código QR de tu negocio" /> : <div className="spinner" />}</div>
         <strong style={{ fontSize: 22 }}>Reserva en {business.name}</strong>
-        <span className="small muted">Escanea para ver {kindOf(business) === 'restaurant' ? 'la carta y reservar mesa' : 'nuestros servicios y reservar'}</span>
+        <span className="small muted">Escanea para ver {kindOf(business) === 'restaurant' ? 'la carta y reservar mesa' : kindOf(business) === 'shop' ? 'la tienda y reservar para recoger' : 'nuestros servicios y reservar'}</span>
       </div>
       <button className="btn primary block" style={{ marginTop: 14 }} onClick={() => window.print()}><Icon name="printer" size={18} /> Imprimir</button>
     </Sheet>
@@ -89,8 +91,11 @@ export default function Settings() {
 
   const toForm = () => { setQ(''); setTimeout(() => document.getElementById('s-addr')?.focus(), 50); };
   const answers = settings?.profile || {};
-  const pct = isRestaurant ? profileProgress(answers) : 100;
-  const sections = isRestaurant ? RESTAURANT_SECTIONS.filter((x) => !x.when || x.when(answers)) : [];
+  const allSections = sectionsFor(business);
+  const pct = profileProgress(answers, allSections);
+  const sections = allSections.filter((x) => !x.when || x.when(answers));
+  const type = typeOf(business);
+  const yours = isRestaurant ? 'Tu restaurante' : kind === 'shop' ? 'Tu tienda' : kind === 'taxi' ? 'Tu taxi' : kind === 'classes' ? 'Tu centro' : 'Tu negocio';
 
   // Every setting as one row, so the search finds it by name or by any of its questions.
   const rows = [
@@ -98,16 +103,19 @@ export default function Settings() {
     ...sections.map((x) => {
       const p = sectionProgress(x, answers);
       return {
-        group: 'Tu restaurante', label: x.title, sub: x.intro, to: x.onboarding ? '/panel/empezar' : `/panel/personalizar/${x.key}`,
+        group: yours, label: x.title, sub: x.intro, to: x.onboarding ? '/panel/empezar' : `/panel/personalizar/${x.key}`,
         keys: x.questions.map((qq) => `${qq.label} ${qq.help || ''}`).join(' '),
         badge: p.done >= p.total ? 'check' : `${p.done}/${p.total}`,
       };
     }),
     ...(isRestaurant && (modules?.reservas || modules?.pedidosQr) ? [{ group: 'Tu restaurante', icon: 'grid', label: 'Tu sala', sub: 'Plano, zonas, mesas, terraza y QR de cada mesa', keys: 'sala mesas plano zonas terraza qr decorado', to: '/panel/mesas' }] : []),
-    ...(kind === 'beauty' ? [{ group: 'Tu negocio', icon: 'calendar', label: 'Horario y equipo', keys: 'horario equipo profesionales', to: '/panel/horario' }] : []),
+    ...(kind === 'beauty' ? [{ group: yours, icon: 'calendar', label: 'Horario y equipo', keys: 'horario equipo profesionales', to: '/panel/horario' }] : []),
+    ...(kind === 'shop' || kind === 'classes' || kind === 'taxi' ? [{ group: yours, icon: 'clock', label: 'Horario', sub: 'Horas de apertura y días que cierras', keys: 'horario apertura cierre dias', to: '/panel/horario' }] : []),
+    ...(type.shop?.daily ? [{ group: yours, icon: 'flame', label: 'Mostrador de hoy y hornadas', sub: 'Lo que queda hoy, agotados y horas de horno', keys: 'stock mostrador hornadas agotado', to: '/panel/stock' }] : []),
+    ...(kind === 'classes' ? [{ group: yours, icon: 'dumbbell', label: 'Horario de clases', keys: 'clases horario plazas profesores', to: '/panel/clases' }] : []),
     ...(!isRestaurant ? [
       { group: 'Compartir', icon: 'qr', label: 'QR para el escaparate o el mostrador', keys: 'qr imprimir', run: () => setPayOpen(true) },
-      ...(business.username ? [{ group: 'Compartir', icon: 'link', label: 'Copiar mi enlace de reservas', keys: 'enlace link', run: () => navigator.clipboard?.writeText(`${window.location.origin}/r/${business.username}`).then(() => toast('Enlace de reservas copiado')) }] : []),
+      ...(business.username ? [{ group: 'Compartir', icon: 'link', label: kind === 'shop' ? 'Copiar el enlace de mi tienda' : 'Copiar mi enlace de reservas', keys: 'enlace link', run: () => navigator.clipboard?.writeText(`${window.location.origin}/r/${business.username}`).then(() => toast('Enlace de reservas copiado')) }] : []),
     ] : []),
     { group: 'Cuenta', icon: 'store', label: 'Ver mi página como cliente', keys: 'pagina publica', href: businessUrl(business.name) },
     { group: 'Cuenta', icon: 'logout', label: 'Cerrar sesión', keys: 'salir', run: () => signOut().then(() => navigate('/negocios')), plain: true },
@@ -146,7 +154,7 @@ export default function Settings() {
     return (
       <section key={g} className="stack" style={{ gap: 6 }}>
         <span className="eyebrow" style={{ padding: '0 6px' }}>{g}</span>
-        {g === 'Tu restaurante' && !query && (
+        {g === yours && !query && (
           <div className="widget dark row" style={{ gap: 16 }}>
             <Ring value={pct / 100} color="var(--accent)" label={`Perfil completado al ${pct} %`} />
             <span className="stack" style={{ gap: 2 }}>
@@ -203,7 +211,7 @@ export default function Settings() {
             <div className="field"><label htmlFor="s-addr">Dirección</label><input id="s-addr" className="input" value={form.address} onChange={set('address')} placeholder="Calle Mayor 1, Palencia" /></div>
             <div className="field"><label htmlFor="s-tel">Teléfono</label><input id="s-tel" className="input" type="tel" value={form.telefono} onChange={set('telefono')} /></div>
             <div className="field">
-              <label htmlFor="s-mail">Correo para avisos de reservas</label>
+              <label htmlFor="s-mail">Correo para avisos de reservas y pedidos</label>
               <input id="s-mail" className="input" type="email" value={form.notification_email} onChange={set('notification_email')} placeholder="reservas@tunegocio.es" />
             </div>
             <button className="btn primary block" disabled={busy}>{busy ? 'Guardando…' : 'Guardar'}</button>

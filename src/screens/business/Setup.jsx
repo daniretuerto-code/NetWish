@@ -4,7 +4,8 @@ import Icon from '../../components/Icon.jsx';
 import { Skeleton, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { saveRestaurantSettings } from '../../lib/data.js';
-import { isAnswered, RESTAURANT_SECTIONS, settingsFromProfile, visibleQuestions } from '../../lib/questionnaire.js';
+import { isAnswered, settingsFromProfile, visibleQuestions } from '../../lib/questionnaire.js';
+import { sectionsFor, settingsFromAnswers } from '../../lib/typeQuestions.js';
 
 function Option({ on, onClick, children }) {
   return (
@@ -100,7 +101,7 @@ function Wizard({ section, onboarding }) {
     setSaving(true);
     try {
       const profile = { ...final, ...(onboarding ? { onboarded: true } : {}) };
-      const patch = section.onboarding ? settingsFromProfile(profile, settings) : {};
+      const patch = section.onboarding ? settingsFromAnswers(business, profile, settings) || settingsFromProfile(profile, settings) : {};
       await saveRestaurantSettings(business.name, { ...patch, profile });
       await reloadSettings();
       toast(onboarding ? '¡Tu panel está listo!' : 'Guardado');
@@ -155,14 +156,16 @@ function Wizard({ section, onboarding }) {
 
 export function Onboarding() {
   const { settings } = useOutletContext();
+  const { business } = useAuth();
   if (!settings) return <Skeleton />;
-  return <Wizard section={RESTAURANT_SECTIONS[0]} onboarding={!settings.profile?.onboarded} />;
+  return <Wizard section={sectionsFor(business)[0]} onboarding={!settings.profile?.onboarded} />;
 }
 
 export function SectionWizard() {
   const { key } = useParams();
   const { settings } = useOutletContext();
-  const section = RESTAURANT_SECTIONS.find((s) => s.key === key);
+  const { business } = useAuth();
+  const section = sectionsFor(business).find((s) => s.key === key);
   if (!settings) return <Skeleton />;
   if (!section) return <Navigate to="/panel/ajustes" replace />;
   return <Wizard section={section} />;
