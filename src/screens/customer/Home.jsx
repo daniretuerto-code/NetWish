@@ -5,7 +5,7 @@ import { BusinessRow, CoverCard, PlaceInfo, placeSummary } from '../../component
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { directory, myOrders, isReservation, restaurantsToday, STATUS } from '../../lib/data.js';
-import { CATEGORIES, kindOf } from '../../lib/categories.js';
+import { CATEGORIES, categoryOf, kindOf } from '../../lib/categories.js';
 import { initials, longDate, money, timeToMinutes } from '../../lib/format.js';
 import { openState } from '../../lib/hours.js';
 import { isClosed } from '../../lib/booking.js';
@@ -63,7 +63,7 @@ function TodayInPalencia() {
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const tonight = list.filter(({ settings }) => settings.dinner_start && settings.dinner_end && nowMin < timeToMinutes(settings.dinner_end) - 60);
   return (
-    <section className="widget stack" style={{ gap: 10 }}>
+    <section className="widget stack home-today" style={{ gap: 10 }}>
       <span className="stack" style={{ gap: 0 }}>
         <span className="eyebrow">Hoy en Palencia</span>
         <h2 className="title-lg">¿Dónde comemos?</h2>
@@ -118,9 +118,10 @@ export default function Home() {
   const featured = pick?.biz;
   const featuredSum = pick ? placeSummary(pick.biz, pick.settings) : null;
   const rest = list.filter((b) => b !== featured);
+  const countIn = (key) => list.filter((b) => categoryOf(b).key === key).length;
 
   return (
-    <div className="page">
+    <div className="page home">
       <div className="row" style={{ alignItems: 'flex-end', padding: '0 4px' }}>
         <div className="grow stack" style={{ gap: 2 }}>
           <span className="eyebrow">{longDate()}</span>
@@ -134,7 +135,7 @@ export default function Home() {
       {loading && <Spinner />}
       {error && <Empty icon="store" title="No hemos podido cargar los comercios">Revisa tu conexión y vuelve a intentarlo.</Empty>}
 
-      <div className="two-col">
+      <div className="two-col home-cols">
         <div className="stack">
           {featured && <CoverCard featured minHeight={240} biz={featured} eyebrow="Destacado hoy" info={<PlaceInfo state={featuredSum.state} line={featuredSum.line} />} cta={featuredSum.canBook ? 'Reservar' : 'Ver'} to={featuredSum.canBook ? `/negocio/${encodeURIComponent(featured.name)}?reservar=1` : undefined} />}
 
@@ -153,26 +154,33 @@ export default function Home() {
         <div className="stack">
           <TodayInPalencia />
           <div className="widget">
-            <div className="row between" style={{ marginBottom: 8 }}>
+            <div className="row between" style={{ marginBottom: 10 }}>
               <h2 className="title-lg">Categorías</h2>
+              <Link to="/explorar" className="small" style={{ fontWeight: 700, color: 'var(--muted)', textDecoration: 'none' }}>Ver todas</Link>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
-              {CATEGORIES.map((c) => (
-                <Link key={c.key} to={`/explorar?cat=${c.key}`} className="stack" style={{ alignItems: 'center', gap: 6, padding: '12px 4px', borderRadius: 18, background: 'var(--bg)', textDecoration: 'none' }}>
-                  <Icon name={c.icon} size={24} />
-                  <span style={{ fontSize: 13, fontWeight: 600 }}>{c.label}</span>
-                </Link>
-              ))}
-            </div>
+            <div className="cat-wrap"><div className="cat-grid">
+              {CATEGORIES.map((c, i) => {
+                const n = countIn(c.key);
+                return (
+                  <Link key={c.key} to={`/explorar?cat=${c.key}`} className="cat-tile" data-cat={c.key} style={{ '--i': i }}>
+                    <span className="cat-ico"><Icon name={c.icon} size={22} stroke={2.2} /></span>
+                    <span className="cat-name">{c.label}</span>
+                    {places && <span className="cat-count">{n ? `${n} ${n === 1 ? 'sitio' : 'sitios'}` : 'Pronto'}</span>}
+                  </Link>
+                );
+              })}
+            </div></div>
           </div>
 
           {rest.length > 0 && (
-            <div className="widget" style={{ paddingBottom: 6 }}>
+            <div className="widget home-list" style={{ paddingBottom: 6 }}>
               <div className="row between">
                 <h2 className="title-lg">En NetWish</h2>
                 <Link to="/explorar" className="small" style={{ fontWeight: 700, color: 'var(--muted)', textDecoration: 'none' }}>Ver todo</Link>
               </div>
-              {rest.slice(0, 5).map((b) => <BusinessRow key={b.username || b.name} biz={b} />)}
+              <div className="home-list-rows">
+                {rest.slice(0, 8).map((b) => <BusinessRow key={b.username || b.name} biz={b} />)}
+              </div>
             </div>
           )}
         </div>
