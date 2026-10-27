@@ -13,6 +13,16 @@ import { eventDay, upcomingEvents } from '../../lib/events.js';
 import { mapsUrl, openState, shiftsOf, weekHours } from '../../lib/hours.js';
 import { isClosed } from '../../lib/booking.js';
 
+async function shareBiz(biz) {
+  const url = window.location.href.split('?')[0];
+  try {
+    if (navigator.share) await navigator.share({ title: biz.name, text: `${biz.name} en NetWish`, url });
+    else await navigator.clipboard.writeText(url);
+  } catch {
+    // Closed the share sheet.
+  }
+}
+
 function Hero({ biz, state, sub }) {
   return (
     <header className="hero" style={{ background: toneFor(biz.name) }}>
@@ -26,6 +36,7 @@ function Hero({ biz, state, sub }) {
       )}
       <div className="hero-actions">
         <BackButton glass />
+        <button className="icon-btn glass" onClick={() => shareBiz(biz)} aria-label="Compartir"><Icon name="share" size={20} /></button>
       </div>
       <span className="eyebrow">{biz.category || categoryOf(biz).label}</span>
       <h1>{biz.name}</h1>
@@ -166,22 +177,12 @@ function DailyMenu({ menu }) {
 }
 
 function Actions({ biz, booksService }) {
-  const share = async () => {
-    const url = window.location.href.split('?')[0];
-    try {
-      if (navigator.share) await navigator.share({ title: biz.name, text: `${biz.name} en NetWish`, url });
-      else await navigator.clipboard.writeText(url);
-    } catch {
-      // Closed the share sheet.
-    }
-  };
   return (
     <div className="actions">
-      {booksService && <a className="action dark" href="#servicios"><Icon name="calendar" size={22} />Pedir cita</a>}
-      {biz.telefono && <a className="action" href={`tel:${biz.telefono}`}><Icon name="phone" size={22} />Llamar</a>}
-      <a className="action" href={mapsUrl(biz)} target="_blank" rel="noreferrer"><Icon name="pin" size={22} />Cómo llegar</a>
-      <Link className="action" to={`/chat/${encodeURIComponent(biz.name)}`}><Icon name="chat" size={22} />Escribir</Link>
-      <button className="action" onClick={share}><Icon name="share" size={22} />Compartir</button>
+      {booksService && <a className="action dark" href="#servicios"><Icon name="calendar" size={20} />Pedir cita</a>}
+      {biz.telefono && <a className="action" href={`tel:${biz.telefono}`}><Icon name="phone" size={20} />Llamar</a>}
+      <a className="action" href={mapsUrl(biz)} target="_blank" rel="noreferrer"><Icon name="pin" size={20} />Cómo llegar</a>
+      <Link className="action" to={`/chat/${encodeURIComponent(biz.name)}`}><Icon name="chat" size={20} />Escribir</Link>
     </div>
   );
 }
@@ -241,25 +242,9 @@ function BookCard({ biz, settings, onBook }) {
   );
 }
 
-function MenuTeaser({ menu, onOpen }) {
-  return (
-    <button className="widget menu-teaser" onClick={onOpen}>
-      <span className="mono" style={{ background: 'var(--accent)', color: 'var(--ink)' }}><Icon name="utensils" size={20} /></span>
-      <span className="grow stack" style={{ gap: 1, minWidth: 0 }}>
-        <span className="row between" style={{ gap: 8 }}>
-          <strong style={{ fontSize: 16 }}>Menú del día</strong>
-          {Number(menu.price) > 0 && <strong className="price" style={{ fontSize: 16 }}>{money(menu.price)}</strong>}
-        </span>
-        <span className="small muted" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[...(menu.first_courses || []), ...(menu.second_courses || [])].slice(0, 4).join(' · ')}</span>
-      </span>
-      <Icon name="chevron" size={18} style={{ color: 'var(--muted)' }} />
-    </button>
-  );
-}
-
 export default function Business() {
   const { name } = useParams();
-  const [tab, setTab] = useState('carta');
+  const [picked, setTab] = useState(null);
   const [params, setParams] = useSearchParams();
   // The restaurant's short link (netwish.es/r/…) and the waiting-list e-mail (…&dia=&pax=) land here with the booking sheet open.
   const [reserveOpen, setReserveOpen] = useState(params.get('reservar') === '1');
@@ -303,6 +288,8 @@ export default function Business() {
   const menu = settings?.daily_menu;
   const menuToday = isRestaurant && mods.menuDia && menu && menu.active !== false && (menu.first_courses?.length || menu.second_courses?.length) && !isClosed(settings, todayISO());
   const events = isRestaurant ? upcomingEvents(settings?.profile?.eventos) : [];
+  // Today's menu opens first when there is one; it's what people come to check.
+  const tab = picked || (menuToday ? 'menu' : 'carta');
   const book = (guests) => {
     if (guests) setPax(String(guests));
     setReserveOpen(true);
@@ -316,16 +303,13 @@ export default function Business() {
   );
 
   const eventsCard = events.length > 0 && (
-    <div className="widget stack" style={{ gap: 4 }}>
-      <span className="eyebrow">Próximamente</span>
-      {events.slice(0, 4).map((ev) => {
+    <div className="widget" style={{ paddingTop: 6, paddingBottom: 6 }}>
+      {events.slice(0, 2).map((ev) => {
         // An event on a day the restaurant closes can't be booked online.
         const bookable = canBook && !isClosed(settings, ev.date);
         return (
           <button key={ev.id} className="list-row" disabled={!bookable} onClick={() => { setParams({ reservar: '1', dia: ev.date }, { replace: true }); setReserveOpen(true); }}>
-            <span className="stack" style={{ gap: 0, minWidth: 56, alignItems: 'center' }}>
-              <strong style={{ fontSize: 14 }}>{eventDay(ev.date)}</strong>
-            </span>
+            <span className="date-tile">{eventDay(ev.date)}</span>
             <span className="grow stack" style={{ gap: 0, minWidth: 0 }}>
               <span className="t">{ev.title}{ev.price ? ` · ${money(ev.price)}` : ''}</span>
               {ev.text && <span className="s">{ev.text}</span>}
@@ -368,26 +352,29 @@ export default function Business() {
 
         <div className="biz-layout">
           <div className="biz-main">
-            {badges && <div className="widget" style={{ padding: 14 }}>{badges}</div>}
-            {menuToday && tab !== 'menu' && <MenuTeaser menu={menu} onOpen={() => setTab('menu')} />}
             {eventsCard}
 
             <div className="segmented" role="tablist" aria-label="Secciones">
               <button role="tab" aria-selected={tab === 'carta'} onClick={() => setTab('carta')}>Carta</button>
               {mods.menuDia && <button role="tab" aria-selected={tab === 'menu'} onClick={() => setTab('menu')}>Menú del día</button>}
-              <button role="tab" aria-selected={tab === 'info'} onClick={() => setTab('info')}>Horario y mapa</button>
+              <button role="tab" aria-selected={tab === 'info'} onClick={() => setTab('info')}>Info</button>
             </div>
 
             {tab === 'carta' && <ProductList biz={biz} products={products} compact />}
             {mods.menuDia && tab === 'menu' && <DailyMenu menu={menu} />}
             {tab === 'info' && (
-              <InfoCard biz={biz} settings={settings} extra={settings.profile?.para_llevar && biz.telefono && <a className="btn soft block" href={`tel:${biz.telefono}`}>Llamar para pedir para llevar</a>} />
+              <InfoCard biz={biz} settings={settings} extra={(
+                <>
+                  {badges && <div style={{ marginTop: 6 }}>{badges}</div>}
+                  {settings.profile?.para_llevar && biz.telefono && <a className="btn soft block" href={`tel:${biz.telefono}`}>Llamar para pedir para llevar</a>}
+                </>
+              )} />
             )}
           </div>
 
           <aside className="biz-aside">
             {canBook && <BookCard biz={biz} settings={settings} onBook={book} />}
-            {tab !== 'info' && <div className="only-wide" style={{ flexDirection: 'column' }}><InfoCard biz={biz} settings={settings} /></div>}
+            {tab !== 'info' && <div className="only-wide" style={{ flexDirection: 'column' }}><InfoCard biz={biz} settings={settings} extra={badges && <div style={{ marginTop: 6 }}>{badges}</div>} /></div>}
           </aside>
         </div>
       </div>
