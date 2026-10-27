@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { cancelMyBooking, isReservation, myOrders, STATUS, subscribe } from '../../lib/data.js';
 import { money, todayISO } from '../../lib/format.js';
+import { guestBookings } from '../../components/ReserveSheet.jsx';
 
 const LABELS = {
   [STATUS.PAID]: { text: 'Pagado', tone: 'var(--accent)' },
@@ -96,12 +97,36 @@ export default function Orders() {
   }, [user, reload]);
 
   if (!user) {
+    // Bookings made without an account in this browser, soonest first.
+    const mine = guestBookings().filter((b) => (b.date || '') >= todayISO()).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
     return (
       <div className="page">
         <PageHeader eyebrow="Tu actividad" title="Reservas" />
+        {mine.length > 0 && (
+          <div className="widget dark stack">
+            <span className="eyebrow row" style={{ gap: 6 }}><Icon name="calendar" size={14} /> Próximas reservas</span>
+            {mine.map((b, i) => {
+              const { head } = bookingLines(b.items);
+              return (
+                <Link key={b.token} to={`/reserva/${b.token}`} className="row between" style={{ gap: 10, textDecoration: 'none', color: 'inherit', paddingTop: i ? 14 : 4, borderTop: i ? '1px solid rgba(255,255,255,.1)' : 0 }}>
+                  <span className="stack" style={{ gap: 2, minWidth: 0 }}>
+                    <strong style={{ fontSize: 17 }}>{b.business_name}</strong>
+                    <span className="small" style={{ opacity: 0.85, fontWeight: 600 }}>{dateLabel(b.date)} · {b.time}</span>
+                    <span className="small" style={{ opacity: 0.62 }}>{head}</span>
+                  </span>
+                  <span className="small" style={{ fontWeight: 800, color: 'var(--accent)', flex: 'none' }}>Ver o cambiar</span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
         <div className="widget">
-          <Empty icon="calendar" title="Inicia sesión para ver tus reservas">
-            <Link to="/cuenta" className="btn primary" style={{ marginTop: 8 }}>Entrar o crear cuenta</Link>
+          <Empty icon="calendar" title={mine.length ? 'Guarda todas tus reservas en un sitio' : 'Aquí verás tus reservas'}>
+            {mine.length ? 'Con una cuenta las ves en cualquier móvil y reservas en dos toques.' : 'Reserva sin registrarte desde la página de cualquier restaurante, o entra para verlas en todos tus dispositivos.'}
+            <span className="row" style={{ gap: 8, justifyContent: 'center', marginTop: 10, flexWrap: 'wrap' }}>
+              <Link to="/explorar?cat=rest" className="btn soft">Buscar restaurante</Link>
+              <Link to="/cuenta" className="btn primary">Entrar o crear cuenta</Link>
+            </span>
           </Empty>
         </div>
       </div>

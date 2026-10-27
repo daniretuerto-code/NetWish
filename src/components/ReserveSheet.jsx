@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet, useToast } from './ui.jsx';
 import Icon from './Icon.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -8,6 +8,7 @@ import { joinPairs, zoneOf, zoneOpenAt, zonesOf } from '../lib/floor.js';
 import { minutesToTime, timeToMinutes, todayISO } from '../lib/format.js';
 import { isClosed } from '../lib/booking.js';
 import { calendarLinks } from '../lib/calendar.js';
+import { mapsUrl } from '../lib/hours.js';
 
 export const DEFAULT_TABLES = [
   { table_number: 1, capacity: 2, zone: 'Sala Principal' },
@@ -62,6 +63,37 @@ const withoutOwn = (list, own) => {
 
 const shortDay = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' });
 
+const longDay = (iso) => {
+  if (iso === todayISO()) return 'Hoy';
+  if (iso === addDays(todayISO(), 1)) return 'Mañana';
+  const s = new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
+
+// Name, e-mail and phone typed last time, so the next booking is two taps.
+const GUEST_KEY = 'netwish.guest';
+const BOOKINGS_KEY = 'netwish.bookings';
+function readJSON(key, fallback) {
+  try {
+    return JSON.parse(localStorage.getItem(key)) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+function writeJSON(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Private mode: nothing to remember.
+  }
+}
+
+// Bookings made without an account live in this browser, so "Reservas" can show them.
+export const guestBookings = () => (readJSON(BOOKINGS_KEY, []) || []).filter((b) => b && b.token);
+function rememberBooking(b) {
+  writeJSON(BOOKINGS_KEY, [b, ...guestBookings().filter((x) => x.token !== b.token)].slice(0, 20));
+}
+
 // `initial` preselects day and party size (the waiting-list e-mail link); `change` turns the sheet
 // into "move my booking" for the booking behind that token.
 export default function ReserveSheet({ open, onClose, biz, settings, initial, change, onChanged }) {
@@ -87,14 +119,34 @@ export default function ReserveSheet({ open, onClose, biz, settings, initial, ch
   const groupFrom = Number(rules.grupo_desde) || 0;
   const lastDay = addDays(todayISO(), Number(rules.dias_vista) || 60);
 
-  const startDay = [change?.date, initial?.date].find((d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '') && d >= todayISO() && d <= lastDay) || todayISO();
+  const slotsFor = (day) => {
+    const now = new Date();
+    const block = blockFor(settings, day);
+    if (isClosed(settings, day) || day > lastDay || block.todo) return [];
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const startOf = (t) => new Date(`${day}T${t}:00`).getTime();
+    return [...slots(settings.lunch_start, settings.lunch_end), ...slots(settings.dinner_start, settings.dinner_end)]
+      .filter((t) => (day !== todayISO() || timeToMinutes(t) > nowMin) && startOf(t) - now.getTime() >= notice * 60000 && !block[slotShift(settings, t)]);
+  };
+
+  // Every bookable day from today to the last one the restaurant opens online.
+  const days = useMemo(() => {
+    const out = [];
+    for (let d = todayISO(); d <= lastDay && out.length < 92; d = addDays(d, 1)) out.push(d);
+    return out;
+  }, [lastDay]);
+  const validDay = (d) => /^\d{4}-\d{2}-\d{2}$/.test(d || '') && d >= todayISO() && d <= lastDay;
+  // Without a day asked for, start on the first one that still has times: never on a closed day.
+  const firstOpenDay = () => days.find((d) => slotsFor(d).length) || todayISO();
+  const startDay = [change?.date, initial?.date].find(validDay) || firstOpenDay();
   const startGuests = Number(/(\d+)\s*pax/i.exec(change?.items || '')?.[1]) || Number(initial?.guests) || 2;
   const startZone = /Mesas? [\d+]+ \(([^)]+)\)/.exec(change?.items || '')?.[1];
   const [date, setDate] = useState(startDay);
   const [guests, setGuests] = useState(Math.min(Math.max(1, startGuests), maxGuests));
   const [zone, setZone] = useState(zones.includes(startZone) ? startZone : zones[0]);
   const [time, setTime] = useState('');
-  const [guest, setGuest] = useState({ name: '', email: '', phone: '' });
+  const [step, setStep] = useState(1);
+  const [guest, setGuest] = useState(() => ({ name: '', email: '', phone: '', ...readJSON(GUEST_KEY, {}) }));
   const [occasions, setOccasions] = useState([]);
   const [extra, setExtra] = useState('');
   const [bookings, setBookings] = useState(null);
@@ -102,10 +154,22 @@ export default function ReserveSheet({ open, onClose, biz, settings, initial, ch
   const [waiting, setWaiting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(null);
-  // An event on the restaurant's page reopens the sheet on its day.
+  const stripRef = useRef(null);
+  // An event on the restaurant's page reopens the sheet on its day; a guest count from the page comes along too.
   useEffect(() => {
-    if (open && !change && /^\d{4}-\d{2}-\d{2}$/.test(initial?.date || '') && initial.date >= todayISO() && initial.date <= lastDay) setDate(initial.date);
-  }, [open, initial?.date]);
+    if (!open || change) return;
+    if (validDay(initial?.date)) setDate(initial.date);
+    if (Number(initial?.guests) > 0) setGuests(Math.min(Number(initial.guests), maxGuests));
+  }, [open, initial?.date, initial?.guests]);
+  useEffect(() => {
+    if (open) setStep(1);
+  }, [open]);
+  // Keep the chosen day in view in the strip.
+  useEffect(() => {
+    if (!open) return;
+    const el = stripRef.current?.querySelector('[aria-pressed="true"]');
+    el?.scrollIntoView?.({ block: 'nearest', inline: 'center' });
+  }, [open, date]);
 
   // A group bigger than the restaurant's limit for instant bookings, or than any table, goes in as a request.
   const isGroup = guests > biggest || (groupFrom > 0 && guests >= groupFrom);
@@ -118,16 +182,6 @@ export default function ReserveSheet({ open, onClose, biz, settings, initial, ch
       .then((list) => setBookings(change && date === change.date ? withoutOwn(list, change) : list))
       .catch(() => setBookings([]));
   }, [open, biz.name, date]);
-
-  const slotsFor = (day) => {
-    const now = new Date();
-    const block = blockFor(settings, day);
-    if (isClosed(settings, day) || day > lastDay || block.todo) return [];
-    const nowMin = now.getHours() * 60 + now.getMinutes();
-    const startOf = (t) => new Date(`${day}T${t}:00`).getTime();
-    return [...slots(settings.lunch_start, settings.lunch_end), ...slots(settings.dinner_start, settings.dinner_end)]
-      .filter((t) => (day !== todayISO() || timeToMinutes(t) > nowMin) && startOf(t) - now.getTime() >= notice * 60000 && !block[slotShift(settings, t)]);
-  };
 
   // The smallest free table that fits, or else two joinable tables together. Returns a list of tables.
   const tableFor = (list, slot) => {
@@ -144,27 +198,39 @@ export default function ReserveSheet({ open, onClose, biz, settings, initial, ch
     && (isGroup ? tables.some((t) => zoneOpenAt(zoneInfo(zoneOf(t)), slot)) : !!tableFor(list, slot));
 
   const daySlots = useMemo(() => slotsFor(date), [settings, date, notice, lastDay]);
-  const freeCount = bookings ? daySlots.filter((t) => isFree(bookings, t)).length : null;
+  const freeSlots = bookings ? daySlots.filter((t) => isFree(bookings, t)) : [];
+  const freeCount = bookings ? freeSlots.length : null;
+  const byShift = (list, shift) => list.filter((t) => slotShift(settings, t) === shift);
 
-  // Nothing free that day: look at the next week for the closest free times.
+  // Nothing free that day: look at the next week for the closest free times, lunch and dinner alike.
   useEffect(() => {
     setSuggestions(null);
     if (!open || freeCount !== 0) return;
     let alive = true;
-    const days = Array.from({ length: 7 }, (_, i) => addDays(date, i + 1)).filter((d) => d <= lastDay && slotsFor(d).length);
-    Promise.all(days.map((d) => reservationsOn(biz.name, d).then((list) => ({ d, list })).catch(() => ({ d, list: [] }))))
+    const next = Array.from({ length: 7 }, (_, i) => addDays(date, i + 1)).filter((d) => d <= lastDay && slotsFor(d).length);
+    Promise.all(next.map((d) => reservationsOn(biz.name, d).then((list) => ({ d, list })).catch(() => ({ d, list: [] }))))
       .then((res) => {
         if (!alive) return;
-        setSuggestions(res.map(({ d, list }) => ({ d, times: slotsFor(d).filter((t) => isFree(list, t)).slice(0, 3) })).filter((x) => x.times.length).slice(0, 3));
+        setSuggestions(res.map(({ d, list }) => {
+          const free = slotsFor(d).filter((t) => isFree(list, t));
+          return { d, times: [...byShift(free, 'comida').slice(0, 2), ...byShift(free, 'cena').slice(0, 2)] };
+        }).filter((x) => x.times.length).slice(0, 3));
       });
     return () => { alive = false; };
   }, [open, freeCount, date, guests, zone]);
 
   const note = [...occasions, extra.trim()].filter(Boolean).join(', ').slice(0, 200);
+  const where = zones.length > 1 && !isGroup ? zone : '';
+  const summary = [longDay(date), time, `${guests} ${guests === 1 ? 'persona' : 'personas'}`, where].filter(Boolean).join(' · ');
 
   const submit = async () => {
     const table = isGroup ? null : tableFor(bookings || [], time);
-    if (!isGroup && !table) return;
+    if (!isGroup && !table) {
+      toast('Esa hora se acaba de ocupar. Elige otra.', 'error');
+      setStep(1);
+      setTime('');
+      return;
+    }
     setSaving(true);
     try {
       const end = minutesToTime(timeToMinutes(time) + duration);
@@ -184,10 +250,13 @@ export default function ReserveSheet({ open, onClose, biz, settings, initial, ch
         state = await bookingState(order.id);
       } else {
         state = await createGuestBooking({ ...base, name: guest.name.trim(), email: guest.email.trim(), phone: guest.phone.trim() });
+        if (state?.token) rememberBooking({ token: state.token, business_name: biz.name, date, time: base.time, items: what, status: state.status });
       }
+      writeJSON(GUEST_KEY, user ? { ...readJSON(GUEST_KEY, {}), phone: guest.phone.trim() } : { name: guest.name.trim(), email: guest.email.trim(), phone: guest.phone.trim() });
       // The restaurant may confirm on the spot when the table is free.
       setDone({
         kind: state.status === STATUS.CONFIRMED ? 'confirmed' : 'pending',
+        token: state.token,
         calendar: calendarLinks({ token: state.token, business_name: biz.name, date, time: base.time, items: what, address: biz.address }),
       });
     } catch (e) {
@@ -212,18 +281,56 @@ export default function ReserveSheet({ open, onClose, biz, settings, initial, ch
     }
   };
 
+  const share = async () => {
+    const text = `He reservado en ${biz.name}: ${longDay(date).toLowerCase()} a las ${time}, ${guests} personas.`;
+    const url = `${window.location.origin}/negocio/${encodeURIComponent(biz.name)}`;
+    try {
+      if (navigator.share) await navigator.share({ title: biz.name, text, url });
+      else {
+        await navigator.clipboard.writeText(`${text} ${url}`);
+        toast('Copiado. Pégalo en WhatsApp.');
+      }
+    } catch {
+      // The person closed the share sheet.
+    }
+  };
+
   const email = user?.email || guest.email;
   const titles = { confirmed: 'Reserva confirmada', pending: 'Solicitud enviada', waitlist: 'Estás en la lista de espera', changed: 'Reserva cambiada', 'change-pending': 'Cambio enviado' };
   const kind = done?.kind;
+  const closedDay = isClosed(settings, date);
+  const pickTime = (t) => setTime(t);
+  const chosenOk = time && freeSlots.includes(time);
+
+  const timeGrid = (list) => (
+    <div className="time-grid">
+      {list.map((t) => (
+        <button key={t} onClick={() => pickTime(t)} className="time-pill" aria-pressed={time === t}>{t}</button>
+      ))}
+    </div>
+  );
+
+  const shiftBlock = (shift, label) => {
+    const all = byShift(daySlots, shift);
+    if (!all.length) return null;
+    const free = byShift(freeSlots, shift);
+    return (
+      <div className="stack" style={{ gap: 8 }}>
+        <span className="row between"><span className="eyebrow">{label}</span>{!free.length && <span className="small muted" style={{ fontWeight: 600 }}>Completo</span>}</span>
+        {free.length > 0 && timeGrid(free)}
+      </div>
+    );
+  };
 
   return (
-    <Sheet open={open} onClose={onClose} title={titles[kind] || (change ? 'Cambiar reserva' : 'Reservar mesa')}>
+    <Sheet open={open} onClose={onClose} title={titles[kind] || (change ? 'Cambiar reserva' : step === 2 ? 'Tus datos' : 'Reservar mesa')}>
       {done ? (
         <div className="stack" style={{ alignItems: 'center', textAlign: 'center', padding: '12px 0' }}>
           <span className="mono lg" style={{ background: 'var(--accent)', color: 'var(--ink)' }}><Icon name="check" size={30} stroke={3} /></span>
           {kind === 'confirmed' && (
             <>
               <p style={{ fontSize: 17, fontWeight: 700 }}>¡Tienes mesa en {biz.name}!</p>
+              <p className="booking-summary">{summary}</p>
               <p className="muted">Te hemos mandado la confirmación a {email}. El día antes te recordaremos la reserva.</p>
               {done.calendar && <CalendarButtons links={done.calendar} />}
             </>
@@ -231,6 +338,7 @@ export default function ReserveSheet({ open, onClose, biz, settings, initial, ch
           {kind === 'pending' && (
             <>
               <p style={{ fontSize: 17, fontWeight: 700 }}>{biz.name} revisará tu {isGroup ? 'solicitud de grupo' : 'reserva'}</p>
+              <p className="booking-summary">{summary}</p>
               <p className="muted">Te avisaremos en {email} cuando la confirme.</p>
             </>
           )}
@@ -247,71 +355,131 @@ export default function ReserveSheet({ open, onClose, biz, settings, initial, ch
             </>
           )}
           {kind === 'waitlist' && <p className="muted">Si se libera una mesa{(user?.email || guest.email) ? ' te avisaremos por correo al momento' : `, ${biz.name} te avisará`}. Se la queda quien reserve antes.</p>}
+          {(kind === 'confirmed' || kind === 'pending') && (
+            <div className="row" style={{ gap: 8, width: '100%' }}>
+              <a className="btn soft sm" style={{ flex: 1 }} href={mapsUrl(biz)} target="_blank" rel="noreferrer"><Icon name="pin" size={15} /> Cómo llegar</a>
+              <button className="btn soft sm" style={{ flex: 1 }} onClick={share}><Icon name="share" size={15} /> Avisar a los tuyos</button>
+            </div>
+          )}
+          {done.token && <a className="small" style={{ fontWeight: 700 }} href={`/reserva/${done.token}`}>Ver, cambiar o cancelar la reserva</a>}
           <button className="btn primary block" onClick={onClose}>Hecho</button>
+        </div>
+      ) : step === 2 && !change ? (
+        <div className="stack">
+          <button className="widget row between summary-card" onClick={() => setStep(1)}>
+            <span className="stack" style={{ gap: 2, textAlign: 'left', minWidth: 0 }}>
+              <span className="eyebrow">{biz.name}</span>
+              <strong style={{ fontSize: 17 }}>{summary}</strong>
+            </span>
+            <span className="small" style={{ fontWeight: 800, flex: 'none' }}>Cambiar</span>
+          </button>
+
+          <div className="widget stack">
+            {user ? (
+              <span className="small muted">Reservas como <strong style={{ color: 'var(--ink)' }}>{displayName || user.email}</strong>. Te mandamos la confirmación a {user.email}.</span>
+            ) : (
+              <>
+                <span className="small muted">Sin registrarte: solo tu nombre y tu correo para mandarte la confirmación.</span>
+                <div className="field"><label htmlFor="g-name">Nombre</label><input id="g-name" className="input" autoComplete="name" value={guest.name} onChange={(e) => setGuest({ ...guest, name: e.target.value })} /></div>
+                <div className="field"><label htmlFor="g-mail">Correo</label><input id="g-mail" className="input" type="email" inputMode="email" autoComplete="email" value={guest.email} onChange={(e) => setGuest({ ...guest, email: e.target.value })} /></div>
+              </>
+            )}
+            <div className="field">
+              <label htmlFor="resv-phone">Teléfono {user ? '(opcional)' : ''}</label>
+              <input id="resv-phone" className="input" type="tel" inputMode="tel" autoComplete="tel" value={guest.phone} onChange={(e) => setGuest({ ...guest, phone: e.target.value })} placeholder="Por si el restaurante necesita llamarte" />
+            </div>
+          </div>
+
+          <div className="widget stack">
+            <span className="eyebrow">¿Algo que debamos saber?</span>
+            <div className="chips" style={{ flexWrap: 'wrap' }}>
+              {OCCASIONS.map((o) => {
+                const on = occasions.includes(o);
+                return <button key={o} className={`chip ${on ? 'on' : ''}`} style={{ background: on ? undefined : 'var(--bg)' }} aria-pressed={on} onClick={() => setOccasions(on ? occasions.filter((x) => x !== o) : [...occasions, o])}>{o}</button>;
+              })}
+            </div>
+            <input className="input" aria-label="Alergias u otras peticiones" maxLength={120} value={extra} onChange={(e) => setExtra(e.target.value)} placeholder="Alergias u otras peticiones (opcional)" />
+          </div>
+          {rules.cancelacion && <p className="small muted" style={{ margin: '0 4px' }}>{rules.cancelacion}</p>}
+          <div className="sheet-foot">
+            <button className="btn primary block" disabled={saving || (!user && (guest.name.trim().length < 2 || !guest.email.includes('@')))} onClick={submit}>
+              {saving ? 'Enviando…' : isGroup ? `Pedir mesa para ${guests} a las ${time}` : 'Confirmar reserva'}
+            </button>
+          </div>
         </div>
       ) : (
         <div className="stack">
           <div className="widget stack">
-            <div className="field">
-              <label htmlFor="resv-date">Día</label>
-              <input id="resv-date" className="input" type="date" min={todayISO()} max={lastDay} value={date} onChange={(e) => { setDate(e.target.value); setTime(''); setWaiting(false); }} />
-            </div>
             <div className="row between">
-              <span className="label" style={{ fontWeight: 600, color: 'var(--muted)', fontSize: 13 }}>Personas</span>
+              <span className="eyebrow">Personas</span>
               <span className="row" style={{ gap: 8 }}>
-                <button className="icon-btn" style={{ background: 'var(--bg)' }} onClick={() => { setGuests((g) => Math.max(1, g - 1)); setTime(''); }} aria-label="Menos personas"><Icon name="minus" /></button>
-                <span className="title-lg price" style={{ minWidth: 28, textAlign: 'center' }}>{guests}</span>
-                <button className="icon-btn" style={{ background: 'var(--bg)' }} onClick={() => { setGuests((g) => Math.min(maxGuests, g + 1)); setTime(''); }} aria-label="Más personas"><Icon name="plus" /></button>
+                <button className="icon-btn" style={{ background: 'var(--bg)' }} disabled={guests <= 1} onClick={() => { setGuests((g) => Math.max(1, g - 1)); setTime(''); }} aria-label="Menos personas"><Icon name="minus" /></button>
+                <span className="title-lg price" style={{ minWidth: 28, textAlign: 'center' }} aria-live="polite">{guests}</span>
+                <button className="icon-btn" style={{ background: 'var(--bg)' }} disabled={guests >= maxGuests} onClick={() => { setGuests((g) => Math.min(maxGuests, g + 1)); setTime(''); }} aria-label="Más personas"><Icon name="plus" /></button>
               </span>
             </div>
-            {zones.length > 1 && !isGroup && (
-              <div className="chips">
-                {zones.map((z) => {
-                  const info = zoneInfo(z);
-                  return (
-                    <button key={z} className={`chip ${zone === z ? 'on' : ''}`} style={{ background: zone === z ? undefined : 'var(--bg)' }} onClick={() => { setZone(z); setTime(''); }}>
-                      {info?.outdoor ? '☀︎ ' : ''}{z}{info?.from && info?.to ? ` · ${info.from}-${info.to}` : ''}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
             {isGroup && <p className="small" style={{ margin: 0, fontWeight: 600 }}>Para grupos de {guests} el restaurante prepara las mesas y te confirma la reserva.</p>}
             {guests >= maxGuests && (
               <p className="small muted" style={{ margin: 0 }}>¿Sois más de {maxGuests}? Llama a {biz.name}{biz.telefono ? ` al ${biz.telefono}` : ''}.</p>
             )}
+
+            <span className="eyebrow" style={{ marginTop: 4 }}>Día</span>
+            <div className="day-strip" ref={stripRef}>
+              {days.map((d) => {
+                const has = slotsFor(d).length > 0;
+                const dt = new Date(`${d}T12:00:00`);
+                const top = d === todayISO() ? 'Hoy' : d === addDays(todayISO(), 1) ? 'Mañana' : dt.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', '');
+                return (
+                  <button key={d} className="day-pill" aria-pressed={date === d} disabled={!has} onClick={() => { setDate(d); setTime(''); setWaiting(false); }}
+                    aria-label={`${longDay(d)}${has ? '' : ', sin horas'}`}>
+                    <span className="wd">{top}</span>
+                    <span className="dn">{dt.getDate()}</span>
+                    <span className="mo">{has ? dt.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '') : isClosed(settings, d) ? 'cerrado' : 'lleno'}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {zones.length > 1 && !isGroup && (
+              <>
+                <span className="eyebrow" style={{ marginTop: 4 }}>Zona</span>
+                <div className="chips">
+                  {zones.map((z) => {
+                    const info = zoneInfo(z);
+                    return (
+                      <button key={z} className={`chip ${zone === z ? 'on' : ''}`} aria-pressed={zone === z} style={{ background: zone === z ? undefined : 'var(--bg)' }} onClick={() => { setZone(z); setTime(''); }}>
+                        {info?.outdoor ? '☀︎ ' : ''}{z}{info?.from && info?.to ? ` · ${info.from}-${info.to}` : ''}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
 
-          <div className="widget">
-            <span className="eyebrow">Hora</span>
-            {!bookings ? <div className="spinner" style={{ margin: '12px auto' }} /> : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, marginTop: 10 }}>
-                {daySlots.map((t) => {
-                  const free = isFree(bookings, t);
-                  return (
-                    <button key={t} disabled={!free} onClick={() => setTime(t)} className="pill" style={{ minWidth: 0, height: 40, background: time === t ? 'var(--ink)' : 'var(--bg)', color: time === t ? '#fff' : free ? 'var(--ink)' : '#B5B1A8', textDecoration: free ? 'none' : 'line-through' }}>
-                      {t}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-            {bookings && freeCount === 0 && (
-              <div className="stack" style={{ gap: 8, marginTop: 10 }}>
-                <p className="small muted" style={{ margin: 0 }}>
-                  {isClosed(settings, date) ? 'Este día el restaurante cierra.' : daySlots.length === 0 && !blockFor(settings, date).todo ? 'No quedan horas para este día.' : `Este día está completo para ${guests}.`}
+          <div className="widget stack" style={{ gap: 14 }}>
+            {!bookings ? <div className="spinner" style={{ margin: '12px auto' }} /> : freeCount > 0 ? (
+              <>
+                {shiftBlock('comida', 'Comida')}
+                {shiftBlock('cena', 'Cena')}
+              </>
+            ) : (
+              <div className="stack" style={{ gap: 10 }}>
+                <p style={{ margin: 0, fontWeight: 700 }}>
+                  {closedDay ? `${longDay(date)} ${biz.name} cierra.` : daySlots.length === 0 && !blockFor(settings, date).todo ? 'Ya no quedan horas para este día.' : `${longDay(date)} está completo para ${guests}.`}
                 </p>
+                {suggestions === null && <div className="spinner" style={{ margin: '4px auto' }} />}
                 {suggestions?.length > 0 && (
                   <>
-                    <span className="eyebrow">Hay sitio</span>
+                    <span className="eyebrow">Hay sitio estos días</span>
                     <div className="chips" style={{ flexWrap: 'wrap' }}>
                       {suggestions.flatMap(({ d, times }) => times.map((t) => (
-                        <button key={`${d}${t}`} className="chip" style={{ background: 'var(--accent)' }} onClick={() => { setDate(d); setTime(t); }}>{shortDay(d)} · {t}</button>
+                        <button key={`${d}${t}`} className="chip" style={{ background: 'var(--accent)', color: 'var(--ink)' }} onClick={() => { setDate(d); setTime(t); }}>{longDay(d)} · {t}</button>
                       )))}
                     </div>
                   </>
                 )}
-                {!isClosed(settings, date) && !waiting && !change && <button className="btn soft sm" style={{ alignSelf: 'flex-start' }} onClick={() => setWaiting(true)}>Apuntarme a la lista de espera</button>}
+                {!closedDay && !waiting && !change && <button className="btn soft sm" style={{ alignSelf: 'flex-start' }} onClick={() => setWaiting(true)}>Apuntarme a la lista de espera</button>}
               </div>
             )}
           </div>
@@ -324,41 +492,18 @@ export default function ReserveSheet({ open, onClose, biz, settings, initial, ch
               <div className="field"><label htmlFor="wl-phone">Teléfono</label><input id="wl-phone" className="input" type="tel" required value={guest.phone} onChange={(e) => setGuest({ ...guest, phone: e.target.value })} /></div>
               <button className="btn primary block">Avisadme si se libera una mesa</button>
             </form>
-          ) : change ? (
-            <button className="btn primary block" disabled={!time || saving || (date === change.date && `${time} - ${minutesToTime(timeToMinutes(time) + duration)}` === change.time && guests === startGuests)} onClick={submit}>
-              {saving ? 'Cambiando…' : !time ? 'Elige la nueva hora' : `Cambiar a ${shortDay(date)} · ${time}`}
-            </button>
           ) : (
-            <>
-              <div className="widget stack">
-                <span className="eyebrow">¿Algo que debamos saber?</span>
-                <div className="chips" style={{ flexWrap: 'wrap' }}>
-                  {OCCASIONS.map((o) => {
-                    const on = occasions.includes(o);
-                    return <button key={o} className={`chip ${on ? 'on' : ''}`} style={{ background: on ? undefined : 'var(--bg)', height: 36 }} onClick={() => setOccasions(on ? occasions.filter((x) => x !== o) : [...occasions, o])}>{o}</button>;
-                  })}
-                </div>
-                <input className="input" aria-label="Alergias u otras peticiones" maxLength={120} value={extra} onChange={(e) => setExtra(e.target.value)} placeholder="Alergias u otras peticiones (opcional)" />
-              </div>
-
-              <div className="widget stack">
-                {!user && (
-                  <>
-                    <span className="small muted">Sin registrarte: solo tu nombre y tu correo para mandarte la confirmación.</span>
-                    <div className="field"><label htmlFor="g-name">Nombre</label><input id="g-name" className="input" autoComplete="name" value={guest.name} onChange={(e) => setGuest({ ...guest, name: e.target.value })} /></div>
-                    <div className="field"><label htmlFor="g-mail">Correo</label><input id="g-mail" className="input" type="email" autoComplete="email" value={guest.email} onChange={(e) => setGuest({ ...guest, email: e.target.value })} /></div>
-                  </>
-                )}
-                <div className="field">
-                  <label htmlFor="resv-phone">Teléfono {user ? '(opcional)' : ''}</label>
-                  <input id="resv-phone" className="input" type="tel" inputMode="tel" autoComplete="tel" value={guest.phone} onChange={(e) => setGuest({ ...guest, phone: e.target.value })} placeholder="Por si el restaurante necesita llamarte" />
-                </div>
-              </div>
-              {rules.cancelacion && <p className="small muted" style={{ margin: 0 }}>{rules.cancelacion}</p>}
-              <button className="btn primary block" disabled={!time || saving || (!user && (guest.name.trim().length < 2 || !guest.email.includes('@')))} onClick={submit}>
-                {saving ? 'Enviando…' : !time ? 'Elige una hora' : isGroup ? `Pedir mesa para ${guests} a las ${time}` : `Reservar a las ${time}`}
-              </button>
-            </>
+            <div className="sheet-foot">
+              {change ? (
+                <button className="btn primary block" disabled={!chosenOk || saving || (date === change.date && `${time} - ${minutesToTime(timeToMinutes(time) + duration)}` === change.time && guests === startGuests)} onClick={submit}>
+                  {saving ? 'Cambiando…' : !chosenOk ? 'Elige la nueva hora' : `Cambiar a ${shortDay(date)} · ${time}`}
+                </button>
+              ) : (
+                <button className="btn primary block" disabled={!chosenOk} onClick={() => setStep(2)}>
+                  {!chosenOk ? 'Elige una hora' : `Continuar · ${longDay(date)} · ${time}`}
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}

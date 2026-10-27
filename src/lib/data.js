@@ -1,5 +1,6 @@
 import { supabase } from './supabase.js';
 import { normalize, todayISO, nowTime } from './format.js';
+import { kindOf } from './categories.js';
 
 const BUSINESS_COLUMNS = 'username, name, category, telefono, image, cover_url, owner_id, status, address';
 
@@ -161,17 +162,39 @@ export async function getRestaurantSettings(businessName, kind) {
 }
 
 // Public settings of every restaurant, for "Hoy en Palencia" on the home screen.
-export async function restaurantsToday() {
+// Every listed business with its public settings (hours, menu, profile), for Explore and Home.
+let directoryCache = null;
+export async function directory() {
+  if (directoryCache) return directoryCache;
   const [businesses, { data }] = await Promise.all([
     listBusinesses(),
-    supabase.from('restaurant_settings').select('business_name, daily_menu, closed_days, lunch_start, dinner_start, profile'),
+    supabase.from('restaurant_settings').select('business_name, daily_menu, closed_days, lunch_start, lunch_end, dinner_start, dinner_end, profile, tables'),
   ]);
   const byName = new Map((data || []).map((r) => [normalize(r.business_name), r]));
+  directoryCache = businesses.map((b) => ({ biz: b, settings: byName.get(normalize(b.name)) || null }));
+  return directoryCache;
+}
+
+// What each business sells, so searching "lechazo" finds the restaurant that has it.
+let dishesCache = null;
+export async function dishIndex() {
+  if (dishesCache) return dishesCache;
+  const { data } = await supabase.from('products').select('business_id, name, section').limit(5000);
+  const map = new Map();
+  for (const p of data || []) {
+    const key = normalize(p.business_id);
+    map.set(key, `${map.get(key) || ''} ${p.name || ''} ${p.section || ''}`);
+  }
+  dishesCache = map;
+  return map;
+}
+
+export async function restaurantsToday() {
+  const list = await directory();
   const today = new Date().getDay();
-  // `open`: takes bookings and is not closed today. Closed ones still show their events.
-  return businesses
-    .map((b) => ({ biz: b, settings: byName.get(normalize(b.name)) }))
-    .filter(({ settings }) => settings)
+  // Only restaurants. `open`: takes bookings and is not closed today. Closed ones still show their events.
+  return list
+    .filter(({ biz, settings }) => settings && kindOf(biz) === 'restaurant')
     .map((r) => ({ ...r, open: !(r.settings.closed_days || []).includes(today) && r.settings.profile?.reservas !== false }));
 }
 
