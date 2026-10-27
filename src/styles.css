@@ -659,3 +659,10 @@ body.soon-body { background: #0B0B0A; }
 .spots { height: 6px; border-radius: 3px; background: var(--bg); overflow: hidden; }
 .spots span { display: block; height: 100%; background: var(--ink); border-radius: 3px; }
 .shell.panel[data-theme="dark"] .p-card, .shell.panel[data-theme="dark"] .qty, .shell.panel[data-theme="dark"] .size-pick button { background: var(--surface); }
+
+/* ---------- Eventos en Palencia ---------- */
+.events-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.event-card { padding: 10px 10px 14px; display: flex; flex-direction: column; }
+.event-cover { position: relative; height: 150px; border-radius: 18px; overflow: hidden; display: flex; align-items: center; justify-content: center; color: rgba(255, 255, 255, 0.85); }
+.event-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.event-tag { position: absolute; left: 10px; top: 10px; }

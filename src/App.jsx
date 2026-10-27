@@ -14,6 +14,7 @@ import BookingResponse from './screens/customer/BookingResponse.jsx';
 import Opinion from './screens/customer/Opinion.jsx';
 import Unsubscribe from './screens/customer/Unsubscribe.jsx';
 import ComingSoon from './screens/customer/ComingSoon.jsx';
+import Events from './screens/customer/Events.jsx';
 import { kindOf } from './lib/categories.js';
 import { showComingSoon } from './lib/launch.js';
 
@@ -118,6 +119,7 @@ export default function App() {
         <Route element={<CustomerShell />}>
           <Route index element={<Home />} />
           <Route path="explorar" element={<Explore />} />
+          <Route path="eventos" element={<Events />} />
           <Route path="reservas" element={<Orders />} />
           <Route path="pedidos" element={<Navigate to="/reservas" replace />} />
           <Route path="cuenta" element={<Account />} />

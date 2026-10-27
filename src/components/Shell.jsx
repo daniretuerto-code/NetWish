@@ -19,6 +19,7 @@ import { isUnseen, markSeen, panelSections, sectionOf } from '../lib/panelNav.js
 const CUSTOMER_NAV = [
   { to: '/', label: 'Hoy', icon: 'today', end: true },
   { to: '/explorar', label: 'Explorar', icon: 'compass' },
+  { to: '/eventos', label: 'Eventos en Palencia', short: 'Eventos', icon: 'sparkle' },
   { to: '/escanear', label: 'Escanear', icon: 'scan' },
   { to: '/reservas', label: 'Reservas', icon: 'calendar' },
   { to: '/cuenta', label: 'Cuenta', icon: 'person' },
@@ -137,7 +138,7 @@ export function CustomerShell() {
       <main className="shell-main">
         <Outlet />
       </main>
-      {!isDetail && <TabBar items={CUSTOMER_NAV} />}
+      {!isDetail && <TabBar items={CUSTOMER_NAV.filter((n) => n.to !== '/escanear')} />}
     </div>
   );
 }

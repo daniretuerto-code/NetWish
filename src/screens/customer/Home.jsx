@@ -4,13 +4,12 @@ import { Empty, Spinner } from '../../components/ui.jsx';
 import { BusinessRow, CoverCard, PlaceInfo, placeSummary } from '../../components/BusinessCards.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
-import { directory, myOrders, isReservation, restaurantsToday, STATUS } from '../../lib/data.js';
+import { directory, myOrders, isReservation, STATUS } from '../../lib/data.js';
 import { CATEGORIES, categoryOf, kindOf } from '../../lib/categories.js';
-import { initials, longDate, money, timeToMinutes } from '../../lib/format.js';
+import { initials, longDate } from '../../lib/format.js';
 import { openState } from '../../lib/hours.js';
-import { isClosed } from '../../lib/booking.js';
-import { modulesFor } from '../../lib/questionnaire.js';
-import { eventDay, eventsWithin } from '../../lib/events.js';
+import { eventCategory, eventWhen } from '../../lib/events.js';
+import { eventLink, loadEvents } from './Events.jsx';
 
 const ACTIVE = [STATUS.KITCHEN, STATUS.PENDING, STATUS.CONFIRMED, STATUS.READY];
 
@@ -48,61 +47,34 @@ function ActiveOrderWidget({ user }) {
   );
 }
 
-// Restaurants open today: their daily menu and a straight way to book a table.
-function TodayInPalencia() {
-  const { data } = useAsync(() => restaurantsToday(), []);
-  const all = data || [];
-  const list = all.filter((r) => r.open);
-  // An event on a day the restaurant closes opens its page, not the booking sheet.
-  const events = all.flatMap(({ biz, settings }) => eventsWithin(settings.profile?.eventos).map((ev) => ({ ev, biz, bookable: settings.profile?.reservas !== false && !isClosed(settings, ev.date) })))
-    .sort((a, b) => a.ev.date.localeCompare(b.ev.date)).slice(0, 6);
-  if (!list.length && !events.length) return null;
-  const withMenu = list.filter(({ settings }) => settings.daily_menu && settings.daily_menu.active !== false && settings.daily_menu.first_courses?.length && modulesFor(settings.profile).menuDia);
-  // Still time to book dinner tonight: up to an hour before the kitchen closes.
-  const now = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  const tonight = list.filter(({ settings }) => settings.dinner_start && settings.dinner_end && nowMin < timeToMinutes(settings.dinner_end) - 60);
+// "Eventos en Palencia": the next plans in the city and its businesses.
+function PalenciaEvents() {
+  const { data } = useAsync(loadEvents, []);
+  const next = (data || []).slice(0, 4);
   return (
     <section className="widget stack home-today" style={{ gap: 10 }}>
-      <span className="stack" style={{ gap: 0 }}>
-        <span className="eyebrow">Hoy en Palencia</span>
-        <h2 className="title-lg">¿Dónde comemos?</h2>
+      <span className="row between" style={{ gap: 8, alignItems: 'flex-end' }}>
+        <span className="stack" style={{ gap: 0 }}>
+          <span className="eyebrow">Hoy en Palencia</span>
+          <h2 className="title-lg">Eventos en Palencia</h2>
+        </span>
+        <Link to="/eventos" className="small muted" style={{ fontWeight: 600 }}>Ver todos</Link>
       </span>
-      {withMenu.map(({ biz, settings }) => (
-        <Link key={biz.name} to={`/negocio/${encodeURIComponent(biz.name)}`} className="order-card" style={{ textDecoration: 'none', color: 'inherit' }}>
-          <span className="row between" style={{ gap: 8 }}>
-            <strong>{biz.name}</strong>
-            {Number(settings.daily_menu.price) > 0 && <span className="price">{money(settings.daily_menu.price)}</span>}
+      {data && next.length === 0 && (
+        <Link to="/eventos" className="order-card" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <strong>Muy pronto, los planes de la ciudad</strong>
+          <span className="small muted">Fiestas, conciertos, mercados y lo nuevo de los negocios de Palencia.</span>
+        </Link>
+      )}
+      {next.map((e) => (
+        <Link key={e.id} to={eventLink(e) || '/eventos'} className="order-card" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <span className="row between" style={{ gap: 8, alignItems: 'flex-start' }}>
+            <strong>{e.title}</strong>
+            <span className="small" style={{ fontWeight: 800, whiteSpace: 'nowrap' }}>{eventWhen(e).split(' · ')[0]}</span>
           </span>
-          <span className="small muted">Menú del día: {settings.daily_menu.first_courses.slice(0, 3).join(' · ')}</span>
+          <span className="small muted">{[eventCategory(e.category).label, e.place, e.time].filter(Boolean).join(' · ')}</span>
         </Link>
       ))}
-      {events.length > 0 && (
-        <>
-          <span className="eyebrow" style={{ marginTop: 4 }}>Esta semana</span>
-          {events.map(({ ev, biz, bookable }) => (
-            <Link key={`${biz.name}-${ev.id}`} to={`/negocio/${encodeURIComponent(biz.name)}${bookable ? `?reservar=1&dia=${ev.date}` : ''}`} className="order-card" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <span className="row between" style={{ gap: 8 }}>
-                <strong>{ev.title}</strong>
-                <span className="small" style={{ fontWeight: 800 }}>{eventDay(ev.date)}</span>
-              </span>
-              <span className="small muted">{biz.name}{ev.price ? ` · ${money(ev.price)}` : ''}{ev.text ? ` · ${ev.text}` : ''}</span>
-            </Link>
-          ))}
-        </>
-      )}
-      {tonight.length > 0 && (
-        <>
-          <span className="eyebrow" style={{ marginTop: 4 }}>Reserva para esta noche</span>
-          <div className="chips">
-            {tonight.map(({ biz }) => (
-              <Link key={biz.name} to={`/negocio/${encodeURIComponent(biz.name)}?reservar=1`} className="chip" style={{ background: 'var(--bg)', display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', color: 'var(--ink)' }}>
-                <Icon name="utensils" size={16} /> {biz.name}
-              </Link>
-            ))}
-          </div>
-        </>
-      )}
     </section>
   );
 }
@@ -152,7 +124,7 @@ export default function Home() {
         </div>
 
         <div className="stack">
-          <TodayInPalencia />
+          <PalenciaEvents />
           <div className="widget">
             <div className="row between" style={{ marginBottom: 10 }}>
               <h2 className="title-lg">Categorías</h2>

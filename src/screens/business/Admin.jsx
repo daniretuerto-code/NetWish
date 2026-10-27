@@ -6,11 +6,12 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import {
   adminBusinesses, adminCreateBusiness, adminLock, adminOverview, adminStatus, adminUnlock,
-  announceLaunch, demoBusinesses, isAdmin, launchSignups, setBusinessStatus, setDemoAs, setDemoVisibility,
+  announceLaunch, cityEvents, deleteCityEvent, demoBusinesses, saveCityEvent, isAdmin, launchSignups, setBusinessStatus, setDemoAs, setDemoVisibility,
 } from '../../lib/data.js';
 import { BUSINESS_TYPES, typeOf } from '../../lib/businessTypes.js';
 import { grantAccess } from '../../lib/launch.js';
-import { timeAgo } from '../../lib/format.js';
+import { timeAgo, todayISO } from '../../lib/format.js';
+import { EVENT_CATEGORIES, eventCategory, eventWhen } from '../../lib/events.js';
 import { AuthForms } from '../customer/Account.jsx';
 import OwnerForm from '../../components/OwnerForm.jsx';
 
@@ -93,10 +94,10 @@ function AdminHome({ onLock }) {
     if (!(await isAdmin())) return { denied: true };
     // The admin always sees the real app on this device, even before launch.
     grantAccess();
-    const [overview, signups, demos, real] = await Promise.all([
-      adminOverview(), launchSignups().catch(() => null), demoBusinesses().catch(() => []), adminBusinesses().catch(() => null),
+    const [overview, signups, demos, real, events] = await Promise.all([
+      adminOverview(), launchSignups().catch(() => null), demoBusinesses().catch(() => []), adminBusinesses().catch(() => null), cityEvents(),
     ]);
-    return { ...overview, signups, demos, real };
+    return { ...overview, signups, demos, real, events };
   }, [user?.id]);
 
   if (loading && !data) return <Spinner />;
@@ -133,6 +134,8 @@ function AdminHome({ onLock }) {
       />
 
       <RealBusinesses list={data.real} reload={reload} />
+
+      <CityEvents list={data.events} reload={reload} />
 
       <DemoList demos={data.demos} reload={reload} />
 
@@ -444,4 +447,96 @@ function OwnerTag({ b }) {
   if (b.owner_email) return <span className="status" style={{ background: 'var(--accent)' }}>Conectado</span>;
   if (b.pending_owner_email) return <span className="status" style={{ background: 'var(--bg)' }}>Esperando registro</span>;
   return <span className="status" style={{ background: 'var(--bg)' }}>Sin conectar</span>;
+}
+
+const blankEvent = () => ({ title: '', category: 'fiestas', date: todayISO(), end_date: '', time: '', place: '', price: '', description: '', image_url: '', link: '' });
+
+// "Eventos en Palencia": the city's plans (fiestas, markets, concerts). Businesses publish their own from their panel.
+function CityEvents({ list, reload }) {
+  const toast = useToast();
+  const [form, setForm] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const upcoming = (list || []).filter((e) => (e.end_date || e.date) >= todayISO());
+
+  const save = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const clean = (v) => (String(v ?? '').trim() || null);
+      await saveCityEvent({
+        ...(form.id ? { id: form.id } : {}),
+        title: form.title.trim(), category: form.category, date: form.date,
+        end_date: form.end_date && form.end_date > form.date ? form.end_date : null,
+        time: clean(form.time), place: clean(form.place), description: clean(form.description),
+        image_url: clean(form.image_url), link: clean(form.link),
+        price: form.price === '' ? null : Math.max(0, Number(form.price) || 0),
+      });
+      toast(form.id ? 'Evento guardado' : 'Publicado en Eventos en Palencia');
+      setForm(null);
+      reload();
+    } catch (err) {
+      toast(err.message, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const remove = async (ev) => {
+    try {
+      await deleteCityEvent(ev.id);
+      toast('Evento borrado');
+      reload();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  };
+
+  return (
+    <section className="widget stack" style={{ paddingBottom: 4 }}>
+      <div className="row between" style={{ gap: 10 }}>
+        <h2 className="title-lg" style={{ margin: 0 }}>Eventos en Palencia</h2>
+        {!form && <button className="btn primary sm" onClick={() => setForm(blankEvent())}><Icon name="plus" size={16} /> Nuevo evento</button>}
+      </div>
+      <p className="small muted" style={{ margin: 0 }}>Los planes de la ciudad. Salen en Inicio y en Eventos junto a los que publican los negocios desde su panel.</p>
+      {form && (
+        <form className="stack" style={{ gap: 10, padding: '6px 0 12px' }} onSubmit={save}>
+          <div className="field"><label htmlFor="ev-title">Título</label><input id="ev-title" className="input" required maxLength={100} value={form.title} onChange={set('title')} placeholder="Mercado medieval" autoFocus /></div>
+          <div className="field">
+            <label htmlFor="ev-cat">Tema</label>
+            <select id="ev-cat" className="input" value={form.category} onChange={set('category')}>
+              {EVENT_CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+            </select>
+          </div>
+          <div className="row" style={{ gap: 8 }}>
+            <div className="field grow"><label htmlFor="ev-date">Día</label><input id="ev-date" className="input" type="date" required value={form.date} onChange={set('date')} /></div>
+            <div className="field grow"><label htmlFor="ev-end">Hasta (opcional)</label><input id="ev-end" className="input" type="date" value={form.end_date || ''} min={form.date} onChange={set('end_date')} /></div>
+          </div>
+          <div className="row" style={{ gap: 8 }}>
+            <div className="field grow"><label htmlFor="ev-time">Hora</label><input id="ev-time" className="input" type="time" value={form.time || ''} onChange={set('time')} /></div>
+            <div className="field grow"><label htmlFor="ev-price">Precio € (0 = gratis)</label><input id="ev-price" className="input" type="number" min="0" step="0.5" value={form.price ?? ''} onChange={set('price')} /></div>
+          </div>
+          <div className="field"><label htmlFor="ev-place">Lugar</label><input id="ev-place" className="input" value={form.place || ''} onChange={set('place')} placeholder="Plaza Mayor" /></div>
+          <div className="field"><label htmlFor="ev-desc">Descripción</label><textarea id="ev-desc" className="input" rows={3} maxLength={600} value={form.description || ''} onChange={set('description')} /></div>
+          <div className="field"><label htmlFor="ev-img">Foto (enlace, opcional)</label><input id="ev-img" className="input" type="url" value={form.image_url || ''} onChange={set('image_url')} placeholder="https://…" /></div>
+          <div className="field"><label htmlFor="ev-link">Más información (enlace, opcional)</label><input id="ev-link" className="input" type="url" value={form.link || ''} onChange={set('link')} placeholder="https://…" /></div>
+          <div className="row" style={{ gap: 8 }}>
+            <button type="button" className="btn ghost" style={{ flex: 1 }} onClick={() => setForm(null)}>Cancelar</button>
+            <button className="btn primary" style={{ flex: 2 }} disabled={busy}>{busy ? 'Guardando…' : form.id ? 'Guardar' : 'Publicar'}</button>
+          </div>
+        </form>
+      )}
+      {upcoming.length === 0 && !form && <p className="small muted" style={{ margin: 0 }}>Aún no hay ninguno.</p>}
+      {upcoming.map((ev) => (
+        <div key={ev.id} className="list-row" style={{ gap: 10, flexWrap: 'wrap' }}>
+          <span className="mono" style={{ background: 'var(--bg)', color: 'var(--ink)', flex: 'none' }}><Icon name={eventCategory(ev.category).icon} size={18} /></span>
+          <span className="grow stack" style={{ gap: 1, minWidth: 140 }}>
+            <span className="t">{ev.title}</span>
+            <span className="s">{[eventWhen(ev), ev.place].filter(Boolean).join(' · ')}</span>
+          </span>
+          <button className="btn soft sm" onClick={() => setForm({ ...blankEvent(), ...ev, end_date: ev.end_date || '', price: ev.price ?? '' })}>Editar</button>
+          <button className="btn ghost sm" onClick={() => remove(ev)} aria-label={`Borrar ${ev.title}`}><Icon name="trash" size={16} /></button>
+        </div>
+      ))}
+    </section>
+  );
 }
