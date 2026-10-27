@@ -25,9 +25,6 @@ export default function Explore() {
   const { data, loading } = useAsync(() => directory(), []);
 
   // Dishes load only once someone searches: "lechazo" finds the restaurant that has it.
-  // Changing category drops the eating filters, which only apply to "Comer".
-  useEffect(() => { if (cat !== 'rest') setFilters([]); }, [cat]);
-
   useEffect(() => {
     if (query.trim().length >= 3 && !dishes) dishIndex().then(setDishes).catch(() => setDishes(new Map()));
   }, [query, dishes]);
@@ -44,11 +41,14 @@ export default function Explore() {
   }, [data, cat, query, filters, dishes]);
 
   const toggle = (key) => setFilters((f) => (f.includes(key) ? f.filter((x) => x !== key) : [...f, key]));
-  const showFilters = cat === 'rest';
+  const showFilters = !cat || cat === 'rest';
 
   return (
     <div className="page">
-      <h1 className="title-xl" style={{ padding: '0 4px' }}>Explorar</h1>
+      <div className="stack" style={{ gap: 2, padding: '0 4px' }}>
+        <span className="eyebrow">Palencia</span>
+        <h1 className="title-xl">Explorar</h1>
+      </div>
 
       <label className="search">
         <Icon name="search" size={18} />
@@ -87,8 +87,7 @@ export default function Explore() {
               key={biz.username || biz.name}
               biz={biz}
               compact
-              cta={null}
-              eyebrow={cat ? biz.category || categoryOf(biz).label : categoryOf(biz).label}
+              eyebrow={categoryOf(biz).label}
               info={<PlaceInfo state={sum.state} line={sum.line} />}
             />
           ))}
