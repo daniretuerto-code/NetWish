@@ -729,3 +729,24 @@ export async function requestBooking({ business, user, guest, itemsText, date, t
   }
   return createGuestBooking({ business, name: guest.name.trim(), email: guest.email.trim(), phone: guest.phone?.trim(), itemsText, date, time });
 }
+
+// ---------- Eventos en Palencia (city plans written from /admin) ----------
+export async function cityEvents() {
+  const { data, error } = await supabase.from('city_events').select('*').gte('date', new Date(Date.now() - 60 * 864e5).toISOString().slice(0, 10)).order('date').limit(300);
+  // Until the table exists, the page shows the businesses' events only.
+  if (error) return [];
+  return data || [];
+}
+
+export async function saveCityEvent(event) {
+  const row = { ...event };
+  const { error } = row.id
+    ? await supabase.from('city_events').update(row).eq('id', row.id)
+    : await supabase.from('city_events').insert([row]);
+  fail(error);
+}
+
+export async function deleteCityEvent(id) {
+  const { error } = await supabase.from('city_events').delete().eq('id', id);
+  fail(error);
+}

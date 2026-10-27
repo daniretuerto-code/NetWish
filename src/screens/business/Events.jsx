@@ -43,7 +43,7 @@ export default function Events() {
     // Old events are dropped as new ones come in.
     if (await save([...upcomingEvents(all), event].sort((a, b) => a.date.localeCompare(b.date)).slice(-20))) {
       setForm(blank());
-      toast('Publicado. Ya sale en tu página y en "Hoy en Palencia"');
+      toast('Publicado. Ya sale en tu página y en "Eventos en Palencia"');
     }
   };
 
@@ -51,14 +51,14 @@ export default function Events() {
     <div className="page">
       <PageHeader eyebrow={business.name} title="Eventos y novedades" />
       <SectionTabs />
-      <p className="muted" style={{ margin: '0 4px' }}>Música en directo, una cata, el menú de fiestas… Sale en tu página y en "Hoy en Palencia" la semana que toca, con el botón de reservar.</p>
+      <p className="muted" style={{ margin: '0 4px' }}>Música en directo, una cata, el menú de fiestas… Sale en tu página y en "Eventos en Palencia" la semana que toca, con el botón de reservar.</p>
 
       {modules.menuDia && (
         <Link to="/panel/carta" className="widget link row" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
           <span className="mono" style={{ background: 'var(--accent)', color: 'var(--ink)' }}><Icon name="book" /></span>
           <span className="grow stack" style={{ gap: 0 }}>
             <strong>Menú del día</strong>
-            <span className="small muted">{settings.daily_menu?.active !== false && settings.daily_menu?.first_courses?.length ? 'Publicado hoy. Cámbialo desde la carta.' : 'Publícalo desde la carta y sal arriba del todo en "Hoy en Palencia".'}</span>
+            <span className="small muted">{settings.daily_menu?.active !== false && settings.daily_menu?.first_courses?.length ? 'Publicado hoy. Cámbialo desde la carta.' : 'Publícalo desde la carta y sal arriba del todo en "Eventos en Palencia".'}</span>
           </span>
           <Icon name="chevron" size={18} />
         </Link>
