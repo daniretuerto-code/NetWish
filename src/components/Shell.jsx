@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Icon from './Icon.jsx';
-import { Mono, Sheet, StatusVeil, useToast } from './ui.jsx';
+import { Mono, Sheet, Spinner, StatusVeil, useToast } from './ui.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { kindOf } from '../lib/categories.js';
 import useAsync from '../hooks/useAsync.js';
-import { getRestaurantSettings, isPickup, isReservation, setDemoAs, subscribe } from '../lib/data.js';
+import { adminBusinesses, getRestaurantSettings, isPickup, isReservation, setDemoAs, subscribe } from '../lib/data.js';
+import OwnerForm from './OwnerForm.jsx';
 import { typeOf } from '../lib/businessTypes.js';
 import { modulesFor } from '../lib/questionnaire.js';
 import { parseTableBooking } from '../lib/agenda.js';
@@ -180,6 +181,34 @@ function useNewBookingAlerts(business, onNew) {
   }, [business.name]);
 }
 
+// The admin inside someone's panel: what kind of business it is, its owner and the way out.
+function AdminBanner({ business, onExit }) {
+  const { refreshBusiness } = useAuth();
+  const [owner, setOwner] = useState(false);
+  const { data: row, reload } = useAsync(
+    () => (owner ? adminBusinesses().then((list) => list.find((b) => b.username === business.username) || null) : Promise.resolve(null)),
+    [owner, business.username],
+  );
+  const text = business.viewingDemo
+    ? `Estás viendo el panel de ejemplo de ${business.name}. Lo que cambies se ve en su página.`
+    : business.preview
+      ? `Vista previa: ${business.name} aún no está conectado. Móntalo a tu gusto y, cuando quieras, asígnaselo a su dueño.`
+      : `Estás dentro del panel de ${business.name} como administrador. Lo que cambies se ve en su página.`;
+  return (
+    <>
+      <div className="widget row" style={{ margin: '12px var(--gutter) 0', background: 'var(--accent)', gap: 12, flexWrap: 'wrap' }} role="status">
+        <Icon name="eye" size={20} />
+        <span className="small grow" style={{ fontWeight: 600, minWidth: 180 }}>{text}</span>
+        {!business.viewingDemo && <button className="btn soft sm" onClick={() => setOwner(true)}>Dueño</button>}
+        <button className="btn primary sm" onClick={onExit}>Salir</button>
+      </div>
+      <Sheet open={owner} onClose={() => setOwner(false)} title="Dueño del negocio">
+        {row ? <OwnerForm business={row} onDone={() => { reload(); refreshBusiness(); setOwner(false); }} /> : <Spinner />}
+      </Sheet>
+    </>
+  );
+}
+
 export function BusinessShell() {
   const { business } = useAuth();
   const { pathname } = useLocation();
@@ -225,26 +254,20 @@ export function BusinessShell() {
             <Mono name={business.name} image={business.image} />
             <span className="stack" style={{ gap: 0, minWidth: 0 }}>
               <span style={{ fontWeight: 800, fontSize: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{business.name}</span>
-              <span className="small" style={{ color: 'var(--accent)' }}>{business.viewingDemo ? '● Negocio de ejemplo' : business.status === 'approved' ? (kind === 'shop' ? '● Recibiendo pedidos' : '● Recibiendo reservas') : '● Pendiente de aprobación'}</span>
+              <span className="small" style={{ color: 'var(--accent)' }}>{business.viewingDemo ? '● Negocio de ejemplo' : business.preview ? '● Aún no conectado' : business.status === 'approved' ? (kind === 'shop' ? '● Recibiendo pedidos' : '● Recibiendo reservas') : '● Pendiente de aprobación'}</span>
             </span>
           </div>
         )}
       />
       <main className="shell-main">
-        {business.viewingDemo && (
-          <div className="widget row" style={{ margin: '12px var(--gutter) 0', background: 'var(--accent)', gap: 12 }} role="status">
-            <Icon name="eye" size={20} />
-            <span className="small grow" style={{ fontWeight: 600 }}>Estás viendo el panel de ejemplo de {business.name}. Lo que cambies se ve en su página.</span>
-            <button className="btn primary sm" onClick={exitDemo}>Salir</button>
-          </div>
-        )}
-        {business.status === 'pending' && !business.viewingDemo && (
+        {business.viewingAs && <AdminBanner business={business} onExit={exitDemo} />}
+        {business.status === 'pending' && !business.viewingAs && (
           <div className="widget row" style={{ margin: '12px var(--gutter) 0', background: 'var(--accent)', gap: 12 }} role="status">
             <Icon name="bell" size={20} />
             <span className="small" style={{ fontWeight: 600 }}>Tu página aún no es pública. Completa la lista "Para salir publicado" y la revisamos enseguida.</span>
           </div>
         )}
-        {business.status === 'rejected' && !business.viewingDemo && (
+        {business.status === 'rejected' && !business.viewingAs && (
           <div className="widget row" style={{ margin: '12px var(--gutter) 0', background: 'var(--danger-soft)', gap: 12 }} role="status">
             <Icon name="bell" size={20} />
             <span className="small" style={{ fontWeight: 600 }}>No hemos podido aprobar tu negocio. Escríbenos desde "Contactar con NetWish" y lo vemos.</span>

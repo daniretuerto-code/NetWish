@@ -33,6 +33,7 @@ function Hero({ biz, state, sub }) {
         <BackButton glass />
       </div>
       {biz.demo && <span className="demo-pill" style={{ alignSelf: 'flex-start', marginBottom: 8 }}>Negocio de ejemplo</span>}
+      {biz.preview && <span className="demo-pill" style={{ alignSelf: 'flex-start', marginBottom: 8 }}>Aún no conectado</span>}
       <span className="eyebrow">{biz.category || categoryOf(biz).label}</span>
       <h1>{biz.name}</h1>
       {(state || sub) && (
@@ -42,6 +43,21 @@ function Hero({ biz, state, sub }) {
         </div>
       )}
     </header>
+  );
+}
+
+// A real business NetWish set up before its owner joined: it can be tried, nothing is saved.
+function PreviewNotice({ biz }) {
+  if (!biz.preview) return null;
+  return (
+    <div className="widget row" style={{ gap: 12, alignItems: 'flex-start', background: 'var(--accent)' }} role="note">
+      <Icon name="eye" size={20} />
+      <span className="stack grow" style={{ gap: 4 }}>
+        <strong>Este negocio aún no está conectado con NetWish</strong>
+        <span className="small">Puedes probar cómo se reserva, pero no se guardará nada ni le llegará al negocio.{biz.telefono ? ' Para reservar de verdad, llámales.' : ''}</span>
+        {biz.telefono && <a className="btn primary sm" style={{ alignSelf: 'flex-start', marginTop: 4 }} href={`tel:${biz.telefono}`}><Icon name="phone" size={16} /> {biz.telefono}</a>}
+      </span>
+    </div>
   );
 }
 
@@ -351,6 +367,7 @@ export default function Business() {
       <div className="page flush-top" style={{ paddingBottom: bottom }}>
         <Hero biz={biz} state={state} />
         <div className="overlap stack">
+          <PreviewNotice biz={biz} />
           <Actions biz={biz} booksService={isBeauty ? true : kind === 'classes' ? '#clases' : false} bookLabel={kind === 'classes' ? 'Reservar clase' : nounsOf(biz).book} />
           {isBeauty && (
             <>
@@ -374,6 +391,7 @@ export default function Business() {
       <Hero biz={biz} state={state} sub={facts.headline} />
 
       <div className="overlap stack">
+        <PreviewNotice biz={biz} />
         <Actions biz={biz} />
 
         <div className="biz-layout">
