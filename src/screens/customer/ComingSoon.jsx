@@ -84,7 +84,6 @@ export default function ComingSoon() {
 
       <footer className="soon-foot">
         <a href="https://instagram.com/netwish.palencia" target="_blank" rel="noreferrer">@netwish.palencia</a>
-        <a href="/negocios">¿Tienes un negocio? Únete</a>
       </footer>
     </main>
   );

@@ -1,13 +1,11 @@
-// "Muy pronto": until NetWish opens to the public, the customer app shows a waiting screen.
-// Links that belong to a business (its page, QR tables, booking e-mails) and the business
-// side keep working, so restaurants already using NetWish are not affected.
+// "Muy pronto": until NetWish opens to the public, every page shows a waiting screen.
+// Only devices that opened the private access link see the real app.
 export const LAUNCHED = false;
 
 // netwish.es/?acceso=CODE opens the real app on that device for good; ?acceso=salir closes it.
 const ACCESS_CODE = 'netwish-dani-4827';
 const KEY = 'netwish_acceso';
 
-const OPEN_PATHS = ['/cuenta', '/reservas', '/negocio/', '/mesa/', '/r/', '/reserva/', '/opinion/', '/pagar/', '/chat/', '/baja', '/negocios', '/admin', '/panel'];
 
 export function hasAccess() {
   try { if (localStorage.getItem(KEY) === '1') return true; } catch { /* storage unavailable */ }
@@ -35,10 +33,7 @@ export function readAccessParam() {
   window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
 }
 
-export function showComingSoon(pathname, search) {
+export function showComingSoon(search) {
   if (new URLSearchParams(search).has('muypronto')) return true;
-  if (LAUNCHED || hasAccess()) return false;
-  // Old printed QR codes: /?biz=NAME&table=N.
-  if (new URLSearchParams(search).has('biz')) return false;
-  return !OPEN_PATHS.some((p) => pathname === p.replace(/\/$/, '') || pathname.startsWith(p));
+  return !LAUNCHED && !hasAccess();
 }

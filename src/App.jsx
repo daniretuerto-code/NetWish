@@ -93,9 +93,9 @@ function OldPayLink() {
 
 export default function App() {
   const { ready } = useAuth();
-  const { pathname, search } = useLocation();
+  const { search } = useLocation();
 
-  if (showComingSoon(pathname, search)) return <ComingSoon />;
+  if (showComingSoon(search)) return <ComingSoon />;
   if (!ready) return <Spinner />;
 
   return (
