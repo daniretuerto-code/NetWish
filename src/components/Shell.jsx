@@ -17,6 +17,7 @@ import { isUnseen, markSeen, panelSections, sectionOf } from '../lib/panelNav.js
 const CUSTOMER_NAV = [
   { to: '/', label: 'Hoy', icon: 'today', end: true },
   { to: '/explorar', label: 'Explorar', icon: 'compass' },
+  { to: '/escanear', label: 'Escanear', icon: 'scan' },
   { to: '/reservas', label: 'Reservas', icon: 'calendar' },
   { to: '/cuenta', label: 'Cuenta', icon: 'person' },
 ];
