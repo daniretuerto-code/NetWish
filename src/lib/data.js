@@ -13,13 +13,16 @@ const fail = (error) => {
 // ---------- Businesses ----------
 let businessCache = null;
 
-// `demo` marks the example businesses. Until the column exists the query goes without it.
+// `demo` marks the example businesses and `preview` the real ones NetWish set up that no
+// owner runs yet. Until a column exists the query goes without it.
 let hasDemo = true;
-const columns = (extra = '') => `${BUSINESS_COLUMNS}${hasDemo ? ', demo' : ''}${extra}`;
+let hasPreview = true;
+const columns = (extra = '') => `${BUSINESS_COLUMNS}${hasDemo ? ', demo' : ''}${hasPreview ? ', preview' : ''}${extra}`;
 async function selectBusinesses(build, extra) {
   let res = await build(supabase.from('businesses').select(columns(extra)));
-  if (res.error && hasDemo && /demo/.test(res.error.message || '')) {
-    hasDemo = false;
+  while (res.error && ((hasDemo && /demo/.test(res.error.message || '')) || (hasPreview && /preview/.test(res.error.message || '')))) {
+    if (/preview/.test(res.error.message)) hasPreview = false;
+    else hasDemo = false;
     res = await build(supabase.from('businesses').select(columns(extra)));
   }
   return res;
@@ -63,6 +66,52 @@ export async function isAdmin() {
   return data === true;
 }
 
+// /admin needs the admin account AND its own key, typed once per session (12 h).
+export async function adminStatus() {
+  const { data, error } = await supabase.rpc('admin_status');
+  if (error) return null;
+  return data;
+}
+
+export async function adminUnlock(key) {
+  const { error } = await supabase.rpc('admin_unlock', { p_key: key });
+  fail(error);
+}
+
+export async function adminLock() {
+  await supabase.rpc('admin_lock');
+}
+
+export async function adminChangeKey(oldKey, newKey) {
+  const { error } = await supabase.rpc('admin_change_key', { p_old: oldKey, p_new: newKey });
+  fail(error);
+}
+
+// ---------- Real businesses NetWish sets up and hands over ----------
+export async function adminBusinesses() {
+  const { data, error } = await supabase.rpc('admin_businesses');
+  fail(error);
+  return data || [];
+}
+
+export async function adminCreateBusiness({ name, category, phone, address }) {
+  const { data, error } = await supabase.rpc('admin_create_business', { p_name: name, p_category: category, p_phone: phone, p_address: address });
+  fail(error);
+  businessCache = null;
+  return data;
+}
+
+export async function adminAssignOwner(username, email) {
+  const { data, error } = await supabase.rpc('admin_assign_owner', { p_username: username, p_email: email });
+  fail(error);
+  return data;
+}
+
+export async function adminReleaseOwner(username) {
+  const { error } = await supabase.rpc('admin_release_owner', { p_username: username });
+  fail(error);
+}
+
 export async function adminOverview() {
   const [biz, req] = await Promise.all([
     supabase.from('businesses').select(`${BUSINESS_COLUMNS}, notification_email, created_at`).neq('status', 'approved').order('created_at', { ascending: false }),
@@ -81,16 +130,22 @@ export async function setBusinessStatus(username, status) {
 
 export async function myBusiness(userId) {
   if (!userId) return null;
-  // The admin can open the panel of an example business (see /admin).
+  // The admin can open the panel of any business (see /admin).
   const demo = demoAs();
   if (demo) {
-    const { data } = await selectBusinesses((q) => q.eq('username', demo).eq('demo', true).maybeSingle(), ', notification_email');
-    if (data && (await isAdmin())) return { ...data, viewingDemo: true };
+    const { data } = await selectBusinesses((q) => q.eq('username', demo).maybeSingle(), ', notification_email');
+    if (data && (await isAdmin())) return { ...data, viewingAs: true, viewingDemo: !!data.demo };
     setDemoAs(null);
   }
   const { data, error } = await selectBusinesses((q) => q.eq('owner_id', userId).maybeSingle(), ', notification_email');
   fail(error);
-  return data;
+  if (data) return data;
+  // A business NetWish set up and assigned to this e-mail before the account existed.
+  const { data: claimed } = await supabase.rpc('claim_invited_business');
+  if (!claimed) return null;
+  businessCache = null;
+  const again = await selectBusinesses((q) => q.eq('owner_id', userId).maybeSingle(), ', notification_email');
+  return again.data || null;
 }
 
 // ---------- Example businesses ----------

@@ -1,34 +1,105 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
 import { Empty, Mono, PageHeader, Spinner, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
-import { adminOverview, announceLaunch, demoBusinesses, isAdmin, launchSignups, setBusinessStatus, setDemoAs, setDemoVisibility } from '../../lib/data.js';
-import { typeOf } from '../../lib/businessTypes.js';
+import {
+  adminBusinesses, adminCreateBusiness, adminLock, adminOverview, adminStatus, adminUnlock,
+  announceLaunch, demoBusinesses, isAdmin, launchSignups, setBusinessStatus, setDemoAs, setDemoVisibility,
+} from '../../lib/data.js';
+import { BUSINESS_TYPES, typeOf } from '../../lib/businessTypes.js';
 import { grantAccess } from '../../lib/launch.js';
 import { timeAgo } from '../../lib/format.js';
+import { AuthForms } from '../customer/Account.jsx';
+import OwnerForm from '../../components/OwnerForm.jsx';
 
 const KIND_LABEL = { alta: 'Quiere entrar', otro: 'No encaja en los tipos', contacto: 'Quiere más', nuevo: 'Alta', listo: 'Listo para publicar' };
 
-// netwish.es/admin: only NetWish's own team. The database refuses everyone else.
+// netwish.es/admin: the admin account signs in and then types its own admin key.
+// Without the key the database treats nobody as admin; anyone else is sent home.
 export default function Admin() {
   const { ready, user } = useAuth();
+  const { data: status, loading, reload } = useAsync(async () => (user ? adminStatus() : null), [user?.id]);
+
+  if (!ready || (user && loading && status === undefined)) return <Spinner />;
+  if (!user) {
+    return (
+      <div className="page" style={{ maxWidth: 440 }}>
+        <PageHeader eyebrow="NetWish" title="Administración" />
+        <AuthForms next="/admin" simple />
+      </div>
+    );
+  }
+  if (loading && !status) return <Spinner />;
+  // Before the admin key exists in the database, the old check (account only) still applies.
+  if (status === null) return <AdminHome />;
+  if (!status.account) return <Navigate to="/" replace />;
+  if (!status.unlocked) return <AdminKey hasKey={status.has_key} onDone={reload} />;
+  return <AdminHome onLock={async () => { await adminLock(); reload(); }} />;
+}
+
+function AdminKey({ hasKey, onDone }) {
+  const toast = useToast();
+  const { signOut } = useAuth();
+  const [key, setKey] = useState('');
+  const [again, setAgain] = useState('');
+  const [busy, setBusy] = useState(false);
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!hasKey && key !== again) { toast('Las dos claves no coinciden', 'error'); return; }
+    setBusy(true);
+    try {
+      await adminUnlock(key);
+      onDone();
+    } catch (err) {
+      toast(err.message, 'error');
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="page" style={{ maxWidth: 440 }}>
+      <PageHeader eyebrow="NetWish" title="Administración" />
+      <form className="widget stack" onSubmit={submit}>
+        <span className="mono" style={{ background: 'var(--ink)', color: 'var(--accent)' }}><Icon name="lock" size={20} /></span>
+        <h2 className="title-lg" style={{ margin: 0 }}>{hasKey ? 'Clave de administración' : 'Crea tu clave de administración'}</h2>
+        <p className="small muted" style={{ margin: 0 }}>
+          {hasKey
+            ? 'Además de tu cuenta, hace falta esta clave. Vale 12 horas en este dispositivo.'
+            : 'Es una segunda contraseña solo para esta zona, distinta de la de tu cuenta. Mínimo 8 caracteres. Apúntala bien.'}
+        </p>
+        <div className="field">
+          <label htmlFor="ad-key">Clave</label>
+          <input id="ad-key" className="input" type="password" required minLength={hasKey ? undefined : 8} value={key} onChange={(e) => setKey(e.target.value)} autoComplete={hasKey ? 'current-password' : 'new-password'} autoFocus />
+        </div>
+        {!hasKey && (
+          <div className="field">
+            <label htmlFor="ad-key2">Repite la clave</label>
+            <input id="ad-key2" className="input" type="password" required value={again} onChange={(e) => setAgain(e.target.value)} autoComplete="new-password" />
+          </div>
+        )}
+        <button className="btn primary block" disabled={busy}>{busy ? 'Comprobando…' : hasKey ? 'Entrar' : 'Guardar clave y entrar'}</button>
+        <button type="button" className="btn ghost block" onClick={signOut}>Cerrar sesión</button>
+      </form>
+    </div>
+  );
+}
+
+function AdminHome({ onLock }) {
+  const { user } = useAuth();
   const toast = useToast();
   const [busy, setBusy] = useState(null);
   const { data, loading, reload } = useAsync(async () => {
-    if (!user) return null;
     if (!(await isAdmin())) return { denied: true };
     // The admin always sees the real app on this device, even before launch.
     grantAccess();
-    const [overview, signups, demos] = await Promise.all([adminOverview(), launchSignups().catch(() => null), demoBusinesses().catch(() => [])]);
-    return { ...overview, signups, demos };
+    const [overview, signups, demos, real] = await Promise.all([
+      adminOverview(), launchSignups().catch(() => null), demoBusinesses().catch(() => []), adminBusinesses().catch(() => null),
+    ]);
+    return { ...overview, signups, demos, real };
   }, [user?.id]);
 
-  if (!ready || (loading && !data)) return <Spinner />;
-  if (!user) {
-    return <div className="page"><Empty icon="lock" title="Entra con tu cuenta"><Link to="/cuenta" className="btn primary" style={{ marginTop: 8 }}>Iniciar sesión</Link></Empty></div>;
-  }
+  if (loading && !data) return <Spinner />;
   if (data?.denied) return <div className="page"><Empty icon="lock" title="Esta página es solo para el equipo de NetWish" /></div>;
 
   const decide = async (b, status) => {
@@ -50,7 +121,18 @@ export default function Admin() {
 
   return (
     <div className="page" style={{ maxWidth: 900 }}>
-      <PageHeader eyebrow="NetWish" title="Administración" right={<Link to="/" className="btn soft sm">Ir a la app</Link>} />
+      <PageHeader
+        eyebrow="NetWish"
+        title="Administración"
+        right={(
+          <div className="row" style={{ gap: 6 }}>
+            <Link to="/" className="btn soft sm">Ir a la app</Link>
+            {onLock && <button className="btn ghost sm" onClick={onLock}>Bloquear</button>}
+          </div>
+        )}
+      />
+
+      <RealBusinesses list={data.real} reload={reload} />
 
       <DemoList demos={data.demos} reload={reload} />
 
@@ -269,4 +351,97 @@ function LaunchList({ signups, reload }) {
       )}
     </section>
   );
+}
+
+// Real businesses of Palencia that NetWish sets up itself and later hands to their owner.
+function RealBusinesses({ list, reload }) {
+  const toast = useToast();
+  const navigate = useNavigate();
+  const { refreshBusiness } = useAuth();
+  const types = BUSINESS_TYPES.filter((t) => !t.hidden && !t.other);
+  const [form, setForm] = useState({ name: '', type: types[0]?.key || '', phone: '', address: '' });
+  const [adding, setAdding] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [owner, setOwner] = useState(null);
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  if (!list) {
+    return (
+      <section className="widget stack">
+        <h2 className="title-lg">Negocios reales</h2>
+        <p className="small muted" style={{ margin: 0 }}>Falta pegar en Supabase el archivo SQL «negocios-reales.sql» y pulsar Run.</p>
+      </section>
+    );
+  }
+
+  const open = async (username) => {
+    setDemoAs(username);
+    await refreshBusiness();
+    navigate('/panel');
+  };
+  const create = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const type = types.find((t) => t.key === form.type);
+      const out = await adminCreateBusiness({ name: form.name, category: type?.category || '', phone: form.phone, address: form.address });
+      toast(`${out.name} creado. Ahora móntale el panel.`);
+      await open(out.username);
+    } catch (err) {
+      toast(err.message, 'error');
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="widget stack" style={{ paddingBottom: 4 }}>
+      <div className="row between" style={{ gap: 10 }}>
+        <h2 className="title-lg" style={{ margin: 0 }}>Negocios reales</h2>
+        {!adding && <button className="btn primary sm" onClick={() => setAdding(true)}><Icon name="plus" size={16} /> Nuevo negocio</button>}
+      </div>
+      <p className="small muted" style={{ margin: 0 }}>Los que montas tú salen en la app como «Aún no conectado»: se puede probar a reservar, pero no se guarda nada. Cuando le asignas el dueño, pasa a funcionar de verdad.</p>
+      {adding && (
+        <form className="stack" style={{ gap: 10, padding: '6px 0 12px' }} onSubmit={create}>
+          <div className="field"><label htmlFor="nb-name">Nombre</label><input id="nb-name" className="input" required value={form.name} onChange={set('name')} autoFocus /></div>
+          <div className="field">
+            <label htmlFor="nb-type">Tipo</label>
+            <select id="nb-type" className="input" value={form.type} onChange={set('type')}>
+              {types.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+            </select>
+          </div>
+          <div className="field"><label htmlFor="nb-phone">Teléfono</label><input id="nb-phone" className="input" type="tel" value={form.phone} onChange={set('phone')} /></div>
+          <div className="field"><label htmlFor="nb-address">Dirección</label><input id="nb-address" className="input" value={form.address} onChange={set('address')} placeholder="Calle Mayor 12, Palencia" /></div>
+          <div className="row" style={{ gap: 8 }}>
+            <button type="button" className="btn ghost" style={{ flex: 1 }} onClick={() => setAdding(false)}>Cancelar</button>
+            <button className="btn primary" style={{ flex: 2 }} disabled={busy}>{busy ? 'Creando…' : 'Crear y montar su panel'}</button>
+          </div>
+        </form>
+      )}
+      {list.length === 0 && !adding && <p className="small muted" style={{ margin: 0 }}>Aún no hay ninguno.</p>}
+      {list.filter((b) => b.status !== 'rejected').map((b) => (
+        <div key={b.username} className="stack" style={{ gap: 8, padding: '10px 0', borderTop: '1px solid var(--bg)' }}>
+          <div className="row" style={{ gap: 10 }}>
+            <Mono name={b.name} />
+            <span className="grow stack" style={{ gap: 1, minWidth: 0 }}>
+              <span className="t" style={{ fontWeight: 700 }}>{b.name}</span>
+              <span className="s small muted">{typeOf(b).label}</span>
+            </span>
+            <OwnerTag b={b} />
+          </div>
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+            <a className="btn soft sm" style={{ flex: 1 }} href={`/negocio/${encodeURIComponent(b.name)}`} target="_blank" rel="noreferrer">Ver como cliente</a>
+            <button className="btn soft sm" style={{ flex: 1 }} onClick={() => setOwner(owner === b.username ? null : b.username)}>Dueño</button>
+            <button className="btn primary sm" style={{ flex: 1 }} onClick={() => open(b.username)}>Abrir panel</button>
+          </div>
+          {owner === b.username && <OwnerForm business={b} onDone={() => { setOwner(null); reload(); }} />}
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function OwnerTag({ b }) {
+  if (b.owner_email) return <span className="status" style={{ background: 'var(--accent)' }}>Conectado</span>;
+  if (b.pending_owner_email) return <span className="status" style={{ background: 'var(--bg)' }}>Esperando registro</span>;
+  return <span className="status" style={{ background: 'var(--bg)' }}>Sin conectar</span>;
 }
