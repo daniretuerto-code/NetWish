@@ -16,10 +16,11 @@ import { isUnseen, markSeen, panelSections, sectionOf } from '../lib/panelNav.js
 
 const CUSTOMER_NAV = [
   { to: '/', label: 'Hoy', icon: 'today', end: true },
-  { to: '/explorar', label: 'Explorar', icon: 'compass' },
-  { to: '/escanear', label: 'Escanear', icon: 'scan' },
+  { to: '/explorar', label: 'Explorar', icon: 'search' },
   { to: '/reservas', label: 'Reservas', icon: 'calendar' },
-  { to: '/cuenta', label: 'Cuenta', icon: 'person' },
+  { to: '/escanear', label: 'Escanear', icon: 'scan' },
+  // On the phone the account sits in the top corner of Hoy, so the bar keeps four tabs.
+  { to: '/cuenta', label: 'Cuenta', icon: 'person', wideOnly: true },
 ];
 
 const DETAIL_ROUTES = ['/negocio/', '/mesa/', '/chat/', '/reserva/'];
@@ -135,7 +136,7 @@ export function CustomerShell() {
       <main className="shell-main">
         <Outlet />
       </main>
-      {!isDetail && <TabBar items={CUSTOMER_NAV} />}
+      {!isDetail && <TabBar items={CUSTOMER_NAV.filter((it) => !it.wideOnly || pathname === it.to)} />}
     </div>
   );
 }
