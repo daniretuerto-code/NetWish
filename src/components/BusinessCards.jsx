@@ -32,7 +32,7 @@ export function CoverCard({ biz, eyebrow, title, subtitle, cta = 'Ver', minHeigh
             <span style={{ fontSize: 13, opacity: 0.75 }}>{subtitle || biz.category}</span>
           </span>
         )}
-        <span className="btn sm" style={{ background: '#fff' }}>{cta}</span>
+        {cta && <span className="btn sm" style={{ background: '#fff' }}>{cta}</span>}
       </span>
     </Link>
   );
