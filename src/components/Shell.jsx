@@ -5,7 +5,8 @@ import { Mono, Sheet, StatusVeil, useToast } from './ui.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { kindOf } from '../lib/categories.js';
 import useAsync from '../hooks/useAsync.js';
-import { getRestaurantSettings, isReservation, subscribe } from '../lib/data.js';
+import { getRestaurantSettings, isPickup, isReservation, setDemoAs, subscribe } from '../lib/data.js';
+import { typeOf } from '../lib/businessTypes.js';
 import { modulesFor } from '../lib/questionnaire.js';
 import { parseTableBooking } from '../lib/agenda.js';
 import { normalize } from '../lib/format.js';
@@ -74,7 +75,7 @@ export function PanelPrefs({ prefs, setPref, dark }) {
     <div className="stack" style={{ gap: 0 }}>
       {row('Modo noche', prefs.theme === 'auto' ? 'Automático: oscuro de 20:00 a 8:00' : prefs.theme === 'dark' ? 'Siempre oscuro' : 'Siempre claro',
         prefs.theme !== 'light', () => setPref('theme', prefs.theme === 'auto' ? 'dark' : prefs.theme === 'dark' ? 'light' : 'auto'))}
-      {row('Sonido de reservas', 'Suena cuando entra una reserva nueva', prefs.sound, () => { unlockSound(); setPref('sound', !prefs.sound); })}
+      {row('Sonido de avisos', 'Suena cuando entra una reserva o un pedido nuevo', prefs.sound, () => { unlockSound(); setPref('sound', !prefs.sound); })}
       {row('Modo atril', 'Pantalla completa y sin apagarse, para la tablet de la entrada', prefs.stand, () => setPref('stand', !prefs.stand))}
     </div>
   );
@@ -150,7 +151,23 @@ function useNewBookingAlerts(business, onNew) {
     const off = subscribe('orders', (payload) => {
       const o = payload.new;
       if (payload.eventType !== 'INSERT' || !o || normalize(o.business_name) !== normalize(business.name)) return;
-      if (!isReservation(o) || ['telefono', 'local'].includes(o.source)) return;
+      if ((!isReservation(o) && !isPickup(o)) || ['telefono', 'local'].includes(o.source)) return;
+      if (isPickup(o)) {
+        const text = `Nuevo pedido · ${o.customer} · ${o.items.replace(/^Pedido para recoger:\s*/i, '').split(' · ')[0]}`;
+        if (soundOn()) chime();
+        systemNotify('Nuevo pedido para recoger', text);
+        toast(text, 'info', { action: { label: 'Ver', onClick: () => navigate('/panel/reservas') }, duration: 9000 });
+        onNew();
+        return;
+      }
+      if (!/\d+\s*pax/i.test(o.items || '')) {
+        const text = `Nueva reserva · ${o.customer} · ${String(o.time || '').split(' - ')[0]}`;
+        if (soundOn()) chime();
+        systemNotify('Nueva reserva', text);
+        toast(text, 'info', { action: { label: 'Ver', onClick: () => navigate('/panel/reservas') }, duration: 9000 });
+        onNew();
+        return;
+      }
       const b = parseTableBooking(o);
       const when = new Date(`${o.date}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
       const text = `Nueva reserva · ${o.customer} · ${b.guests} pers. · ${when} ${b.start}`;
@@ -169,6 +186,13 @@ export function BusinessShell() {
   const [more, setMore] = useState(false);
   const [fresh, setFresh] = useState(0);
   const { prefs, setPref, dark } = usePanelPrefs();
+  const { refreshBusiness } = useAuth();
+  const navigate = useNavigate();
+  const exitDemo = async () => {
+    setDemoAs(null);
+    await refreshBusiness();
+    navigate('/admin');
+  };
   useNewBookingAlerts(business, () => setFresh((n) => n + 1));
   useEffect(() => { if (pathname === '/panel/reservas') setFresh(0); }, [pathname]);
   useEffect(() => setMore(false), [pathname]);
@@ -176,7 +200,8 @@ export function BusinessShell() {
   // Panel sections follow the business's questionnaire answers.
   const { data: settings, reload: reloadSettings } = useAsync(() => getRestaurantSettings(business.name, kind), [business.name, kind]);
   const mods = modulesFor(settings?.profile);
-  const sections = panelSections(kind, mods);
+  const type = typeOf(business);
+  const sections = panelSections(kind, mods, type);
   const current = sectionOf(sections, pathname);
   // Opening a section or tab clears its "new" dot.
   useEffect(() => { if (current) markSeen(current.key, pathname); }, [current?.key, pathname]);
@@ -200,19 +225,26 @@ export function BusinessShell() {
             <Mono name={business.name} image={business.image} />
             <span className="stack" style={{ gap: 0, minWidth: 0 }}>
               <span style={{ fontWeight: 800, fontSize: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{business.name}</span>
-              <span className="small" style={{ color: 'var(--accent)' }}>{business.status === 'approved' ? '● Recibiendo reservas' : '● Pendiente de aprobación'}</span>
+              <span className="small" style={{ color: 'var(--accent)' }}>{business.viewingDemo ? '● Negocio de ejemplo' : business.status === 'approved' ? (kind === 'shop' ? '● Recibiendo pedidos' : '● Recibiendo reservas') : '● Pendiente de aprobación'}</span>
             </span>
           </div>
         )}
       />
       <main className="shell-main">
-        {business.status === 'pending' && (
+        {business.viewingDemo && (
+          <div className="widget row" style={{ margin: '12px var(--gutter) 0', background: 'var(--accent)', gap: 12 }} role="status">
+            <Icon name="eye" size={20} />
+            <span className="small grow" style={{ fontWeight: 600 }}>Estás viendo el panel de ejemplo de {business.name}. Lo que cambies se ve en su página.</span>
+            <button className="btn primary sm" onClick={exitDemo}>Salir</button>
+          </div>
+        )}
+        {business.status === 'pending' && !business.viewingDemo && (
           <div className="widget row" style={{ margin: '12px var(--gutter) 0', background: 'var(--accent)', gap: 12 }} role="status">
             <Icon name="bell" size={20} />
             <span className="small" style={{ fontWeight: 600 }}>Tu página aún no es pública. Completa la lista "Para salir publicado" y la revisamos enseguida.</span>
           </div>
         )}
-        {business.status === 'rejected' && (
+        {business.status === 'rejected' && !business.viewingDemo && (
           <div className="widget row" style={{ margin: '12px var(--gutter) 0', background: 'var(--danger-soft)', gap: 12 }} role="status">
             <Icon name="bell" size={20} />
             <span className="small" style={{ fontWeight: 600 }}>No hemos podido aprobar tu negocio. Escríbenos desde "Contactar con NetWish" y lo vemos.</span>

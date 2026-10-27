@@ -4,6 +4,11 @@ import Icon from '../../components/Icon.jsx';
 import { BackButton, Empty, Spinner } from '../../components/ui.jsx';
 import ReserveSheet from '../../components/ReserveSheet.jsx';
 import ServiceBooking from '../../components/ServiceBooking.jsx';
+import ShopFront from '../../components/ShopFront.jsx';
+import ClassesFront from '../../components/ClassesFront.jsx';
+import TaxiFront from '../../components/TaxiFront.jsx';
+import { nounsOf } from '../../lib/businessTypes.js';
+import { typeFacts } from '../../lib/typeQuestions.js';
 import useAsync from '../../hooks/useAsync.js';
 import { findBusiness, getRestaurantSettings, listProducts } from '../../lib/data.js';
 import { categoryOf, kindOf } from '../../lib/categories.js';
@@ -27,11 +32,12 @@ function Hero({ biz, state, sub }) {
       <div className="hero-actions">
         <BackButton glass />
       </div>
+      {biz.demo && <span className="demo-pill" style={{ alignSelf: 'flex-start', marginBottom: 8 }}>Negocio de ejemplo</span>}
       <span className="eyebrow">{biz.category || categoryOf(biz).label}</span>
       <h1>{biz.name}</h1>
       {(state || sub) && (
         <div className="hero-meta">
-          {state && <span className={`open-pill${state.open ? (state.soon ? ' soon' : '') : ' closed'}`}><span className="dot" />{state.label}</span>}
+          {state && <span className={`open-pill${state.open ? (state.soon ? ' closing' : '') : ' closed'}`}><span className="dot" />{state.label}</span>}
           {sub && <span className="sub">{sub}</span>}
         </div>
       )}
@@ -165,7 +171,7 @@ function DailyMenu({ menu }) {
   );
 }
 
-function Actions({ biz, booksService }) {
+function Actions({ biz, booksService, bookLabel = 'Pedir cita' }) {
   const share = async () => {
     const url = window.location.href.split('?')[0];
     try {
@@ -177,7 +183,7 @@ function Actions({ biz, booksService }) {
   };
   return (
     <div className="actions">
-      {booksService && <a className="action dark" href="#servicios"><Icon name="calendar" size={22} />Pedir cita</a>}
+      {booksService && <a className="action dark" href={booksService === true ? '#servicios' : booksService}><Icon name="calendar" size={22} />{bookLabel}</a>}
       {biz.telefono && <a className="action" href={`tel:${biz.telefono}`}><Icon name="phone" size={22} />Llamar</a>}
       <a className="action" href={mapsUrl(biz)} target="_blank" rel="noreferrer"><Icon name="pin" size={22} />Cómo llegar</a>
       <Link className="action" to={`/chat/${encodeURIComponent(biz.name)}`}><Icon name="chat" size={22} />Escribir</Link>
@@ -271,7 +277,7 @@ export default function Business() {
     const kind = kindOf(biz);
     const [products, settings] = await Promise.all([
       listProducts(biz.name),
-      kind === 'restaurant' || kind === 'beauty' ? getRestaurantSettings(biz.name, kind) : Promise.resolve(null),
+      kind === 'music' ? Promise.resolve(null) : getRestaurantSettings(biz.name, kind),
     ]);
     return { biz, kind, products, settings };
   }, [name]);
@@ -299,7 +305,7 @@ export default function Business() {
   const mods = modulesFor(isRestaurant ? settings?.profile : {});
   const canBook = isRestaurant && mods.reservas;
   const facts = isRestaurant ? publicFacts(settings?.profile) : { headline: '', badges: [] };
-  const state = isRestaurant || isBeauty ? openState(settings) : null;
+  const state = kind !== 'music' && settings ? openState(settings) : null;
   const menu = settings?.daily_menu;
   const menuToday = isRestaurant && mods.menuDia && menu && menu.active !== false && (menu.first_courses?.length || menu.second_courses?.length) && !isClosed(settings, todayISO());
   const events = isRestaurant ? upcomingEvents(settings?.profile?.eventos) : [];
@@ -338,22 +344,26 @@ export default function Business() {
   );
 
   if (!isRestaurant) {
+    const shop = kind === 'shop';
+    const bottom = isBeauty || kind === 'taxi' || (shop && settings?.profile?.recogida) ? 120 : undefined;
+    const hasHours = kind !== 'music' && settings && (settings.lunch_start || settings.dinner_start);
     return (
-      <div className="page flush-top" style={{ paddingBottom: isBeauty ? 120 : undefined }}>
+      <div className="page flush-top" style={{ paddingBottom: bottom }}>
         <Hero biz={biz} state={state} />
         <div className="overlap stack">
-          <Actions biz={biz} booksService={isBeauty} />
-          {isBeauty ? (
+          <Actions biz={biz} booksService={isBeauty ? true : kind === 'classes' ? '#clases' : false} bookLabel={kind === 'classes' ? 'Reservar clase' : nounsOf(biz).book} />
+          {isBeauty && (
             <>
+              {typeFacts(biz, settings?.profile).length > 0 && <div className="widget" style={{ padding: 14 }}><div className="facts">{typeFacts(biz, settings?.profile).map((f) => <span key={f} className="fact">{f}</span>)}</div></div>}
               <ServiceBooking biz={biz} services={products} settings={settings} />
               <Hours settings={settings} />
             </>
-          ) : (
-            <>
-              <ProductList biz={biz} products={products} music={kind === 'music'} />
-              {!products.length && (biz.address || biz.telefono) && <InfoCard biz={biz} settings={{}} />}
-            </>
           )}
+          {shop && <ShopFront biz={biz} products={products} settings={settings} />}
+          {kind === 'classes' && <ClassesFront biz={biz} products={products} settings={settings} />}
+          {kind === 'taxi' && <TaxiFront biz={biz} products={products} settings={settings} />}
+          {kind === 'music' && <ProductList biz={biz} products={products} music />}
+          {!isBeauty && (hasHours || biz.address || biz.telefono) && <InfoCard biz={biz} settings={kind === 'taxi' || !hasHours ? {} : settings} />}
         </div>
       </div>
     );

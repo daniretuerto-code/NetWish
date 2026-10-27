@@ -114,14 +114,14 @@ export default function Orders({ comandasOnly = false, page = false }) {
 
   return (
     <div className="page">
-      <PageHeader eyebrow={business.name} title={isRestaurant ? 'Reservas y mesas' : 'Reservas'} />
+      <PageHeader eyebrow={business.name} title={isRestaurant ? 'Reservas y mesas' : { beauty: 'Citas', taxi: 'Viajes' }[kindOf(business)] || 'Reservas'} />
 
       {orders.length === 0 ? (
         <div className="widget"><Empty icon="calendar" title="Aún no hay reservas">Cuando un cliente reserve, lo verás aquí al momento.</Empty></div>
       ) : (
         <>
           <div className={isRestaurant ? 'kanban' : 'stack'}>
-            <Column title="Reservas por confirmar" count={reservations.length} accent>
+            <Column title={kindOf(business) === 'taxi' ? 'Viajes por confirmar' : kindOf(business) === 'beauty' ? 'Citas por confirmar' : 'Por confirmar'} count={reservations.length} accent>
               {reservations.map((o) => (
                 <OrderCard key={o.id} order={o} busy={busy === o.id} actions={[
                   { label: 'Confirmar', run: () => move(o, STATUS.CONFIRMED) },
@@ -145,7 +145,7 @@ export default function Orders({ comandasOnly = false, page = false }) {
 
           {upcoming.length > 0 && (
             <div className="widget" style={{ paddingBottom: 4 }}>
-              <h2 className="title-lg">Próximas reservas confirmadas</h2>
+              <h2 className="title-lg">Próximas confirmadas</h2>
               {upcoming.map((o) => (
                 <div key={o.id} className="list-row">
                   <span className="grow stack" style={{ gap: 1 }}>

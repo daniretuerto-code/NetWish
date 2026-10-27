@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import { createProduct, deleteProduct, getRestaurantSettings, listProducts, safeSlug, saveRestaurantSettings, uploadPublicFile } from '../../lib/data.js';
 import { kindOf } from '../../lib/categories.js';
+import { nounsOf } from '../../lib/businessTypes.js';
 import { duration, money } from '../../lib/format.js';
 
 const DURATIONS = [15, 20, 30, 45, 60, 75, 90, 105, 120, 150, 180, 210, 240];
@@ -213,7 +214,7 @@ export default function Catalog() {
     <div className="page">
       <PageHeader
         eyebrow={business.name}
-        title={kind === 'restaurant' ? 'Carta' : beauty ? 'Servicios' : 'Catálogo'}
+        title={kind === 'restaurant' ? 'Carta' : kind === 'classes' ? 'Tarifas' : kind === 'taxi' ? 'Precios' : nounsOf(business).list}
         right={tab === 'carta' && <button className="btn primary sm" onClick={() => setAdding(true)}><Icon name="plus" size={16} /> Añadir</button>}
       />
       <SectionTabs />

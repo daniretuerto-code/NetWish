@@ -4,7 +4,9 @@ import Icon from '../../components/Icon.jsx';
 import { Empty, Mono, PageHeader, Spinner, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
-import { cancelMyBooking, isReservation, myOrders, STATUS, subscribe } from '../../lib/data.js';
+import { cancelMyBooking, isPickup, isReservation, myOrders, STATUS, subscribe } from '../../lib/data.js';
+import { myPickups } from '../../lib/guest.js';
+import { paymentLabel } from '../../lib/shop.js';
 import { money, todayISO } from '../../lib/format.js';
 import { guestBookings } from '../../components/ReserveSheet.jsx';
 
@@ -19,7 +21,51 @@ const LABELS = {
   [STATUS.CANCELLED]: { text: 'Cancelada', tone: 'var(--bg)' },
   [STATUS.SEATED]: { text: 'En la mesa', tone: 'var(--accent)' },
   [STATUS.NOSHOW]: { text: 'No asististe', tone: '#F3C9C9' },
+  [STATUS.ORDERED]: { text: 'Recibido', tone: '#F4E3B5' },
+  [STATUS.PREPARING]: { text: 'Preparando', tone: '#F4E3B5' },
+  [STATUS.PICKUP]: { text: '¡Listo para recoger!', tone: 'var(--accent)' },
+  [STATUS.COLLECTED]: { text: 'Recogido', tone: '#E4EFE8' },
 };
+
+const ACTIVE_PICKUP = [STATUS.ORDERED, STATUS.PREPARING, STATUS.PICKUP];
+const pickupText = (items = '') => String(items).replace(/^Pedido para recoger:\s*/i, '').split(' · Nota:')[0];
+
+// Orders waiting at a shop: the code to show at the counter, and what to pick up.
+function PickupBlock({ list, onCancel, confirming, setConfirming }) {
+  if (!list.length) return null;
+  return (
+    <div className="widget dark stack">
+      <span className="eyebrow row" style={{ gap: 6 }}><Icon name="bag" size={14} /> Para recoger</span>
+      {list.map((o, i) => {
+        const label = LABELS[o.status] || LABELS[STATUS.ORDERED];
+        return (
+          <div key={o.id} className="stack" style={{ gap: 10, paddingTop: i ? 14 : 4, borderTop: i ? '1px solid rgba(255,255,255,.1)' : 0 }}>
+            <div className="row between" style={{ gap: 10, alignItems: 'flex-start' }}>
+              <span className="stack" style={{ gap: 2, minWidth: 0 }}>
+                <strong style={{ fontSize: 17 }}>{o.business_name}</strong>
+                <span className="small" style={{ opacity: 0.85, fontWeight: 600 }}>Recoge {dateLabel(o.date).toLowerCase()} · {String(o.time || '').slice(0, 5)}</span>
+                <span className="small" style={{ opacity: 0.62 }}>{pickupText(o.items)}</span>
+                <span className="small" style={{ opacity: 0.62 }}>{money(o.total)}{o.payment ? ` · pagas en tienda (${paymentLabel(o.payment).toLowerCase()})` : ''}</span>
+              </span>
+              <span className="stack" style={{ gap: 6, alignItems: 'flex-end', flex: 'none' }}>
+                {(o.pickup_code || o.code) && <span className="pickup-code" style={{ fontSize: 20, padding: '4px 10px' }}>{o.pickup_code || o.code}</span>}
+                <span className="status" style={{ background: label.tone, color: 'var(--ink)' }}>{label.text}</span>
+              </span>
+            </div>
+            {onCancel && o.status === STATUS.ORDERED && (confirming === o.id ? (
+              <div className="row" style={{ gap: 8 }}>
+                <button className="btn accent sm" style={{ flex: 1 }} onClick={() => onCancel(o)}>Sí, cancelar</button>
+                <button className="btn soft sm" style={{ flex: 1 }} onClick={() => setConfirming(null)}>No</button>
+              </div>
+            ) : (
+              <button className="btn ghost sm" style={{ color: '#fff', alignSelf: 'flex-start' }} onClick={() => setConfirming(o.id)}>Cancelar pedido</button>
+            ))}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 // Newest first by the day of the visit, not by when it was booked.
 const byDateDesc = (a, b) => `${b.date || ''} ${b.time || ''}`.localeCompare(`${a.date || ''} ${a.time || ''}`);
@@ -44,7 +90,7 @@ const dateLabel = (iso) => {
 function OrderRow({ order }) {
   const label = LABELS[order.status] || { text: order.status, tone: 'var(--bg)' };
   const booking = isReservation(order);
-  const { head, note } = booking ? bookingLines(order.items) : { head: order.items, note: '' };
+  const { head, note } = booking ? bookingLines(order.items) : { head: isPickup(order) ? pickupText(order.items) : order.items, note: '' };
   return (
     <Link to={`/negocio/${encodeURIComponent(order.business_name)}`} className="list-row" style={{ alignItems: 'flex-start', padding: '12px 0' }}>
       <Mono name={order.business_name} />
@@ -83,7 +129,7 @@ export default function Orders() {
   const cancel = async (o) => {
     try {
       await cancelMyBooking(o.id);
-      toast('Reserva cancelada. Gracias por avisar.');
+      toast(isPickup(o) ? 'Pedido cancelado.' : 'Reserva cancelada. Gracias por avisar.');
       setConfirming(null);
       reload();
     } catch (e) {
@@ -99,9 +145,11 @@ export default function Orders() {
   if (!user) {
     // Bookings made without an account in this browser, soonest first.
     const mine = guestBookings().filter((b) => (b.date || '') >= todayISO()).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+    const pickups = myPickups().filter((p) => (p.date || '') >= todayISO()).map((p) => ({ ...p, status: STATUS.ORDERED }));
     return (
       <div className="page">
         <PageHeader eyebrow="Tu actividad" title="Reservas" />
+        <PickupBlock list={pickups} />
         {mine.length > 0 && (
           <div className="widget dark stack">
             <span className="eyebrow row" style={{ gap: 6 }}><Icon name="calendar" size={14} /> Próximas reservas</span>
@@ -135,12 +183,13 @@ export default function Orders() {
 
   if (loading && !data) return <Spinner />;
   const orders = data || [];
-  const reservations = orders.filter((o) => isReservation(o) && [STATUS.PENDING, STATUS.CONFIRMED].includes(o.status) && (o.date || '') >= todayISO());
+  const pickups = orders.filter((o) => isPickup(o) && ACTIVE_PICKUP.includes(o.status)).sort((a, b) => byDateDesc(b, a));
+  const reservations = orders.filter((o) => !isPickup(o) && isReservation(o) && [STATUS.PENDING, STATUS.CONFIRMED].includes(o.status) && (o.date || '') >= todayISO());
   reservations.sort((a, b) => byDateDesc(b, a));
-  const rest = orders.filter((o) => !reservations.includes(o));
+  const rest = orders.filter((o) => !reservations.includes(o) && !pickups.includes(o));
   // Bookings and old QR orders are different things: each gets its own list.
-  const pastBookings = rest.filter(isReservation).sort(byDateDesc);
-  const pastOrders = rest.filter((o) => !isReservation(o)).sort(byDateDesc);
+  const pastBookings = rest.filter((o) => isReservation(o) && !isPickup(o)).sort(byDateDesc);
+  const pastOrders = rest.filter((o) => !isReservation(o) || isPickup(o)).sort(byDateDesc);
 
   return (
     <div className="page">
@@ -154,6 +203,7 @@ export default function Orders() {
       ) : (
         <div className="two-col">
           <div className="stack">
+            <PickupBlock list={pickups} onCancel={cancel} confirming={confirming} setConfirming={setConfirming} />
             {reservations.length > 0 && (
               <div className="widget dark stack">
                 <span className="eyebrow row" style={{ gap: 6 }}><Icon name="calendar" size={14} /> Próximas reservas</span>
@@ -190,7 +240,7 @@ export default function Orders() {
               </div>
             )}
             <HistoryBlock title="Historial" list={pastBookings} />
-            {reservations.length === 0 && pastBookings.length === 0 && (
+            {reservations.length === 0 && pastBookings.length === 0 && pickups.length === 0 && (
               <div className="widget"><Empty icon="calendar" title="No tienes reservas próximas"><Link to="/explorar">Busca dónde ir</Link></Empty></div>
             )}
           </div>

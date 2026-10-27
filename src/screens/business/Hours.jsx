@@ -20,6 +20,8 @@ export default function Hours() {
   const { data, loading, setData } = useAsync(() => getRestaurantSettings(business.name, kindOf(business)), [business.name]);
 
   if (loading && !data) return <Skeleton />;
+  const kind = kindOf(business);
+  const withTeam = kind === 'beauty';
   const staff = data.staff || [];
   const closed = data.closed_days || [];
 
@@ -57,11 +59,11 @@ export default function Hours() {
 
   return (
     <div className="page" style={{ maxWidth: 820, paddingBottom: dirty ? 200 : undefined }}>
-      <PageHeader eyebrow={business.name} title="Horario y equipo" />
+      <PageHeader eyebrow={business.name} title={withTeam ? 'Horario y equipo' : 'Horario'} />
 
       <div className="widget stack">
-        <h2 className="title-lg">Horario de citas</h2>
-        <p className="small muted" style={{ margin: 0 }}>Las citas solo se ofrecen si el servicio entero cabe dentro de un turno.</p>
+        <h2 className="title-lg">{withTeam ? 'Horario de citas' : kind === 'shop' ? 'Horario de la tienda' : kind === 'taxi' ? 'Horario de servicio' : 'Horario'}</h2>
+        <p className="small muted" style={{ margin: 0 }}>{withTeam ? 'Las citas solo se ofrecen si el servicio entero cabe dentro de un turno.' : kind === 'shop' ? 'Tus clientes solo pueden elegir recoger dentro de este horario. Si abres seguido, pon la tarde vacía.' : 'Se muestra en tu página. Deja la tarde vacía si no cierras a mediodía.'}</p>
         <div className="bento">{time('lunch_start', 'Mañana desde')}{time('lunch_end', 'Mañana hasta')}</div>
         <div className="bento">{time('dinner_start', 'Tarde desde')}{time('dinner_end', 'Tarde hasta')}</div>
         <span className="eyebrow" style={{ marginTop: 6 }}>Días que cierras</span>
@@ -75,7 +77,7 @@ export default function Hours() {
         </div>
       </div>
 
-      <div className="widget stack">
+      {withTeam && <div className="widget stack">
         <h2 className="title-lg">Equipo</h2>
         <p className="small muted" style={{ margin: 0 }}>
           Cada profesional atiende una cita a la vez. Si sois varios, se pueden reservar citas a la misma hora y el cliente puede elegir con quién.
@@ -92,7 +94,7 @@ export default function Hours() {
           <input className="input grow" aria-label="Nombre del profesional" placeholder="Nombre (ej. Laura)" value={newName} onChange={(e) => setNewName(e.target.value)} />
           <button className="btn primary sm" disabled={!newName.trim()}><Icon name="plus" size={16} /> Añadir</button>
         </form>
-      </div>
+      </div>}
 
       {dirty && (
         <button className="cta-bar above-tabs" onClick={save} disabled={busy}>

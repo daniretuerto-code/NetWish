@@ -35,6 +35,10 @@ const BizOnboarding = lazy(() => import('./screens/business/Setup.jsx').then((m)
 const BizClients = lazy(() => import('./screens/business/Clients.jsx'));
 const BizNumbers = lazy(() => import('./screens/business/Clients.jsx').then((m) => ({ default: m.Numbers })));
 const BizShare = lazy(() => import('./screens/business/Share.jsx'));
+const BizPickups = lazy(() => import('./screens/business/PickupOrders.jsx'));
+const BizShopCatalog = lazy(() => import('./screens/business/ShopCatalog.jsx'));
+const BizStock = lazy(() => import('./screens/business/Stock.jsx'));
+const BizClasses = lazy(() => import('./screens/business/ClassesAdmin.jsx'));
 const BizSection = lazy(() => import('./screens/business/Setup.jsx').then((m) => ({ default: m.SectionWizard })));
 
 // Printed QR codes point to /?biz=NAME&table=N, so keep that entry point working.
@@ -58,10 +62,19 @@ function RequireBusiness({ children }) {
   return children;
 }
 
-// Restaurants get the agenda, hall and customers; other businesses the simple list.
+// Restaurants get the agenda, hall and customers; shops their pickup orders; others the simple list.
 function BizBookings() {
   const { business } = useAuth();
-  return kindOf(business) === 'restaurant' ? <BizReservations /> : <BizOrders />;
+  const kind = kindOf(business);
+  if (kind === 'restaurant') return <BizReservations />;
+  if (kind === 'shop') return <BizPickups />;
+  return <BizOrders />;
+}
+
+// Shops manage products with photos and stock; everyone else the menu or list of services.
+function BizProducts() {
+  const { business } = useAuth();
+  return kindOf(business) === 'shop' ? <BizShopCatalog /> : <BizCatalog />;
 }
 
 // QR table orders, on their own page inside the service section.
@@ -130,7 +143,9 @@ export default function App() {
           <Route path="numeros" element={<BizNumbers />} />
           <Route path="compartir" element={<BizShare />} />
           <Route path="cocina" element={<BizKitchen />} />
-          <Route path="carta" element={<BizCatalog />} />
+          <Route path="carta" element={<BizProducts />} />
+          <Route path="stock" element={<BizStock />} />
+          <Route path="clases" element={<BizClasses />} />
           <Route path="mesas" element={<BizTables />} />
           <Route path="mensajes" element={<BizMessages />} />
           <Route path="ajustes" element={<BizSettings />} />

@@ -19,13 +19,19 @@ export function CartProvider({ children }) {
     const key = normalize(business);
     setCarts((all) => {
       const items = [...(all[key]?.items || [])];
-      const idx = items.findIndex((i) => i.id === product.id);
+      // A shop line is one product in one size and colour: its id carries the variant.
+      const id = product.variant ? `${product.id}~${product.variant}` : product.id;
+      const idx = items.findIndex((i) => i.id === id);
       if (idx === -1 && delta > 0) {
         items.push({
-          id: product.id,
+          id,
+          pid: product.id,
+          variant: product.variant || null,
           name: product.name,
           price: Number(product.price) || 0,
           qty: delta,
+          image: product.image_url || null,
+          unit: product.unit || null,
           audio_url: product.audio_url || null,
           full_audio_url: product.full_audio_url || null,
         });
@@ -48,7 +54,7 @@ export function CartProvider({ children }) {
         qtyOf: (id) => items.find((i) => i.id === id)?.qty || 0,
       };
     },
-    add: (business, product) => change(business, product, 1),
+    add: (business, product, qty = 1) => change(business, product, qty),
     remove: (business, product) => change(business, product, -1),
     clear: (business) => setCarts((all) => {
       const next = { ...all };

@@ -57,7 +57,7 @@ export default function Explore() {
 
       <div className="chips" role="tablist" aria-label="Categorías">
         <button role="tab" aria-selected={!cat} className={`chip ${!cat ? 'on' : ''}`} onClick={() => setParams({})}>Todo</button>
-        {CATEGORIES.map((c) => (
+        {CATEGORIES.filter((c) => !c.hidden || (data || []).some((r) => categoryOf(r.biz).key === c.key)).map((c) => (
           <button key={c.key} role="tab" aria-selected={cat === c.key} className={`chip ${cat === c.key ? 'on' : ''}`} onClick={() => setParams({ cat: c.key })}>
             {c.label}
           </button>

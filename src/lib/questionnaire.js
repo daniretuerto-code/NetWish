@@ -159,8 +159,8 @@ export function sectionProgress(section, answers) {
   return { done, total: qs.length };
 }
 
-export function profileProgress(answers) {
-  const sections = RESTAURANT_SECTIONS.filter((s) => !s.when || s.when(answers));
+export function profileProgress(answers, all = RESTAURANT_SECTIONS) {
+  const sections = all.filter((s) => !s.when || s.when(answers));
   let done = 0;
   let total = 0;
   for (const s of sections) {

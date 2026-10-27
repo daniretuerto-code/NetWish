@@ -21,10 +21,30 @@ function summary(order) {
   </table>`;
 }
 
+const PAY = { tarjeta: 'con tarjeta en la tienda', efectivo: 'en efectivo en la tienda', bizum: 'por Bizum al recoger' };
+
+// Orders to pick up at a shop: what was ordered, the code and where to go.
+function pickupSummary(order) {
+  const lines = Array.isArray(order.lines) && order.lines.length
+    ? order.lines.map((l) => `${l.qty}× ${l.name}${l.variant ? ` (${String(l.variant).split('|').join(' · ')})` : ''}`)
+    : [String(order.items || '').replace(/^Pedido para recoger:\s*/i, '')];
+  return `<table style="width:100%;border-collapse:collapse;font-size:15px">
+    ${row('Tienda', order.business_name)}
+    ${lines.map((l, i) => row(i ? '' : 'Pedido', l)).join('')}
+    ${row('Recoger', `${order.date} · ${String(order.time || '').slice(0, 5)}`)}
+    ${row('Total', euro(order.total))}
+    ${row('Pago', PAY[order.payment] || 'en la tienda')}
+    ${order.address ? row('Dirección', order.address) : ''}
+  </table>`;
+}
+const codeBox = (code) => (code
+  ? `<p style="margin:18px 0;text-align:center"><span style="display:inline-block;background:#D4FF3A;color:#111;font-size:28px;font-weight:800;letter-spacing:4px;padding:10px 22px;border-radius:14px">${escapeHtml(code)}</span><br><span style="color:#6B6862;font-size:13px">Enséñalo al recoger</span></p>`
+  : '');
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
   const { orderId, kind = 'created' } = req.body || {};
-  if (!UUID.test(String(orderId)) || !['created', 'confirmed', 'changed'].includes(kind)) {
+  if (!UUID.test(String(orderId)) || !['created', 'confirmed', 'changed', 'ready'].includes(kind)) {
     return res.status(400).json({ error: 'Petición no válida' });
   }
 
@@ -39,6 +59,32 @@ export default async function handler(req, res) {
     if (!order) return res.status(200).json({ sent: false });
 
     const reservation = /reserva/i.test(order.items) || /aprobaci/i.test(order.status);
+    const pickup = /^Pedido para recoger/i.test(order.items || '') || !!order.pickup_code;
+
+    if (kind === 'ready') {
+      await sendEmail({
+        to: order.customer_email,
+        subject: `Tu pedido está listo en ${order.business_name}`,
+        html: emailLayout('¡Tu pedido está listo!', `<p>Hola ${escapeHtml(order.customer)}, ya puedes pasar a recogerlo por ${escapeHtml(order.business_name)}.</p>${codeBox(order.pickup_code)}${pickupSummary(order)}`),
+      });
+      return res.status(200).json({ sent: true });
+    }
+
+    if (kind === 'created' && pickup) {
+      await Promise.all([
+        sendEmail({
+          to: order.customer_email,
+          subject: `Pedido recibido en ${order.business_name} · ${order.pickup_code || ''}`.trim(),
+          html: emailLayout('Hemos recibido tu pedido', `<p>Hola ${escapeHtml(order.customer)}, ${escapeHtml(order.business_name)} te lo deja apartado. Te avisamos cuando esté listo. Pagas al recogerlo.</p>${codeBox(order.pickup_code)}${pickupSummary(order)}`),
+        }),
+        sendEmail({
+          to: order.business_email,
+          subject: `Nuevo pedido para recoger: ${order.customer}${order.pickup_code ? ` · ${order.pickup_code}` : ''}`,
+          html: emailLayout('Nuevo pedido para recoger', `${pickupSummary(order)}<p>Cliente: ${escapeHtml(order.customer)}${order.customer_email ? ` · ${escapeHtml(order.customer_email)}` : ''}${order.phone ? ` · ${escapeHtml(order.phone)}` : ''}</p><p><a href="${SITE_URL}/panel/reservas">Abrir el panel</a></p>`),
+        }),
+      ]);
+      return res.status(200).json({ sent: true });
+    }
 
     if (kind === 'confirmed') {
       await sendEmail({

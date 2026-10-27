@@ -1,30 +1,35 @@
-import { normalize } from './format.js';
+import { typeOf } from './businessTypes.js';
 
+// The directory's categories. Each business type belongs to one (businessTypes.js → cat).
 export const CATEGORIES = [
-  { key: 'rest', label: 'Comer', match: ['rest', 'bar', 'cafe'], icon: 'utensils' },
-  { key: 'pan', label: 'Panaderías', match: ['pan', 'horno', 'paste'], icon: 'croissant' },
-  { key: 'pel', label: 'Belleza', match: ['pelu', 'barb', 'estet', 'belle'], icon: 'scissors' },
-  { key: 'music', label: 'Música', match: ['disc', 'music', 'beat', 'estudio'], icon: 'music' },
-  { key: 'serv', label: 'Servicios', match: ['serv', 'repar', 'escay'], icon: 'wrench' },
-  { key: 'shop', label: 'Tiendas', match: ['comer', 'tienda', 'moda'], icon: 'bag' },
+  { key: 'rest', label: 'Comer', icon: 'utensils' },
+  { key: 'pan', label: 'Pan y dulces', icon: 'croissant' },
+  { key: 'alim', label: 'Alimentación', icon: 'basket' },
+  { key: 'pel', label: 'Belleza', icon: 'scissors' },
+  { key: 'moda', label: 'Moda', icon: 'shirt' },
+  { key: 'shop', label: 'Tiendas', icon: 'bag' },
+  { key: 'salud', label: 'Salud', icon: 'pulse' },
+  { key: 'clases', label: 'Deporte y clases', icon: 'dumbbell' },
+  { key: 'serv', label: 'Servicios', icon: 'wrench' },
+  { key: 'music', label: 'Música', icon: 'music', hidden: true },
 ];
 
 export const categoryOf = (biz) => {
-  const c = normalize(biz?.category);
-  return CATEGORIES.find((cat) => cat.match.some((m) => c.includes(m))) || CATEGORIES[CATEGORIES.length - 1];
+  const key = typeOf(biz).cat;
+  return CATEGORIES.find((c) => c.key === key) || CATEGORIES.find((c) => c.key === 'shop');
 };
 
-export const kindOf = (biz) => {
-  const key = categoryOf(biz).key;
-  if (key === 'rest') return 'restaurant';
-  if (key === 'music') return 'music';
-  if (key === 'pel') return 'beauty';
-  return 'shop';
-};
+// Which panel and public page a business gets. See businessTypes.js for the engines.
+export const kindOf = (biz) => typeOf(biz).engine;
 
 // One line under each business in lists, matching what you can do there.
-export const taglineFor = (biz) => ({
-  restaurant: 'Carta y reserva de mesa',
-  beauty: 'Reserva tu cita online',
-  music: 'Escucha sus beats',
-}[kindOf(biz)] || 'Catálogo y contacto');
+export const taglineFor = (biz) => {
+  const t = typeOf(biz);
+  return ({
+    restaurant: 'Carta y reserva de mesa',
+    beauty: t.key === 'taller' ? 'Pide cita para tu coche' : 'Reserva tu cita online',
+    classes: 'Horario de clases y reservas',
+    taxi: 'Reserva tu viaje',
+    music: 'Escucha sus beats',
+  })[t.engine] || (t.shop?.daily ? 'Encarga y recoge en la tienda' : 'Catálogo y recogida en tienda');
+};
