@@ -4,6 +4,8 @@ import Icon from '../../components/Icon.jsx';
 import { Mono, PageHeader, Sheet, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { claimBusiness } from '../../lib/data.js';
+import { LegalLinks } from './Legal.jsx';
+import { useFavorites } from '../../lib/favorites.js';
 
 // At least 8 characters with letters and numbers; Supabase stores only a hash.
 const weakPassword = (p) => p.length < 8 || !/[a-zA-Z]/.test(p) || !/\d/.test(p);
@@ -122,6 +124,63 @@ export function ClaimSheet({ open, onClose }) {
   );
 }
 
+function Favorites() {
+  const [favs, toggle] = useFavorites();
+  if (!favs.length) return null;
+  return (
+    <div className="widget stack" style={{ gap: 6 }}>
+      <span className="eyebrow">Tus favoritos</span>
+      {favs.map((f) => (
+        <div key={f.name} className="row" style={{ gap: 10 }}>
+          <Link to={`/negocio/${encodeURIComponent(f.name)}`} className="row grow" style={{ gap: 10, textDecoration: 'none', color: 'inherit', minWidth: 0 }}>
+            <Mono name={f.name} image={f.image} />
+            <span className="stack grow" style={{ gap: 0, minWidth: 0 }}><strong>{f.name}</strong>{f.category && <span className="small muted">{f.category}</span>}</span>
+          </Link>
+          <button className="icon-btn" aria-label={`Quitar ${f.name} de favoritos`} onClick={() => toggle(f)}><Icon name="close" size={16} /></button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DeleteAccount() {
+  const { deleteAccount, business } = useAuth();
+  const toast = useToast();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const go = async () => {
+    setBusy(true);
+    try {
+      await deleteAccount();
+      toast('Tu cuenta y tus datos se han borrado');
+      navigate('/');
+    } catch (err) {
+      toast(err.message, 'error');
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <button className="btn ghost sm" style={{ alignSelf: 'center', color: 'var(--muted)' }} onClick={() => setOpen(true)}>Borrar mi cuenta</button>
+      <Sheet open={open} onClose={() => setOpen(false)} title="Borrar mi cuenta">
+        <div className="stack">
+          {business ? (
+            <p className="small" style={{ margin: 0 }}>Tu cuenta lleva el panel de <strong>{business.name}</strong>. Para borrarla, primero escríbenos para dar de baja el negocio; así no pierdes las reservas de tus clientes.</p>
+          ) : (
+            <>
+              <p className="small" style={{ margin: 0 }}>Se borran tu cuenta, tus datos y tus mensajes. Las reservas que ya hiciste se quedan en el negocio sin tu correo ni tu teléfono. No se puede deshacer.</p>
+              <div className="field"><label htmlFor="del-ok">Escribe BORRAR para confirmar</label><input id="del-ok" className="input" value={text} onChange={(e) => setText(e.target.value)} /></div>
+              <button className="btn primary block" style={{ background: 'var(--danger, #C0392B)' }} disabled={busy || text.trim().toUpperCase() !== 'BORRAR'} onClick={go}>{busy ? 'Borrando…' : 'Borrar para siempre'}</button>
+            </>
+          )}
+        </div>
+      </Sheet>
+    </>
+  );
+}
+
 export default function Account() {
   const { user, business, displayName, avatar, signOut } = useAuth();
   const navigate = useNavigate();
@@ -141,6 +200,7 @@ export default function Account() {
             </span>
             <Icon name="chevron" size={18} />
           </Link>
+          <Favorites />
         </>
       ) : (
         <>
@@ -172,11 +232,15 @@ export default function Account() {
             <Icon name="chevron" size={18} />
           </Link>
 
+          <Favorites />
+
           <button className="btn block" onClick={() => signOut().then(() => navigate('/'))}>
             <Icon name="logout" size={18} /> Cerrar sesión
           </button>
+          <DeleteAccount />
         </>
       )}
+      <div style={{ marginTop: 18 }}><LegalLinks /></div>
     </div>
   );
 }

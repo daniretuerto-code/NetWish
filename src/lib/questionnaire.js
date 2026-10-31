@@ -60,6 +60,9 @@ export const RESTAURANT_SECTIONS = [
       ] },
       { id: 'google_resenas', type: 'text', label: '¿Cuál es el enlace para dejarte una reseña en Google?', help: 'Quien te ponga un 4 o un 5 en la encuesta del día siguiente irá directo a dejarte la reseña en Google. Lo encuentras en tu Perfil de Empresa de Google → "Pedir reseñas".', placeholder: 'https://g.page/r/…' },
       { id: 'cancelacion', type: 'text', label: '¿Tienes alguna norma de cancelación o retraso?', help: 'La verá el cliente antes de reservar.', placeholder: 'Ej.: Guardamos la mesa 15 minutos. Avísanos si no puedes venir.' },
+      { id: 'cancelar_horas', type: 'choice', label: '¿Hasta cuándo pueden cancelar o cambiar online?', help: 'Después tendrán que llamarte. Se lo decimos antes de reservar.', options: [
+        { value: 0, label: 'Hasta la hora' }, { value: 2, label: '2 h antes' }, { value: 6, label: '6 h antes' }, { value: 24, label: '24 h antes' },
+      ] },
     ],
   },
   {

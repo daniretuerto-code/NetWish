@@ -2,6 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
 import { BackButton, Empty, Spinner } from '../../components/ui.jsx';
+import { useFavorites } from '../../lib/favorites.js';
+import { allergenInfo } from '../../lib/allergens.js';
+import Reviews from '../../components/Reviews.jsx';
 import ReserveSheet from '../../components/ReserveSheet.jsx';
 import ServiceBooking from '../../components/ServiceBooking.jsx';
 import ShopFront from '../../components/ShopFront.jsx';
@@ -18,6 +21,18 @@ import { eventDay, upcomingEvents } from '../../lib/events.js';
 import { mapsUrl, openState, shiftsOf, weekHours } from '../../lib/hours.js';
 import { isClosed } from '../../lib/booking.js';
 
+// Heart in the top corner: keeps the place in "Tus favoritos" (Cuenta).
+function FavButton({ biz }) {
+  const [favs, toggle] = useFavorites();
+  const on = favs.some((f) => f.name === biz.name);
+  return (
+    <button type="button" className="icon-btn glass" aria-pressed={on} aria-label={on ? 'Quitar de favoritos' : 'Guardar en favoritos'} onClick={() => toggle(biz)}
+      style={on ? { color: '#E5484D' } : undefined}>
+      <Icon name="heart" size={20} stroke={on ? 0 : 2.2} fill={on ? 'currentColor' : 'none'} />
+    </button>
+  );
+}
+
 function Hero({ biz, state, sub }) {
   return (
     <header className="hero" style={{ background: toneFor(biz.name) }}>
@@ -31,6 +46,7 @@ function Hero({ biz, state, sub }) {
       )}
       <div className="hero-actions">
         <BackButton glass />
+        <FavButton biz={biz} />
       </div>
       {biz.demo && <span className="demo-pill" style={{ alignSelf: 'flex-start', marginBottom: 8 }}>Negocio de ejemplo</span>}
       {biz.preview && <span className="demo-pill" style={{ alignSelf: 'flex-start', marginBottom: 8 }}>Aún no conectado</span>}
@@ -115,16 +131,25 @@ function ProductList({ biz, products, music, compact }) {
           <div key={section} className="menu-section">
             <h2 id={`carta-${i}`}>{section}</h2>
             {items.map((p) => (
-              <div key={p.id} className="dish">
+              <div key={p.id} className="dish" style={p.sold_out ? { opacity: 0.55 } : undefined}>
+                {p.image_url && <img src={p.image_url} alt="" loading="lazy" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 14, flex: 'none' }} />}
                 <span className="grow" style={{ minWidth: 0 }}>
-                  <span className="t" style={{ display: 'block' }}>{p.name}</span>
+                  <span className="t" style={{ display: 'block' }}>{p.name}{p.sold_out && <span className="small muted" style={{ fontWeight: 600 }}> · Agotado hoy</span>}</span>
                   {p.description && <span className="s" style={{ display: 'block' }}>{p.description}</span>}
+                  {p.allergens?.length > 0 && (
+                    <span className="s" style={{ display: 'block', marginTop: 2 }} title={p.allergens.map((a) => allergenInfo(a).label).join(', ')}>
+                      {p.allergens.map((a) => `${allergenInfo(a).icon} ${allergenInfo(a).label}`).join(' · ')}
+                    </span>
+                  )}
                 </span>
                 {Number(p.price) > 0 && <span className="price">{money(p.price)}</span>}
               </div>
             ))}
           </div>
         ))}
+        {sections.some(([, items]) => items.some((p) => p.allergens?.length)) && (
+          <p className="small muted" style={{ margin: '10px 0 0' }}>Si tienes alguna alergia, díselo al personal antes de pedir.</p>
+        )}
       </section>
     );
   }
@@ -380,6 +405,7 @@ export default function Business() {
           {kind === 'classes' && <ClassesFront biz={biz} products={products} settings={settings} />}
           {kind === 'taxi' && <TaxiFront biz={biz} products={products} settings={settings} />}
           {kind === 'music' && <ProductList biz={biz} products={products} music />}
+          {kind !== 'music' && <Reviews biz={biz} />}
           {!isBeauty && (hasHours || biz.address || biz.telefono) && <InfoCard biz={biz} settings={kind === 'taxi' || !hasHours ? {} : settings} />}
         </div>
       </div>
@@ -407,6 +433,7 @@ export default function Business() {
             </div>
 
             {tab === 'carta' && <ProductList biz={biz} products={products} compact />}
+            <Reviews biz={biz} />
             {mods.menuDia && tab === 'menu' && <DailyMenu menu={menu} />}
             {tab === 'info' && (
               <InfoCard biz={biz} settings={settings} extra={settings.profile?.para_llevar && biz.telefono && <a className="btn soft block" href={`tel:${biz.telefono}`}>Llamar para pedir para llevar</a>} />

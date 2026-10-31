@@ -32,13 +32,73 @@ function LinkCard({ business }) {
 }
 
 // Where to put the booking button: Google, Instagram, the restaurant's website and a printed QR.
+// A ready-to-print poster (A5 portrait) or table sticker (square) with the QR, as a PNG.
+async function makePoster({ qr, name, kind }) {
+  const sticker = kind === 'sticker';
+  const W = sticker ? 1200 : 1748;
+  const H = sticker ? 1200 : 2480;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  await document.fonts?.ready;
+  g.fillStyle = '#0B0B0A'; g.fillRect(0, 0, W, H);
+  const font = (w, px) => `${w} ${px}px Inter, -apple-system, "Segoe UI", Arial, sans-serif`;
+  g.textAlign = 'center';
+  g.fillStyle = '#D4F25C';
+  g.font = font(800, sticker ? 64 : 96);
+  g.fillText(sticker ? 'Reserva aquí' : 'Reserva tu mesa', W / 2, sticker ? 140 : 300);
+  g.fillStyle = '#FFFFFF';
+  let size = sticker ? 54 : 84;
+  g.font = font(700, size);
+  while (g.measureText(name).width > W * 0.86 && size > 30) { size -= 4; g.font = font(700, size); }
+  g.fillText(name, W / 2, sticker ? 220 : 430);
+  const img = new Image();
+  img.src = qr;
+  await img.decode();
+  const q = sticker ? 760 : 1180;
+  const x = (W - q) / 2;
+  const y = sticker ? 290 : 620;
+  g.fillStyle = '#FFFFFF';
+  const pad = sticker ? 36 : 56;
+  g.beginPath(); g.roundRect(x - pad, y - pad, q + pad * 2, q + pad * 2, sticker ? 40 : 64); g.fill();
+  g.drawImage(img, x, y, q, q);
+  g.fillStyle = 'rgba(255,255,255,.75)';
+  g.font = font(600, sticker ? 38 : 58);
+  g.fillText('Apunta con la cámara del móvil', W / 2, y + q + pad + (sticker ? 80 : 150));
+  if (!sticker) {
+    g.font = font(500, 46);
+    g.fillText('Sin llamadas · Confirmación al momento', W / 2, y + q + pad + 240);
+  }
+  g.fillStyle = '#D4F25C';
+  g.font = font(800, sticker ? 34 : 54);
+  g.fillText('netwish.es', W / 2, H - (sticker ? 50 : 120));
+  return c.toDataURL('image/png');
+}
+
 function ShareGuide({ business }) {
   const toast = useToast();
+  // Each place gets its own tag, so "Números" shows where bookings come from.
   const url = bookingLink(business);
+  const tagged = (via) => `${url}?via=${via}`;
   const [qr, setQr] = useState('');
+  const [making, setMaking] = useState(null);
   useEffect(() => {
-    QRCode.toDataURL(url, { margin: 1, width: 720 }).then(setQr);
+    QRCode.toDataURL(tagged('qr'), { margin: 1, width: 720 }).then(setQr);
   }, [url]);
+  const poster = async (kind) => {
+    setMaking(kind);
+    try {
+      const png = await makePoster({ qr, name: business.name, kind });
+      const a = document.createElement('a');
+      a.href = png;
+      a.download = `${kind === 'sticker' ? 'pegatina-mesa' : 'cartel-a5'}-${business.username}.png`;
+      a.click();
+    } catch {
+      toast('No se pudo crear el cartel en este navegador', 'error');
+    } finally {
+      setMaking(null);
+    }
+  };
   const code = `<script src="${window.location.origin}/reservar.js" data-negocio="${business.username}" async></script>`;
   const copy = (text, what) => navigator.clipboard?.writeText(text).then(() => toast(`${what} copiado`));
   const step = (n, title, body) => (
@@ -54,13 +114,13 @@ function ShareGuide({ business }) {
         <h3 className="title-md">Google Maps</h3>
         {step(1, 'Abre tu Perfil de Empresa', 'Busca tu restaurante en Google, entra en "Editar perfil".')}
         {step(2, 'Enlaces de reservas', 'En "Reservas" o "Enlaces de pedidos y reservas", pega tu enlace.')}
-        <button className="btn soft sm" onClick={() => copy(url, 'Enlace')}><Icon name="link" size={16} /> Copiar enlace</button>
+        <button className="btn soft sm" onClick={() => copy(tagged('google'), 'Enlace')}><Icon name="link" size={16} /> Copiar enlace</button>
       </section>
       <section className="widget stack" style={{ gap: 10 }}>
         <h3 className="title-md">Instagram</h3>
         {step(1, 'Editar perfil → Enlaces', 'Añade un enlace externo con tu enlace de reservas y ponle de título "Reservar mesa".')}
         {step(2, 'En tus historias', 'Usa el sticker "Enlace" con el mismo enlace cuando publiques un plato o un evento.')}
-        <button className="btn soft sm" onClick={() => copy(url, 'Enlace')}><Icon name="link" size={16} /> Copiar enlace</button>
+        <button className="btn soft sm" onClick={() => copy(tagged('instagram'), 'Enlace')}><Icon name="link" size={16} /> Copiar enlace</button>
       </section>
       <section className="widget stack" style={{ gap: 10 }}>
         <h3 className="title-md">Tu página web</h3>
@@ -76,6 +136,15 @@ function ShareGuide({ business }) {
           {qr && <a className="btn soft sm" style={{ flex: 1 }} href={qr} download={`qr-reservas-${business.username}.png`}><Icon name="download" size={16} /> Descargar</a>}
           <button className="btn soft sm" style={{ flex: 1 }} onClick={() => window.print()}><Icon name="printer" size={16} /> Imprimir</button>
         </div>
+        <div className="row" style={{ gap: 8, width: '100%' }}>
+          <button className="btn primary sm" style={{ flex: 1 }} disabled={!qr || !!making} onClick={() => poster('a5')}>{making === 'a5' ? 'Creando…' : 'Cartel A5 listo para imprimir'}</button>
+          <button className="btn soft sm" style={{ flex: 1 }} disabled={!qr || !!making} onClick={() => poster('sticker')}>{making === 'sticker' ? 'Creando…' : 'Pegatina de mesa'}</button>
+        </div>
+      </section>
+      <section className="widget stack" style={{ gap: 10 }}>
+        <h3 className="title-md">WhatsApp</h3>
+        {step(1, 'Mensaje automático', 'En WhatsApp Business → Herramientas → Mensaje de bienvenida, pega tu enlace: "¡Hola! Reserva aquí en un momento: …".')}
+        <button className="btn soft sm" onClick={() => copy(tagged('whatsapp'), 'Enlace')}><Icon name="link" size={16} /> Copiar enlace</button>
       </section>
     </div>
   );

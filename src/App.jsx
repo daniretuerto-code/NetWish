@@ -15,6 +15,8 @@ import Opinion from './screens/customer/Opinion.jsx';
 import Unsubscribe from './screens/customer/Unsubscribe.jsx';
 import ComingSoon from './screens/customer/ComingSoon.jsx';
 import Events from './screens/customer/Events.jsx';
+import Legal from './screens/customer/Legal.jsx';
+import NewPassword from './components/NewPassword.jsx';
 import { kindOf } from './lib/categories.js';
 import { showComingSoon } from './lib/launch.js';
 
@@ -40,6 +42,7 @@ const BizPickups = lazy(() => import('./screens/business/PickupOrders.jsx'));
 const BizShopCatalog = lazy(() => import('./screens/business/ShopCatalog.jsx'));
 const BizStock = lazy(() => import('./screens/business/Stock.jsx'));
 const BizClasses = lazy(() => import('./screens/business/ClassesAdmin.jsx'));
+const BizHelp = lazy(() => import('./screens/business/Help.jsx'));
 const BizSection = lazy(() => import('./screens/business/Setup.jsx').then((m) => ({ default: m.SectionWizard })));
 
 // Printed QR codes point to /?biz=NAME&table=N, so keep that entry point working.
@@ -107,14 +110,15 @@ function OldPayLink() {
 
 export default function App() {
   const { ready } = useAuth();
-  const { search } = useLocation();
+  const { search, pathname } = useLocation();
 
-  if (showComingSoon(search)) return <ComingSoon />;
+  if (showComingSoon(search, pathname)) return <ComingSoon />;
   if (!ready) return <Spinner />;
 
   return (
     <Suspense fallback={<Spinner />}>
       <LegacyLinks />
+      <NewPassword />
       <Routes>
         <Route element={<CustomerShell />}>
           <Route index element={<Home />} />
@@ -133,6 +137,8 @@ export default function App() {
           <Route path="r/:slug" element={<ShortLink />} />
           <Route path="opinion/:token" element={<Opinion />} />
           <Route path="baja" element={<Unsubscribe />} />
+          <Route path="legal/:doc" element={<Legal />} />
+          <Route path="legal" element={<Navigate to="/legal/aviso" replace />} />
         </Route>
         <Route path="negocios" element={<BizPortal />} />
         <Route path="admin" element={<Admin />} />
@@ -155,6 +161,7 @@ export default function App() {
           <Route path="campanas" element={<BizCampaigns />} />
           <Route path="eventos" element={<BizEvents />} />
           <Route path="empezar" element={<BizOnboarding />} />
+          <Route path="ayuda" element={<BizHelp />} />
           <Route path="personalizar" element={<Navigate to="/panel/ajustes" replace />} />
           <Route path="personalizar/:key" element={<BizSection />} />
         </Route>

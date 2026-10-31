@@ -5,7 +5,8 @@ import { Empty, PageHeader, Sheet, Skeleton, Spinner, useToast } from '../../com
 import SectionTabs from '../../components/SectionTabs.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
-import { createProduct, deleteProduct, getRestaurantSettings, listProducts, safeSlug, saveRestaurantSettings, uploadPublicFile } from '../../lib/data.js';
+import { createProduct, deleteProduct, getRestaurantSettings, listProducts, safeSlug, saveRestaurantSettings, updateProduct, uploadPublicFile } from '../../lib/data.js';
+import { ALLERGENS, allergenInfo } from '../../lib/allergens.js';
 import { kindOf } from '../../lib/categories.js';
 import { nounsOf } from '../../lib/businessTypes.js';
 import { duration, money } from '../../lib/format.js';
@@ -15,10 +16,25 @@ const EXTRA_LONG = [0, 15, 30, 45, 60];
 
 const MAX_AUDIO_MB = 25;
 
-function ProductSheet({ open, onClose, business, music, beauty, sections, onSaved }) {
+const MAX_PHOTO_MB = 8;
+
+const formOf = (p, sections) => (p ? {
+  name: p.name || '', description: p.description || '', price: String(p.price ?? '').replace('.', ','), section: p.section || '',
+  finished: !!p.is_finished_beat, duration: String(p.duration_min || 30), extra: String(p.extra_long_min || 0), from: !!p.price_from,
+  allergens: p.allergens || [], image_url: p.image_url || '',
+} : { name: '', description: '', price: '', section: sections[0] || '', finished: false, duration: '30', extra: '0', from: false, allergens: [], image_url: '' });
+
+function ProductSheet({ open, onClose, business, music, beauty, food, sections, onSaved, editing }) {
   const toast = useToast();
-  const empty = { name: '', description: '', price: '', section: sections[0] || '', finished: false, duration: '30', extra: '0', from: false };
+  const empty = formOf(null, sections);
   const [form, setForm] = useState(empty);
+  const [photo, setPhoto] = useState(null);
+  const [lastEditing, setLastEditing] = useState(null);
+  if (open && editing !== lastEditing) {
+    setLastEditing(editing);
+    setForm(formOf(editing, sections));
+    setPhoto(null);
+  }
   const [preview, setPreview] = useState(null);
   const [master, setMaster] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -56,9 +72,21 @@ function ProductSheet({ open, onClose, business, music, beauty, sections, onSave
         if (preview) product.audio_url = await upload(preview, 'preview');
         if (master) product.full_audio_url = await upload(master, 'master');
       }
-      await createProduct(product);
-      toast(beauty ? 'Servicio añadido' : 'Producto añadido');
+      if (!music && !beauty) {
+        if (photo) {
+          if (photo.size > MAX_PHOTO_MB * 1024 * 1024) throw new Error(`La foto no puede pasar de ${MAX_PHOTO_MB} MB`);
+          const ext = (photo.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+          product.image_url = await uploadPublicFile('public-images', `${safeSlug(business.name)}/plato_${Date.now()}_${safeSlug(form.name)}.${ext}`, photo);
+        } else if (editing) product.image_url = form.image_url || null;
+      }
+      if (food) product.allergens = form.allergens;
+      if (editing) {
+        delete product.business_id;
+        await updateProduct(editing.id, product);
+      } else await createProduct(product);
+      toast(editing ? 'Cambios guardados' : beauty ? 'Servicio añadido' : 'Producto añadido');
       setForm(empty);
+      setPhoto(null);
       setPreview(null);
       setMaster(null);
       onSaved();
@@ -71,7 +99,7 @@ function ProductSheet({ open, onClose, business, music, beauty, sections, onSave
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title={music ? 'Nuevo beat' : beauty ? 'Nuevo servicio' : 'Nuevo producto'}>
+    <Sheet open={open} onClose={onClose} title={editing ? `Editar ${editing.name}` : music ? 'Nuevo beat' : beauty ? 'Nuevo servicio' : food ? 'Nuevo plato' : 'Nuevo producto'}>
       <form className="stack" onSubmit={submit}>
         <div className="field"><label htmlFor="p-name">Nombre</label><input id="p-name" className="input" required value={form.name} onChange={set('name')} /></div>
         <div className="bento">
@@ -105,6 +133,32 @@ function ProductSheet({ open, onClose, business, music, beauty, sections, onSave
           </>
         )}
         <div className="field"><label htmlFor="p-desc">Descripción</label><textarea id="p-desc" className="input" value={form.description} onChange={set('description')} /></div>
+        {!music && !beauty && (
+          <div className="field">
+            <label htmlFor="p-photo">Foto (opcional)</label>
+            <div className="row" style={{ gap: 10 }}>
+              {(photo || form.image_url) && <img src={photo ? URL.createObjectURL(photo) : form.image_url} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 12 }} />}
+              <input id="p-photo" className="input grow" style={{ paddingTop: 12 }} type="file" accept="image/*" onChange={(e) => setPhoto(e.target.files?.[0] || null)} />
+              {!photo && form.image_url && <button type="button" className="btn ghost sm" onClick={() => setForm((f) => ({ ...f, image_url: '' }))}>Quitar</button>}
+            </div>
+          </div>
+        )}
+        {food && (
+          <div className="field">
+            <label>Alérgenos (obligatorio por ley si los lleva)</label>
+            <div className="row wrap" style={{ gap: 6 }}>
+              {ALLERGENS.map(([k, label, icon]) => {
+                const on = form.allergens.includes(k);
+                return (
+                  <button type="button" key={k} className={`chip ${on ? 'on' : ''}`} style={{ height: 34, padding: '0 12px', fontSize: 13, background: on ? undefined : 'var(--bg)' }} aria-pressed={on}
+                    onClick={() => setForm((f) => ({ ...f, allergens: on ? f.allergens.filter((x) => x !== k) : [...f.allergens, k] }))}>
+                    <span aria-hidden="true">{icon}</span> {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         {music && (
           <>
             <div className="field">
@@ -121,7 +175,7 @@ function ProductSheet({ open, onClose, business, music, beauty, sections, onSave
             </label>
           </>
         )}
-        <button className="btn primary block" disabled={busy}>{busy ? 'Guardando…' : 'Añadir'}</button>
+        <button className="btn primary block" disabled={busy}>{busy ? 'Guardando…' : editing ? 'Guardar cambios' : 'Añadir'}</button>
       </form>
     </Sheet>
   );
@@ -181,7 +235,9 @@ export default function Catalog() {
   const { modules } = useOutletContext() || {};
   const [tab, setTab] = useState('carta');
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
+  const food = kind === 'restaurant';
   const { data, loading, reload, setData } = useAsync(() => listProducts(business.name), [business.name]);
 
   if (loading && !data) return <Skeleton />;
@@ -207,6 +263,19 @@ export default function Catalog() {
       toast(e.message, 'error');
     } finally {
       setConfirmId(null);
+    }
+  };
+
+  // "Agotado hoy": one tap, and the customer sees it struck through.
+  const toggleSoldOut = async (p) => {
+    const next = !p.sold_out;
+    setData(products.map((x) => (x.id === p.id ? { ...x, sold_out: next } : x)));
+    try {
+      await updateProduct(p.id, { sold_out: next });
+      toast(next ? `${p.name}: agotado` : `${p.name}: disponible otra vez`);
+    } catch (e) {
+      setData(products);
+      toast(e.message, 'error');
     }
   };
 
@@ -239,15 +308,22 @@ export default function Catalog() {
             <section key={section} className="widget" style={{ paddingBottom: 4 }}>
               <div className="row between"><h2 className="title-md">{section}</h2><span className="count-badge">{items.length}</span></div>
               {items.map((p) => (
-                <div key={p.id} className="list-row">
-                  <span className="grow stack" style={{ gap: 1, minWidth: 0 }}>
-                    <span className="t">{p.name}</span>
+                <div key={p.id} className="list-row" style={p.sold_out ? { opacity: 0.6 } : undefined}>
+                  {p.image_url && <img src={p.image_url} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 10, flex: 'none' }} />}
+                  <button type="button" className="grow stack" style={{ gap: 1, minWidth: 0, background: 'none', border: 0, padding: 0, textAlign: 'left', color: 'inherit', font: 'inherit', cursor: 'pointer' }} onClick={() => setEditing(p)} aria-label={`Editar ${p.name}`}>
+                    <span className="t">{p.name}{p.sold_out ? ' · agotado' : ''}</span>
                     <span className="s">
                       {beauty && `${duration(p.duration_min || 30)}${p.extra_long_min ? ` (+${p.extra_long_min} pelo largo)` : ''} · `}
                       <span className="price">{beauty && p.price_from ? 'desde ' : ''}{money(p.price)}</span>
                       {music && (p.full_audio_url ? ' · con archivo' : ' · sin archivo')}
+                      {food && (p.allergens?.length ? ` · ${p.allergens.map((a) => allergenInfo(a).icon).join(' ')}` : ' · sin alérgenos marcados')}
                     </span>
-                  </span>
+                  </button>
+                  {!music && !beauty && (
+                    <button type="button" className={`btn sm ${p.sold_out ? 'primary' : 'soft'}`} onClick={() => toggleSoldOut(p)} aria-pressed={!!p.sold_out}>
+                      {p.sold_out ? 'Agotado' : 'Hay'}
+                    </button>
+                  )}
                   {music && p.audio_url && <audio src={p.audio_url} controls preload="none" style={{ height: 32, maxWidth: 140 }} />}
                   <button className={`btn sm ${confirmId === p.id ? 'danger' : 'ghost'}`} onClick={() => remove(p)} onBlur={() => setConfirmId(null)} aria-label={`Eliminar ${p.name}`}>
                     {confirmId === p.id ? '¿Eliminar?' : <Icon name="trash" size={18} />}
@@ -259,7 +335,7 @@ export default function Catalog() {
         </div>
       )}
 
-      <ProductSheet open={adding} onClose={() => setAdding(false)} business={business} music={music} beauty={beauty} sections={sections} onSaved={reload} />
+      <ProductSheet open={adding || !!editing} onClose={() => { setAdding(false); setEditing(null); }} business={business} music={music} beauty={beauty} food={food} sections={sections} onSaved={reload} editing={editing} />
     </div>
   );
 }

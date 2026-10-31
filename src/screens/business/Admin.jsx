@@ -5,12 +5,13 @@ import { Empty, Mono, PageHeader, Spinner, useToast } from '../../components/ui.
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
 import {
-  adminBusinesses, adminCreateBusiness, adminLock, adminOverview, adminStatus, adminUnlock,
+  adminBusinesses, adminCreateBusiness, adminStats, approvalNotice, adminLock, adminOverview, adminStatus, adminUnlock,
   announceLaunch, cityEvents, deleteCityEvent, demoBusinesses, saveCityEvent, isAdmin, launchSignups, setBusinessStatus, setDemoAs, setDemoVisibility,
 } from '../../lib/data.js';
 import { BUSINESS_TYPES, typeOf } from '../../lib/businessTypes.js';
 import { grantAccess } from '../../lib/launch.js';
 import { timeAgo, todayISO } from '../../lib/format.js';
+import { channelLabel } from '../../lib/channel.js';
 import { EVENT_CATEGORIES, eventCategory, eventWhen } from '../../lib/events.js';
 import { AuthForms } from '../customer/Account.jsx';
 import OwnerForm from '../../components/OwnerForm.jsx';
@@ -94,10 +95,11 @@ function AdminHome({ onLock }) {
     if (!(await isAdmin())) return { denied: true };
     // The admin always sees the real app on this device, even before launch.
     grantAccess();
-    const [overview, signups, demos, real, events] = await Promise.all([
+    const [overview, signups, demos, real, events, stats] = await Promise.all([
       adminOverview(), launchSignups().catch(() => null), demoBusinesses().catch(() => []), adminBusinesses().catch(() => null), cityEvents(),
+      adminStats().catch(() => null),
     ]);
-    return { ...overview, signups, demos, real, events };
+    return { ...overview, signups, demos, real, events, stats };
   }, [user?.id]);
 
   if (loading && !data) return <Spinner />;
@@ -107,7 +109,9 @@ function AdminHome({ onLock }) {
     setBusy(b.username);
     try {
       await setBusinessStatus(b.username, status);
-      toast(status === 'approved' ? `${b.name} ya es público` : `${b.name} rechazado`);
+      // The owner gets an e-mail with the link to their panel.
+      if (status === 'approved') approvalNotice(b.username);
+      toast(status === 'approved' ? `${b.name} ya es público. Le hemos mandado un correo.` : `${b.name} rechazado`);
       reload();
     } catch (e) {
       toast(e.message, 'error');
@@ -132,6 +136,8 @@ function AdminHome({ onLock }) {
           </div>
         )}
       />
+
+      <Usage stats={data.stats} />
 
       <RealBusinesses list={data.real} reload={reload} />
 
@@ -195,6 +201,47 @@ function AdminHome({ onLock }) {
 }
 
 // One example business of each type, to see the customer page and open its panel.
+// Who uses NetWish: bookings in 30 days, where they came from, and who hasn't opened the panel.
+function Usage({ stats }) {
+  if (!stats) return null;
+  const live = stats.filter((b) => b.status === 'approved');
+  const total = live.reduce((n, b) => n + b.bookings_30, 0);
+  const online = live.reduce((n, b) => n + b.online_30, 0);
+  const asleep = live.filter((b) => b.owner && (!b.last_seen_at || Date.now() - new Date(b.last_seen_at) > 7 * 864e5));
+  const channels = {};
+  live.forEach((b) => Object.entries(b.channels || {}).forEach(([c, n]) => { channels[c] = (channels[c] || 0) + n; }));
+  return (
+    <section className="widget stack">
+      <span className="eyebrow">Uso en los últimos 30 días</span>
+      <div className="bento">
+        <div className="stack" style={{ gap: 0 }}><span style={{ fontSize: 30, fontWeight: 800 }}>{live.length}</span><span className="small muted">negocios publicados</span></div>
+        <div className="stack" style={{ gap: 0 }}><span style={{ fontSize: 30, fontWeight: 800 }}>{total}</span><span className="small muted">reservas y pedidos ({online} online)</span></div>
+      </div>
+      {Object.keys(channels).length > 0 && (
+        <p className="small" style={{ margin: 0 }}>De dónde vienen: {Object.entries(channels).sort((a, b) => b[1] - a[1]).map(([c, n]) => `${channelLabel(c)} ${n}`).join(' · ')}</p>
+      )}
+      {asleep.length > 0 && (
+        <p className="small" style={{ margin: 0 }}><strong>Llama a:</strong> {asleep.map((b) => b.name).join(', ')} (no abren el panel desde hace más de 7 días).</p>
+      )}
+      <div style={{ overflowX: 'auto' }}>
+        <table className="small" style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead><tr style={{ textAlign: 'left', color: 'var(--muted)' }}><th>Negocio</th><th>30 días</th><th>Online</th><th>No vino</th><th>Próximas</th><th>Nota</th><th>Último acceso</th></tr></thead>
+          <tbody>
+            {stats.map((b) => (
+              <tr key={b.username} style={{ borderTop: '1px solid var(--line)', opacity: b.status === 'approved' ? 1 : 0.55 }}>
+                <td style={{ padding: '6px 4px', fontWeight: 600 }}>{b.name}{b.status !== 'approved' ? ` (${b.status === 'pending' ? 'pendiente' : 'oculto'})` : ''}</td>
+                <td>{b.bookings_30}</td><td>{b.online_30}</td><td>{b.noshow_30}</td><td>{b.upcoming}</td>
+                <td>{b.rating ? String(b.rating).replace('.', ',') : '—'}</td>
+                <td>{b.last_seen_at ? timeAgo(b.last_seen_at) : b.owner ? 'nunca' : 'sin dueño'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 function DemoList({ demos, reload }) {
   const toast = useToast();
   const navigate = useNavigate();

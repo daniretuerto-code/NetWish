@@ -1,6 +1,7 @@
 import { supabase } from './supabase.js';
 import { normalize, todayISO, nowTime } from './format.js';
 import { kindOf } from './categories.js';
+import { currentChannel } from './channel.js';
 
 const BUSINESS_COLUMNS = 'username, name, category, telefono, image, cover_url, owner_id, status, address';
 
@@ -142,7 +143,13 @@ export async function myBusiness(userId) {
   if (data) return data;
   // A business NetWish set up and assigned to this e-mail before the account existed.
   const { data: claimed } = await supabase.rpc('claim_invited_business');
-  if (!claimed) return null;
+  if (!claimed) {
+    // Staff the owner added by e-mail (Ajustes → Tu equipo) open the same panel.
+    const { data: staffOf } = await supabase.rpc('my_staff_business');
+    if (!staffOf) return null;
+    const { data: biz } = await selectBusinesses((q) => q.eq('username', staffOf).maybeSingle());
+    return biz ? { ...biz, staff: true } : null;
+  }
   businessCache = null;
   const again = await selectBusinesses((q) => q.eq('owner_id', userId).maybeSingle(), ', notification_email');
   return again.data || null;
@@ -207,13 +214,24 @@ export async function listProducts(businessName) {
   return data || [];
 }
 
+// Until the allergens column exists, the dish still saves without them.
+const withoutAllergens = (error, row) => error && /allergens/.test(error.message || '') && 'allergens' in row;
+
 export async function createProduct(product) {
-  const { error } = await supabase.from('products').insert([product]);
+  let { error } = await supabase.from('products').insert([product]);
+  if (withoutAllergens(error, product)) {
+    const { allergens, ...rest } = product;
+    ({ error } = await supabase.from('products').insert([rest]));
+  }
   fail(error);
 }
 
 export async function updateProduct(id, patch) {
-  const { error } = await supabase.from('products').update(patch).eq('id', id);
+  let { error } = await supabase.from('products').update(patch).eq('id', id);
+  if (withoutAllergens(error, patch)) {
+    const { allergens, ...rest } = patch;
+    ({ error } = await supabase.from('products').update(rest).eq('id', id));
+  }
   fail(error);
 }
 
@@ -348,6 +366,7 @@ export async function createPickupOrder({ business, lines, date, time, payment, 
   });
   if (error && /create_pickup_order/.test(error.message || '')) throw new Error('Esta tienda aún no recibe pedidos online. Llámala o escríbele.');
   fail(error);
+  tagChannel(data.id);
   notifyOrder(data.id, 'created');
   return data;
 }
@@ -375,6 +394,7 @@ export async function createOrder({ business, user, items, itemsText, total, dat
   };
   const { error } = await supabase.from('orders').insert([order]);
   fail(error);
+  tagChannel(id);
   notifyOrder(id, 'created');
   return order;
 }
@@ -428,6 +448,7 @@ export async function createGuestBooking({ business, name, email, phone, itemsTe
     p_business: business, p_name: name, p_email: email, p_phone: phone || null, p_items: itemsText, p_date: date, p_time: time,
   });
   fail(error);
+  tagChannel(data.id);
   notifyOrder(data.id, 'created');
   return data;
 }
@@ -654,8 +675,16 @@ export async function sendMessage({ businessName, customerId, customerName, send
     avatar_url: avatarUrl || null,
     is_read: false,
   };
-  const { error } = await supabase.from('messages').insert([msg]);
+  const { data, error } = await supabase.from('messages').insert([msg]).select('id');
   fail(error);
+  // The business hears about it by e-mail (at most once every 30 minutes per conversation).
+  if (senderType === 'customer' && data?.[0]?.id) {
+    supabase.auth.getSession().then(({ data: d }) => fetch('/api/notify-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(d.session ? { Authorization: `Bearer ${d.session.access_token}` } : {}) },
+      body: JSON.stringify({ kind: 'message', messageId: data[0].id }),
+    })).catch(() => {});
+  }
 }
 
 export async function markThreadRead(businessName, customerId) {
@@ -749,4 +778,71 @@ export async function saveCityEvent(event) {
 export async function deleteCityEvent(id) {
   const { error } = await supabase.from('city_events').delete().eq('id', id);
   fail(error);
+}
+
+// ---------- Where bookings come from ----------
+function tagChannel(id) {
+  if (!id) return;
+  supabase.rpc('tag_order_channel', { p_order: id, p_channel: currentChannel() }).then(() => {}, () => {});
+}
+
+// ---------- Ratings and reviews (from the survey after the visit) ----------
+let ratingsCache = null;
+export async function businessRatings() {
+  if (ratingsCache) return ratingsCache;
+  const { data, error } = await supabase.rpc('business_ratings');
+  if (error) return new Map();
+  ratingsCache = new Map((data || []).map((r) => [normalize(r.business_name), r]));
+  return ratingsCache;
+}
+
+export async function businessReviews(name) {
+  const [ratings, { data }] = await Promise.all([businessRatings(), supabase.rpc('business_reviews', { p_business: name })]);
+  return { rating: ratings.get(normalize(name)) || null, reviews: data || [] };
+}
+
+// ---------- Account ----------
+export async function claimGuestBookings() {
+  const { data, error } = await supabase.rpc('claim_my_guest_bookings');
+  return error ? 0 : data || 0;
+}
+
+export async function bookingHistory(orderId) {
+  const { data, error } = await supabase.from('order_events').select('at, actor, what').eq('order_id', orderId).order('at');
+  return error ? [] : data || [];
+}
+
+export async function touchMyBusiness() {
+  await supabase.rpc('touch_my_business').then(() => {}, () => {});
+}
+
+export async function adminStats() {
+  const { data, error } = await supabase.rpc('admin_stats');
+  fail(error);
+  return data || [];
+}
+
+export async function callTable(business, table, kind) {
+  const { error } = await supabase.rpc('call_table', { p_business: business, p_table: Number(table), p_kind: kind });
+  fail(error);
+}
+
+export async function openTableCalls(business) {
+  const { data, error } = await supabase.from('table_calls').select('*').ilike('business_name', escapeLike(business)).is('done_at', null)
+    .gt('created_at', new Date(Date.now() - 3 * 3600e3).toISOString()).order('created_at');
+  return error ? [] : data || [];
+}
+
+export async function closeTableCall(id) {
+  const { error } = await supabase.from('table_calls').update({ done_at: new Date().toISOString() }).eq('id', id);
+  fail(error);
+}
+
+export async function approvalNotice(username) {
+  const { data: { session } } = await supabase.auth.getSession();
+  fetch('/api/notify-order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
+    body: JSON.stringify({ kind: 'approved', username }),
+  }).catch(() => {});
 }

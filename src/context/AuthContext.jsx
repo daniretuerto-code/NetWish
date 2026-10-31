@@ -11,6 +11,8 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [business, setBusiness] = useState(null);
   const [ready, setReady] = useState(false);
+  // True after the user opened the "change your password" link from the e-mail.
+  const [recovery, setRecovery] = useState(() => /type=recovery/.test(window.location.hash));
   const [mode, setModeState] = useState(() => {
     try { return localStorage.getItem(MODE_KEY) || 'customer'; } catch { return 'customer'; }
   });
@@ -36,7 +38,8 @@ export function AuthProvider({ children }) {
       await loadBusiness(u);
       if (alive) setReady(true);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') setRecovery(true);
       const u = session?.user || null;
       setUser(u);
       loadBusiness(u);
@@ -53,6 +56,19 @@ export function AuthProvider({ children }) {
     user,
     business,
     ready,
+    recovery,
+    endRecovery: () => setRecovery(false),
+    async updatePassword(password) {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw new Error(error.message);
+      setRecovery(false);
+    },
+    async deleteAccount() {
+      const { error } = await supabase.rpc('delete_my_account');
+      if (error) throw new Error(error.message);
+      await supabase.auth.signOut();
+      try { ['netwish.guest', 'netwish.bookings'].forEach((k) => localStorage.removeItem(k)); } catch { /* storage unavailable */ }
+    },
     mode: business && mode === 'business' ? 'business' : 'customer',
     setMode,
     refreshBusiness: () => loadBusiness(user),
@@ -82,14 +98,14 @@ export function AuthProvider({ children }) {
       if (error) throw new Error(error.message);
     },
     async resetPassword(email) {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/cuenta' });
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/cuenta?nueva=1' });
       if (error) throw new Error(error.message);
     },
     async signOut() {
       await supabase.auth.signOut();
       setMode('customer');
     },
-  }), [user, business, ready, mode, setMode, loadBusiness]);
+  }), [user, business, ready, recovery, mode, setMode, loadBusiness]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
