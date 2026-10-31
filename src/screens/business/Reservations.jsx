@@ -1,3 +1,5 @@
+import BookingLog from '../../components/BookingLog.jsx';
+import { upcomingHolidays } from '../../lib/holidays.js';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import Icon from '../../components/Icon.jsx';
@@ -163,6 +165,17 @@ function CloseDaysSheet({ open, onClose, settings, business, reloadSettings }) {
         </div>
         <button className="btn primary block" disabled={busy}>{busy ? 'Guardando…' : 'Cerrar esos días'}</button>
       </form>
+      <div className="stack" style={{ gap: 6, marginTop: 14 }}>
+        <span className="eyebrow">Festivos en Palencia</span>
+        <span className="small muted">Toca uno para elegirlo. Si abres ese día, no hagas nada.</span>
+        <div className="chips" style={{ flexWrap: 'wrap' }}>
+          {upcomingHolidays(todayISO()).filter((h) => !closedAhead.includes(h.date)).slice(0, 12).map((h) => (
+            <button key={h.date} type="button" className="chip" style={{ background: 'var(--bg)' }} onClick={() => { setFrom(h.date); setTo(h.date); }}>
+              {new Date(`${h.date}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} · {h.name}
+            </button>
+          ))}
+        </div>
+      </div>
       {closedAhead.length > 0 && (
         <div className="stack" style={{ gap: 6, marginTop: 14 }}>
           <span className="eyebrow">Días cerrados</span>
@@ -428,6 +441,7 @@ function Timeline({ day, bookings, settings, actions, history, business, onAdd, 
       <p className="small muted" style={{ margin: '0 4px' }}>Arrastra una reserva arriba o abajo para cambiarla de mesa. Tócala para ver sus datos. Doble toque en un hueco para apuntar una reserva.</p>
       <Sheet open={!!current} onClose={() => setOpen(null)} title={current ? current.customer : ''}>
         {current && <BookingCard order={current} history={history.get(customerKey(current))} profile={profiles?.[customerKey(current)]} busy={actions.busy === current.id} onMove={(o, st) => { actions.move(o, st); setOpen(null); }} onChangeTable={(o) => { setOpen(null); onChangeTable(o); }} businessName={business.name} />}
+        {current && <BookingLog order={current} />}
       </Sheet>
     </>
   );
@@ -511,6 +525,7 @@ function Hall({ day, bookings, settings, actions, history, business, onAdd, onCh
       <p className="small muted" style={{ margin: '0 4px' }}>Toca una mesa libre para sentar a alguien que llega sin reserva. El plano se dibuja en <Link to="/panel/mesas">Ajustes › Tu sala</Link>.</p>
       <Sheet open={!!current} onClose={() => setOpen(null)} title={current ? tableLabel(parseTableBooking(current).tables) : ''}>
         {current && <BookingCard order={current} history={history.get(customerKey(current))} profile={profiles?.[customerKey(current)]} busy={actions.busy === current.id} onMove={(o, s) => { actions.move(o, s); setOpen(null); }} onChangeTable={(o) => { setOpen(null); onChangeTable(o); }} businessName={business.name} />}
+        {current && <BookingLog order={current} />}
       </Sheet>
     </>
   );

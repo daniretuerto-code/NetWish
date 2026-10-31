@@ -1,3 +1,4 @@
+import { pushToBusiness } from './_push.js';
 import { calendarButtons, emailLayout, escapeHtml, euro, sendEmail, SITE_URL, supabaseRest } from './_lib.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -41,9 +42,49 @@ const codeBox = (code) => (code
   ? `<p style="margin:18px 0;text-align:center"><span style="display:inline-block;background:#D4FF3A;color:#111;font-size:28px;font-weight:800;letter-spacing:4px;padding:10px 22px;border-radius:14px">${escapeHtml(code)}</span><br><span style="color:#6B6862;font-size:13px">Enséñalo al recoger</span></p>`
   : '');
 
+// The owner's business was approved in /admin: tell them it is live, with the way in.
+async function approvedNotice(req, res, username) {
+  const auth = req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization : undefined;
+  if (!auth || !username) return res.status(400).json({ error: 'Petición no válida' });
+  const b = await supabaseRest('rpc/claim_approval_notice', { method: 'POST', body: { p_username: String(username).slice(0, 80) }, authorization: auth });
+  if (!b?.email) return res.status(200).json({ sent: false });
+  await sendEmail({
+    to: b.email,
+    subject: `${b.name} ya está en NetWish`,
+    html: emailLayout('¡Tu negocio ya está publicado!', `<p>Hemos revisado ${escapeHtml(b.name)} y ya sale en NetWish. Tus clientes pueden encontrarte y reservar.</p>
+      <p>Tu enlace para compartir en Instagram, Google y WhatsApp:<br><a href="${SITE_URL}/r/${encodeURIComponent(b.username)}" style="color:#111;font-weight:700">${SITE_URL.replace(/^https?:\/\//, '')}/r/${escapeHtml(b.username)}</a></p>
+      <p><a href="${SITE_URL}/panel" style="display:inline-block;padding:12px 20px;border-radius:999px;background:#111;color:#D4F25C;font-weight:700;text-decoration:none">Abrir mi panel</a></p>
+      <p style="color:#6B6862;font-size:13px">¿Dudas? Responde a este correo o escríbenos por WhatsApp desde el panel.</p>`),
+  });
+  return res.status(200).json({ sent: true });
+}
+
+// A customer wrote in the chat: the business gets an e-mail (once every 30 minutes per conversation).
+async function messageNotice(req, res, messageId) {
+  const auth = req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization : undefined;
+  if (!auth || !/^\d+$/.test(String(messageId))) return res.status(400).json({ error: 'Petición no válida' });
+  const m = await supabaseRest('rpc/claim_message_notice', { method: 'POST', body: { p_id: Number(messageId) }, authorization: auth });
+  if (!m?.email) return res.status(200).json({ sent: false });
+  await sendEmail({
+    to: m.email,
+    subject: `Mensaje nuevo de ${m.sender} en NetWish`,
+    html: emailLayout('Tienes un mensaje nuevo', `<p><strong>${escapeHtml(m.sender)}</strong> te ha escrito:</p>
+      <blockquote style="margin:12px 0;padding:12px 16px;background:#F2F0EB;border-radius:14px">${escapeHtml(m.text)}</blockquote>
+      <p><a href="${SITE_URL}/panel/mensajes" style="color:#111;font-weight:700">Contestar desde el panel</a></p>`),
+  });
+  return res.status(200).json({ sent: true });
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
   const { orderId, kind = 'created' } = req.body || {};
+  try {
+    if (kind === 'approved') return await approvedNotice(req, res, req.body?.username);
+    if (kind === 'message') return await messageNotice(req, res, req.body?.messageId);
+  } catch (error) {
+    console.error('notify', kind, error);
+    return res.status(200).json({ sent: false });
+  }
   if (!UUID.test(String(orderId)) || !['created', 'confirmed', 'changed', 'ready'].includes(kind)) {
     return res.status(400).json({ error: 'Petición no válida' });
   }
@@ -82,6 +123,7 @@ export default async function handler(req, res) {
           subject: `Nuevo pedido para recoger: ${order.customer}${order.pickup_code ? ` · ${order.pickup_code}` : ''}`,
           html: emailLayout('Nuevo pedido para recoger', `${pickupSummary(order)}<p>Cliente: ${escapeHtml(order.customer)}${order.customer_email ? ` · ${escapeHtml(order.customer_email)}` : ''}${order.phone ? ` · ${escapeHtml(order.phone)}` : ''}</p><p><a href="${SITE_URL}/panel/reservas">Abrir el panel</a></p>`),
         }),
+       pushToBusiness(orderId, { title: `Pedido nuevo: ${order.customer}`, body: `${order.pickup_code ? `${order.pickup_code} · ` : ''}recoger ${order.date} ${String(order.time || '').slice(0, 5)}` }).catch(() => 0),
       ]);
       return res.status(200).json({ sent: true });
     }
@@ -142,6 +184,10 @@ export default async function handler(req, res) {
           `${summary(order)}${order.customer_email ? `<p>Cliente: ${escapeHtml(order.customer)} · ${escapeHtml(order.customer_email)}${order.phone ? ` · ${escapeHtml(order.phone)}` : ''}</p>` : ''}<p><a href="${SITE_URL}/panel/reservas">Abrir el panel</a></p>`,
         ),
       }),
+     pushToBusiness(orderId, {
+        title: instant ? `Reserva nueva: ${order.customer}` : `Reserva por confirmar: ${order.customer}`,
+        body: `${String(order.items || '').split(' · Nota:')[0]} · ${order.date} ${String(order.time || '').slice(0, 5)}`,
+      }).catch(() => 0),
     ]);
     return res.status(200).json({ sent: true });
   } catch (error) {

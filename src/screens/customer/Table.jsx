@@ -1,12 +1,35 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Icon from '../../components/Icon.jsx';
 import { useParams } from 'react-router-dom';
 import { BackButton, Empty, Spinner, Stepper, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useCart } from '../../context/CartContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
-import { addItemsToTable, findBusiness, getRestaurantSettings, listProducts, openTableSession, subscribe } from '../../lib/data.js';
+import { addItemsToTable, callTable, findBusiness, getRestaurantSettings, listProducts, openTableSession, subscribe } from '../../lib/data.js';
 import { modulesFor } from '../../lib/questionnaire.js';
 import { money, sameName } from '../../lib/format.js';
+
+// "La cuenta, por favor" and "Llamar al camarero": the floor sees it at once in the panel.
+function TableCallButtons({ bizName, table }) {
+  const toast = useToast();
+  const [sent, setSent] = useState({});
+  const call = async (kind) => {
+    try {
+      await callTable(bizName, table, kind);
+      setSent((x) => ({ ...x, [kind]: true }));
+      toast(kind === 'cuenta' ? 'Avisado: ahora te traen la cuenta' : 'Avisado: ahora viene alguien');
+      setTimeout(() => setSent((x) => ({ ...x, [kind]: false })), 60000);
+    } catch (e) {
+      toast(e.message, 'error');
+    }
+  };
+  return (
+    <div className="bento">
+      <button className="btn soft block" disabled={sent.camarero} onClick={() => call('camarero')}><Icon name="bell" size={18} /> {sent.camarero ? 'Avisado' : 'Llamar al camarero'}</button>
+      <button className="btn soft block" disabled={sent.cuenta} onClick={() => call('cuenta')}><Icon name="card" size={18} /> {sent.cuenta ? 'Avisado' : 'Pedir la cuenta'}</button>
+    </div>
+  );
+}
 
 export default function Table() {
   const { name, table: tableParam } = useParams();
@@ -129,6 +152,8 @@ export default function Table() {
             </div>
           )}
         </div>
+
+        <TableCallButtons bizName={bizName} table={table} />
 
         <div className="stack" ref={cartaRef}>
           <div className="widget" style={{ paddingBottom: 4 }}>

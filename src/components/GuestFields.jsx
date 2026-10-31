@@ -1,3 +1,4 @@
+import { PrivacyNote } from '../screens/customer/Legal.jsx';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { readGuest } from '../lib/guest.js';
@@ -22,6 +23,7 @@ export default function GuestFields({ guest, setGuest, phoneRequired = false, pr
       {!user && <div className="field"><label htmlFor={`${prefix}-mail`}>Correo (te mandamos la confirmación)</label><input id={`${prefix}-mail`} className="input" type="email" required value={guest.email} onChange={set('email')} /></div>}
       <div className="field"><label htmlFor={`${prefix}-tel`}>Teléfono{phoneRequired ? '' : ' (opcional)'}</label><input id={`${prefix}-tel`} className="input" type="tel" required={phoneRequired} maxLength={20} value={guest.phone} onChange={set('phone')} /></div>
       {!user && <span className="small muted">Sin registrarte. Si tienes cuenta, entra y lo verás todo en "Reservas".</span>}
+      <PrivacyNote />
     </div>
   );
 }

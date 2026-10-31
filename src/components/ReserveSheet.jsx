@@ -1,3 +1,4 @@
+import { PrivacyNote } from '../screens/customer/Legal.jsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sheet, useToast } from './ui.jsx';
 import Icon from './Icon.jsx';
@@ -401,6 +402,8 @@ export default function ReserveSheet({ open, onClose, biz, settings, initial, ch
             <input className="input" aria-label="Alergias u otras peticiones" maxLength={120} value={extra} onChange={(e) => setExtra(e.target.value)} placeholder="Alergias u otras peticiones (opcional)" />
           </div>
           {rules.cancelacion && <p className="small muted" style={{ margin: '0 4px' }}>{rules.cancelacion}</p>}
+          {Number(rules.cancelar_horas) > 0 && <p className="small muted" style={{ margin: '0 4px' }}>Puedes cancelar o cambiar online hasta {rules.cancelar_horas} h antes. Después, llama a {biz.name}.</p>}
+          <PrivacyNote name={biz.name} />
           <div className="sheet-foot">
             <button className="btn primary block" disabled={saving || (!user && (guest.name.trim().length < 2 || !guest.email.includes('@')))} onClick={submit}>
               {saving ? 'Enviando…' : isGroup ? `Pedir mesa para ${guests} a las ${time}` : 'Confirmar reserva'}

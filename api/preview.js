@@ -38,7 +38,17 @@ export default async function handler(req, res) {
         html = html
           .replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(title)}</title>`)
           .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${escapeHtml(text)}">`)
-          .replace('</head>', `  ${meta}\n</head>`);
+          .replace('</head>', `  ${meta}\n  <script type="application/ld+json">${JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': restaurant ? 'Restaurant' : 'LocalBusiness',
+            name: biz.name,
+            url,
+            image,
+            address: { '@type': 'PostalAddress', streetAddress: biz.address || undefined, addressLocality: 'Palencia', addressCountry: 'ES' },
+            ...(restaurant ? { acceptsReservations: `${SITE_URL}/r/${encodeURIComponent(biz.username || biz.name)}` } : {}),
+          }).replace(/</g, '\\u003c')}</script>\n</head>`)
+          // Search engines read this before the app paints the page.
+          .replace('<div id="root"></div>', `<div id="root"><main><h1>${escapeHtml(biz.name)}</h1><p>${escapeHtml(text)}</p></main></div>`);
       }
     }
   } catch (error) {

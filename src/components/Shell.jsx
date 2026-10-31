@@ -5,7 +5,7 @@ import { Mono, Sheet, Spinner, StatusVeil, useToast } from './ui.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { kindOf } from '../lib/categories.js';
 import useAsync from '../hooks/useAsync.js';
-import { adminBusinesses, getRestaurantSettings, isPickup, isReservation, setDemoAs, subscribe } from '../lib/data.js';
+import { adminBusinesses, closeTableCall, getRestaurantSettings, isPickup, isReservation, openTableCalls, setDemoAs, subscribe, touchMyBusiness } from '../lib/data.js';
 import OwnerForm from './OwnerForm.jsx';
 import { typeOf } from '../lib/businessTypes.js';
 import { modulesFor } from '../lib/questionnaire.js';
@@ -210,6 +210,39 @@ function AdminBanner({ business, onExit }) {
   );
 }
 
+// Table QR: "La cuenta, por favor" / "Llamar al camarero", on top of every panel screen.
+function TableCalls({ business }) {
+  const [calls, setCalls] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    const load = () => openTableCalls(business.name).then((c) => alive && setCalls(c));
+    load();
+    const off = subscribe('table_calls', (payload) => {
+      if (payload.eventType === 'INSERT' && soundOn()) chime();
+      if (payload.eventType === 'INSERT') systemNotify(payload.new.kind === 'cuenta' ? 'Piden la cuenta' : 'Llaman al camarero', `Mesa ${payload.new.table_no}`);
+      load();
+    });
+    return () => { alive = false; off(); };
+  }, [business.name]);
+  if (!calls.length) return null;
+  const done = async (c) => {
+    setCalls((list) => list.filter((x) => x.id !== c.id));
+    await closeTableCall(c.id).catch(() => {});
+  };
+  return (
+    <div className="stack" style={{ gap: 8, margin: '12px var(--gutter) 0' }} role="status" aria-live="polite">
+      {calls.map((c) => (
+        <div key={c.id} className="widget dark row" style={{ gap: 12, padding: '12px 14px' }}>
+          <Icon name={c.kind === 'cuenta' ? 'card' : 'bell'} size={20} />
+          <span className="grow" style={{ fontWeight: 700 }}>Mesa {c.table_no}: {c.kind === 'cuenta' ? 'piden la cuenta' : 'llaman al camarero'}</span>
+          <span className="small" style={{ opacity: 0.7 }}>{new Date(c.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</span>
+          <button className="btn sm" style={{ background: 'var(--accent)', color: 'var(--ink)' }} onClick={() => done(c)}>Hecho</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function BusinessShell() {
   const { business } = useAuth();
   const { pathname } = useLocation();
@@ -224,6 +257,8 @@ export function BusinessShell() {
     navigate('/admin');
   };
   useNewBookingAlerts(business, () => setFresh((n) => n + 1));
+  // /admin sees who opens their panel and who needs a call.
+  useEffect(() => { if (!business.viewingAs) touchMyBusiness(); }, [business.name, business.viewingAs]);
   useEffect(() => { if (pathname === '/panel/reservas') setFresh(0); }, [pathname]);
   useEffect(() => setMore(false), [pathname]);
   const kind = kindOf(business);
@@ -249,7 +284,12 @@ export function BusinessShell() {
       <StatusVeil />
       <SideNav
         items={nav}
-        footer={<a className="btn ghost block" style={{ color: '#fff' }} href={businessUrl(business.name)} target="_blank" rel="noreferrer">Ver mi página</a>}
+        footer={(
+          <>
+            <NavLink className="btn ghost block" style={{ color: '#fff' }} to="/panel/ayuda">Ayuda</NavLink>
+            <a className="btn ghost block" style={{ color: '#fff' }} href={businessUrl(business.name)} target="_blank" rel="noreferrer">Ver mi página</a>
+          </>
+        )}
         header={(
           <div className="row" style={{ padding: '0 6px' }}>
             <Mono name={business.name} image={business.image} />
@@ -274,6 +314,7 @@ export function BusinessShell() {
             <span className="small" style={{ fontWeight: 600 }}>No hemos podido aprobar tu negocio. Escríbenos desde "Contactar con NetWish" y lo vemos.</span>
           </div>
         )}
+        {kind === 'restaurant' && <TableCalls business={business} />}
         <Outlet context={{ settings, reloadSettings, modules: mods, sections, prefs, setPref }} />
       </main>
       <TabBar items={mobileNav} onMore={rest.length ? () => setMore(true) : null} moreActive={rest.some((n) => n.className)} />

@@ -33,7 +33,13 @@ export function readAccessParam() {
   window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
 }
 
-export function showComingSoon(search) {
+// Pages that must work for real businesses and their customers even before launch:
+// a business's own page and short link, the links in the e-mails, table QR codes,
+// the customer's account and bookings, legal pages, and the business panel.
+const OPEN_PATHS = /^\/(negocio|r|reserva|opinion|baja|mesa|chat|cuenta|reservas|legal|negocios|panel|admin|pagar)(\/|$)/;
+
+export function showComingSoon(search, pathname = '/') {
   if (new URLSearchParams(search).has('muypronto')) return true;
+  if (OPEN_PATHS.test(pathname)) return false;
   return !LAUNCHED && !hasAccess();
 }

@@ -7,14 +7,109 @@ import { PanelPrefs } from '../../components/Shell.jsx';
 import ContactTeam from '../../components/ContactTeam.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { safeSlug, updateBusiness, uploadPublicFile } from '../../lib/data.js';
+import { supabase } from '../../lib/supabase.js';
 import { kindOf } from '../../lib/categories.js';
 import { businessUrl } from '../../lib/qr.js';
 import { normalize, toneFor } from '../../lib/format.js';
 import { profileProgress, sectionProgress } from '../../lib/questionnaire.js';
 import { sectionsFor } from '../../lib/typeQuestions.js';
 import { typeOf } from '../../lib/businessTypes.js';
+import { canInstall, disablePush, enablePush, isInstalled, promptInstall, pushState } from '../../lib/push.js';
 
 const MAX_IMAGE_MB = 8;
+
+// Notifications on this phone or computer for every new booking or order, even with the panel closed.
+function PushRow({ business }) {
+  const toast = useToast();
+  const [state, setState] = useState('…');
+  useEffect(() => { pushState().then(setState).catch(() => setState('unsupported')); }, []);
+  const flip = async () => {
+    try {
+      if (state === 'on') { await disablePush(); setState('off'); toast('Avisos desactivados en este dispositivo'); }
+      else { await enablePush(business.name); setState('on'); toast('Listo: te avisaremos aquí de cada reserva nueva'); }
+    } catch (e) {
+      toast(e.message, 'error');
+    }
+  };
+  const sub = state === 'on' ? 'Activados: te llega un aviso aunque el panel esté cerrado.'
+    : state === 'denied' ? 'Bloqueados en el navegador. Actívalos en sus ajustes.'
+      : state === 'unsupported' ? 'En iPhone: Compartir → Añadir a pantalla de inicio, y ábrelo desde ahí.'
+        : 'Recibe un aviso en este móvil con cada reserva o pedido nuevo.';
+  return (
+    <button className="list-row" onClick={flip} disabled={state === 'unsupported' || state === '…'}>
+      <span className="mono" style={{ background: state === 'on' ? 'var(--accent)' : 'var(--bg)', color: 'var(--ink)' }}><Icon name="bell" size={20} /></span>
+      <span className="grow stack" style={{ gap: 1 }}><span className="t">Avisos en este dispositivo</span><span className="s">{sub}</span></span>
+      <span className="small" style={{ fontWeight: 700 }}>{state === 'on' ? 'Quitar' : state === 'off' ? 'Activar' : ''}</span>
+    </button>
+  );
+}
+
+// Put the panel on the home screen like an app (Android/Chrome; on iPhone, from Share).
+function InstallRow() {
+  const [ready, setReady] = useState(canInstall());
+  useEffect(() => {
+    const on = () => setReady(true);
+    window.addEventListener('netwish-installable', on);
+    return () => window.removeEventListener('netwish-installable', on);
+  }, []);
+  if (isInstalled()) return null;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if (!ready && !ios) return null;
+  return (
+    <button className="list-row" onClick={() => (ready ? promptInstall().then(() => setReady(false)) : null)} disabled={!ready}>
+      <span className="mono" style={{ background: 'var(--bg)', color: 'var(--ink)' }}><Icon name="download" size={20} /></span>
+      <span className="grow stack" style={{ gap: 1 }}>
+        <span className="t">Instalar NetWish en este dispositivo</span>
+        <span className="s">{ready ? 'Se abre como una app, a pantalla completa.' : 'En Safari: botón Compartir → "Añadir a pantalla de inicio".'}</span>
+      </span>
+      {ready && <span className="small" style={{ fontWeight: 700 }}>Instalar</span>}
+    </button>
+  );
+}
+
+// Waiters, front desk or the team: they enter with their own account and see the panel.
+function TeamAccess({ business }) {
+  const toast = useToast();
+  const [list, setList] = useState(null);
+  const [email, setEmail] = useState('');
+  useEffect(() => {
+    supabase.from('businesses').select('staff_emails').eq('username', business.username).maybeSingle()
+      .then(({ data, error }) => setList(error ? null : data?.staff_emails || []));
+  }, [business.username]);
+  if (list === null) return null;
+  const save = async (next) => {
+    try {
+      await updateBusiness(business.username, { staff_emails: next });
+      setList(next);
+    } catch (e) {
+      toast(e.message, 'error');
+    }
+  };
+  const add = (e) => {
+    e.preventDefault();
+    const m = email.trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m)) return toast('Escribe un correo válido', 'error');
+    if (list.includes(m)) return setEmail('');
+    save([...list, m].slice(0, 20)).then(() => { setEmail(''); toast(`Listo. ${m} entra en netwish.es/negocios con ese correo.`); });
+  };
+  return (
+    <section className="widget stack" style={{ gap: 10 }}>
+      <h2 className="title-lg">Personas con acceso al panel</h2>
+      <span className="small muted">Añade el correo de cada persona. Entran en netwish.es/negocios con su propia cuenta y ven reservas, clientes y carta. Los datos del negocio y estos ajustes solo los cambias tú.</span>
+      {list.map((m) => (
+        <div key={m} className="row" style={{ gap: 10 }}>
+          <Icon name="person" size={18} />
+          <span className="grow small" style={{ fontWeight: 600 }}>{m}</span>
+          <button type="button" className="btn ghost sm" onClick={() => save(list.filter((x) => x !== m))}>Quitar</button>
+        </div>
+      ))}
+      <form className="row" style={{ gap: 8 }} onSubmit={add}>
+        <input className="input grow" type="email" placeholder="correo@ejemplo.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Correo de la persona del equipo" />
+        <button className="btn soft">Añadir</button>
+      </form>
+    </section>
+  );
+}
 
 function BusinessQrSheet({ open, onClose, business }) {
   const [src, setSrc] = useState('');
@@ -117,11 +212,12 @@ export default function Settings() {
       { group: 'Compartir', icon: 'qr', label: 'QR para el escaparate o el mostrador', keys: 'qr imprimir', run: () => setPayOpen(true) },
       ...(business.username ? [{ group: 'Compartir', icon: 'link', label: kind === 'shop' ? 'Copiar el enlace de mi tienda' : 'Copiar mi enlace de reservas', keys: 'enlace link', run: () => navigator.clipboard?.writeText(`${window.location.origin}/r/${business.username}`).then(() => toast('Enlace de reservas copiado')) }] : []),
     ] : []),
+    { group: 'Cuenta', icon: 'chat', label: 'Ayuda y primeros pasos', sub: 'Guía rápida, preguntas frecuentes y contacto', keys: 'ayuda soporte dudas whatsapp contacto guia', to: '/panel/ayuda' },
     { group: 'Cuenta', icon: 'store', label: 'Ver mi página como cliente', keys: 'pagina publica', href: businessUrl(business.name) },
     { group: 'Cuenta', icon: 'logout', label: 'Cerrar sesión', keys: 'salir', run: () => signOut().then(() => navigate('/negocios')), plain: true },
   ];
   const device = 'Este dispositivo';
-  const deviceKeys = normalize('modo noche oscuro sonido aviso atril tablet pantalla');
+  const deviceKeys = normalize('modo noche oscuro sonido aviso avisos notificaciones push atril tablet pantalla');
   const query = normalize(q.trim());
   const hits = query ? rows.filter((r) => normalize(`${r.group} ${r.label} ${r.sub || ''} ${r.keys || ''}`).includes(query)) : rows;
   const groups = [...new Set(hits.map((r) => r.group))];
@@ -170,9 +266,21 @@ export default function Settings() {
   const deviceBlock = showDevice && prefs && (
     <section className="stack" style={{ gap: 6 }}>
       <span className="eyebrow" style={{ padding: '0 6px' }}>{device}</span>
-      <div className="widget" style={{ paddingTop: 4, paddingBottom: 4 }}><PanelPrefs prefs={prefs} setPref={setPref} /></div>
+      <div className="widget" style={{ paddingTop: 4, paddingBottom: 4 }}><InstallRow /><PushRow business={business} /><PanelPrefs prefs={prefs} setPref={setPref} /></div>
     </section>
   );
+
+  // Staff only get their device settings; the business data is the owner's.
+  if (business.staff) {
+    return (
+      <div className="page" style={{ maxWidth: 820 }}>
+        <PageHeader eyebrow={business.name} title="Ajustes" />
+        <div className="widget"><span className="small">Entras como parte del equipo de {business.name}. Los datos del negocio solo los cambia el dueño.</span></div>
+        {deviceBlock}
+        <button className="btn block" onClick={() => signOut().then(() => navigate('/negocios'))}><Icon name="logout" size={18} /> Cerrar sesión</button>
+      </div>
+    );
+  }
 
   return (
     <div className="page" style={{ maxWidth: 820 }}>
@@ -216,6 +324,7 @@ export default function Settings() {
             </div>
             <button className="btn primary block" disabled={busy}>{busy ? 'Guardando…' : 'Guardar'}</button>
           </form>
+          <TeamAccess business={business} />
         </>
       )}
 

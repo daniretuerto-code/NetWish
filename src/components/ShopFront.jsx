@@ -1,3 +1,4 @@
+import { PrivacyNote } from '../screens/customer/Legal.jsx';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from './Icon.jsx';
@@ -10,7 +11,7 @@ import { typeFacts } from '../lib/typeQuestions.js';
 import { money, todayISO } from '../lib/format.js';
 import { readGuest, rememberPickup, saveGuest } from '../lib/guest.js';
 import {
-  availability, byWeight, colorsOf, hasVariants, ONLINE_PAYMENTS, PAYMENTS, perUnit, pickupDays, pickupTimes,
+  availability, byWeight, colorsOf, hasVariants, PAYMENTS, perUnit, pickupDays, pickupTimes,
   priceText, sizesOf, variantKey, variantLabel, variantStock,
 } from '../lib/shop.js';
 
@@ -260,13 +261,9 @@ function CheckoutSheet({ biz, settings, products, onClose }) {
                 {payment === m && <Icon name="check" size={18} stroke={3} />}
               </button>
             ))}
-            {!ONLINE_PAYMENTS && (
-              <button type="button" className="pay-opt" disabled>
-                <Icon name="lock" size={20} /> <span className="grow">Pagar ahora con tarjeta</span><span className="small">Pronto</span>
-              </button>
-            )}
           </div>
           <span className="small muted">No se cobra nada ahora. Pagas cuando lo recojas.</span>
+          <PrivacyNote name={biz.name} />
         </div>
 
         <div className="widget stack" style={{ gap: 10 }}>

@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /panel
+Disallow: /admin
+Disallow: /reserva/
+Disallow: /opinion/
+Disallow: /baja
+Disallow: /api/
+
+Sitemap: https://netwish.es/sitemap.xml

@@ -4,7 +4,7 @@ import Icon from '../../components/Icon.jsx';
 import { Empty, Mono, PageHeader, Spinner, useToast } from '../../components/ui.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import useAsync from '../../hooks/useAsync.js';
-import { cancelMyBooking, isPickup, isReservation, myOrders, STATUS, subscribe } from '../../lib/data.js';
+import { cancelMyBooking, claimGuestBookings, isPickup, isReservation, myOrders, STATUS, subscribe } from '../../lib/data.js';
 import { myPickups } from '../../lib/guest.js';
 import { paymentLabel } from '../../lib/shop.js';
 import { money, todayISO } from '../../lib/format.js';
@@ -124,7 +124,8 @@ export default function Orders() {
   const { user } = useAuth();
   const toast = useToast();
   const [confirming, setConfirming] = useState(null);
-  const { data, loading, reload } = useAsync(() => (user ? myOrders() : Promise.resolve([])), [user?.id]);
+  // Bookings made without an account with this same e-mail join the account first.
+  const { data, loading, reload } = useAsync(() => (user ? claimGuestBookings().then(() => myOrders()) : Promise.resolve([])), [user?.id]);
 
   const cancel = async (o) => {
     try {
